@@ -1,0 +1,16 @@
+{
+  "name": "MBP Chấm bài",
+  "short_name": "MBP Chấm",
+  "description": "Chấm bài kiểm tra MathBankPro bằng camera điện thoại",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141c3a",
+  "theme_color": "#141c3a",
+  "lang": "vi",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

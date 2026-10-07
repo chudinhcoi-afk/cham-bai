@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#141c3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>MBP Chấm bài</title>
+<style>
+:root{--navy:#141c3a;--gold:#b8892b;--ink:#1c2233;--mut:#6b7286;--line:#e2e5ee;--bg:#f4f5f9;--ok:#12a150;--bad:#d0302b}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column}
+header{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px}
+header b{font-size:1.1rem;letter-spacing:.01em}
+header span{margin-left:auto;font-size:.8rem;opacity:.8}
+main{flex:1;overflow:auto;position:relative}
+nav{display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:10px 4px 9px;font-size:.82rem;color:var(--mut);font-weight:600}
+nav button i{display:block;font-style:normal;font-size:1.35rem;line-height:1.2}
+nav button.on{color:var(--navy);box-shadow:inset 0 3px 0 var(--gold)}
+.view{display:none;padding:14px}
+.view.on{display:block}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;padding:11px 14px;font-size:.95rem;font-weight:650;min-height:44px}
+.btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mut{color:var(--mut);font-size:.86rem;line-height:1.45}
+h3{margin:0 0 8px;font-size:1rem}
+textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:.85rem;min-height:74px}
+/* camera */
+#v-scan{padding:0;height:100%}
+#v-scan.on{display:flex;flex-direction:column}
+.cam{position:relative;flex:1;background:#000;overflow:hidden;min-height:0}
+.cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.cam canvas.ov{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hint{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;color:#fff;font-size:.92rem;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.72))}
+.hint b{display:block;font-size:1rem;margin-bottom:2px}
+.camtop{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px}
+.chip{background:rgba(20,28,58,.78);color:#fff;border:0;border-radius:20px;padding:8px 13px;font-size:.85rem;font-weight:600;min-height:38px}
+.shot{display:none;position:absolute;inset:0;background:#0d1226;flex-direction:column}
+.shot.on{display:flex}
+.shot .pic{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;text-align:center}
+.shot img{max-width:100%;display:block;margin:0 auto}
+.shot .bar{background:#fff;padding:12px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px}
+.score{font-size:1.9rem;font-weight:800;color:var(--bad);line-height:1}
+.score small{font-size:.95rem;color:var(--mut);font-weight:600}
+.warn{color:#9a5b00;font-size:.84rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.res{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.res img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block}
+.res div{padding:7px 9px;display:flex;align-items:center;gap:6px;font-weight:700}
+.res div span{margin-left:auto;font-weight:500;color:var(--mut);font-size:.8rem}
+.test{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.test:first-of-type{border-top:0}
+.test .id{background:var(--navy);color:#fff;border-radius:8px;padding:5px 9px;font-weight:700;font-size:.9rem;white-space:nowrap}
+.test .nm{flex:1;min-width:0;font-size:.92rem}
+.test .nm small{display:block;color:var(--mut)}
+#toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:rgba(20,28,58,.94);color:#fff;padding:10px 16px;border-radius:22px;font-size:.9rem;opacity:0;transition:opacity .2s;pointer-events:none;max-width:88vw;text-align:center;z-index:50}
+#toast.on{opacity:1}
+#zoom{display:none;position:fixed;inset:0;background:#0d1226;z-index:60;overflow:auto}
+#zoom.on{display:block}
+#zoom img{width:100%;display:block}
+#zoom .zb{position:sticky;bottom:0;background:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+</style>
+</head>
+<body>
+<header><b>MBP Chấm bài</b><span id="hdInfo"></span></header>
+<main>
+  <section class="view on" id="v-scan">
+    <div class="cam">
+      <video id="vid" playsinline muted autoplay></video>
+      <canvas class="ov" id="ov"></canvas>
+      <div class="camtop">
+        <button class="chip" id="bTorch" style="display:none">🔦 Đèn</button>
+        <label class="chip" style="margin-left:auto;display:inline-flex;align-items:center">🖼 Chọn ảnh<input type="file" id="fPick" accept="image/*" multiple hidden></label>
+      </div>
+      <div class="hint" id="hint"><b>Đang mở camera…</b></div>
+      <div class="shot" id="shot">
+        <div class="pic"><img id="shotImg" alt="Bài đã chấm"></div>
+        <div class="bar">
+          <div><div class="score" id="shotScore"></div><div class="warn" id="shotWarn"></div></div>
+          <button class="btn" id="bDrop" style="margin-left:auto">Bỏ</button>
+          <button class="btn pri" id="bNext">Bài tiếp ➜</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="v-tests">
+    <div class="card">
+      <h3>Nạp đáp án từ máy tính</h3>
+      <p class="mut" style="margin:0 0 10px">Trên MathBankPro: <b>Chấm bài → Bài kiểm tra → Bài kiểm tra đã lưu đáp án → 📱 Mã QR</b>. Mỗi đề chỉ cần nạp một lần; chấm không cần mạng.</p>
+      <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
+      <div id="qrBox" style="display:none;margin-top:10px">
+        <div class="cam" style="height:300px;border-radius:12px"><video id="qrVid" playsinline muted autoplay></video></div>
+        <button class="btn wide" id="bQrStop" style="margin-top:8px">Dừng quét</button>
+      </div>
+      <details style="margin-top:12px"><summary class="mut">Không quét được? Dán mã đáp án dạng chữ</summary>
+        <textarea id="tPaste" placeholder="MBP1;12;…" style="margin-top:8px"></textarea>
+        <button class="btn wide" id="bPaste" style="margin-top:6px">Nạp mã đã dán</button>
+      </details>
+    </div>
+    <div class="card"><h3>Đề đã nạp</h3><div id="testList"></div></div>
+  </section>
+
+  <section class="view" id="v-res">
+    <div class="card">
+      <div class="row"><h3 style="margin:0" id="resTitle">Kết quả</h3></div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn gold" id="bShare">📤 Chia sẻ tất cả</button>
+        <button class="btn" id="bSave">⬇ Tải tất cả</button>
+        <button class="btn" id="bClear" style="margin-left:auto">🗑 Xoá</button>
+      </div>
+      <p class="mut" style="margin:10px 0 0">Ảnh đã ghi điểm trắc nghiệm; tên học sinh đọc trên ảnh. Chạm vào ảnh để xem lớn.</p>
+    </div>
+    <div class="grid" id="resGrid"></div>
+  </section>
+</main>
+<nav>
+  <button data-v="scan" class="on"><i>📷</i>Chấm</button>
+  <button data-v="tests"><i>🗂</i>Đề</button>
+  <button data-v="res"><i>📑</i>Kết quả</button>
+</nav>
+<div id="toast"></div>
+<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Chia sẻ</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
+
+<script>
+"use strict";
+/* ===== Lõi đọc khung trả lời — dùng chung với MathBankPro (giữ nguyên) ===== */
+const OMR_FILL = 0.38;          // ngưỡng coi là "đã tô" (tỉ lệ đậm so với mực đen của ô định vị)
+const OMR_WEAK = 0.20;          // dưới ngưỡng tô nhưng trên mức này: tô mờ, cần xem lại
+function fmtVN(n){ const r = Math.round((+n||0)*100)/100; return String(r).replace('.', ','); }
+function omrGrayFromImageData(img){
+  const {width:w, height:h, data} = img;
+  const g = new Uint8Array(w*h);
+  for(let i=0, j=0; i<g.length; i++, j+=4) g[i] = (data[j]*77 + data[j+1]*150 + data[j+2]*29) >> 8;
+  return g;
+}
+function omrOtsu(hist, total){
+  let sum = 0; for(let i=0;i<256;i++) sum += i*hist[i];
+  let sumB = 0, wB = 0, best = 0, thr = 128;
+  for(let t=0;t<256;t++){
+    wB += hist[t]; if(!wB) continue;
+    const wF = total - wB; if(!wF) break;
+    sumB += t*hist[t];
+    const mB = sumB/wB, mF = (sum-sumB)/wF;
+    const between = wB*wF*(mB-mF)*(mB-mF);
+    if(between > best){ best = between; thr = t; }
+  }
+  return thr;
+}
+function omrFindMarkerCandidates(gray, w, h){
+  // Thu nhỏ ảnh để tìm vùng đen liền khối (connected components) cho nhanh.
+  const step = Math.max(1, Math.round(Math.max(w,h)/1400));
+  const W = Math.floor(w/step), H = Math.floor(h/step);
+  const small = new Uint8Array(W*H);
+  const hist = new Uint32Array(256);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const v = gray[(y*step)*w + x*step]; small[y*W+x] = v; hist[v]++;
+  }
+  const thr = Math.min(omrOtsu(hist, W*H), 150);
+  const lab = new Int32Array(W*H);
+  const comps = [];
+  const stack = new Int32Array(W*H);
+  let next = 1;
+  for(let i=0;i<W*H;i++){
+    if(lab[i] || small[i] >= thr) continue;
+    let sp = 0; stack[sp++] = i; lab[i] = next;
+    let minx=W, maxx=0, miny=H, maxy=0, cnt=0;
+    while(sp){
+      const p = stack[--sp]; const px = p % W, py = (p - px)/W; cnt++;
+      if(px<minx) minx=px; if(px>maxx) maxx=px; if(py<miny) miny=py; if(py>maxy) maxy=py;
+      if(px>0){ const q=p-1; if(!lab[q] && small[q]<thr){ lab[q]=next; stack[sp++]=q; } }
+      if(px<W-1){ const q=p+1; if(!lab[q] && small[q]<thr){ lab[q]=next; stack[sp++]=q; } }
+      if(py>0){ const q=p-W; if(!lab[q] && small[q]<thr){ lab[q]=next; stack[sp++]=q; } }
+      if(py<H-1){ const q=p+W; if(!lab[q] && small[q]<thr){ lab[q]=next; stack[sp++]=q; } }
+    }
+    next++;
+    const bw = maxx-minx+1, bh = maxy-miny+1;
+    if(bw < 5 || bh < 5) continue;
+    const asp = bw/bh, fill = cnt/(bw*bh);
+    if(asp < 0.7 || asp > 1.43 || fill < 0.75) continue;
+    comps.push({x:(minx+maxx+1)/2*step, y:(miny+maxy+1)/2*step, side:Math.sqrt(cnt)*step, area:cnt});
+  }
+  comps.sort((a,b)=> b.area - a.area);
+  return {cands: comps.slice(0,14), thr};
+}
+function omrSolveHomography(src, dst){
+  // Giải ma trận 8x8: (X,Y) trên phiếu (mm) -> (x,y) trên ảnh (px)
+  const A = [], b = [];
+  for(let i=0;i<4;i++){
+    const [X,Y] = src[i], [x,y] = dst[i];
+    A.push([X,Y,1,0,0,0,-x*X,-x*Y]); b.push(x);
+    A.push([0,0,0,X,Y,1,-y*X,-y*Y]); b.push(y);
+  }
+  for(let c=0;c<8;c++){
+    let piv = c; for(let r=c+1;r<8;r++) if(Math.abs(A[r][c]) > Math.abs(A[piv][c])) piv = r;
+    if(Math.abs(A[piv][c]) < 1e-12) return null;
+    [A[c],A[piv]] = [A[piv],A[c]]; [b[c],b[piv]] = [b[piv],b[c]];
+    for(let r=0;r<8;r++){ if(r===c) continue; const f = A[r][c]/A[c][c]; if(!f) continue; for(let k=c;k<8;k++) A[r][k] -= f*A[c][k]; b[r] -= f*b[c]; }
+  }
+  const h = b.map((v,i)=> v/A[i][i]);
+  return (X,Y)=>{ const d = h[6]*X + h[7]*Y + 1; return [(h[0]*X + h[1]*Y + h[2])/d, (h[3]*X + h[4]*Y + h[5])/d]; };
+}
+function omrMeanGray(gray, w, h, map, X, Y, rUnits){
+  const [cx, cy] = map(X, Y);
+  const [ex, ey] = map(X + rUnits, Y);
+  const r = Math.max(1.5, Math.hypot(ex-cx, ey-cy));
+  let s = 0, n = 0;
+  const x0 = Math.max(0, Math.floor(cx-r)), x1 = Math.min(w-1, Math.ceil(cx+r));
+  const y0 = Math.max(0, Math.floor(cy-r)), y1 = Math.min(h-1, Math.ceil(cy+r));
+  for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+    if((x-cx)*(x-cx) + (y-cy)*(y-cy) <= r*r){ s += gray[y*w+x]; n++; }
+  }
+  return n ? s/n : 255;
+}
+function omrPickGroup(opts, scores){
+  const idx = scores.map((s,i)=>i).sort((a,b)=> scores[b]-scores[a]);
+  const s1 = scores[idx[0]], s2 = idx.length>1 ? scores[idx[1]] : 0;
+  if(s1 < OMR_FILL) return {v:'', state: s1 >= OMR_WEAK ? 'weak' : 'blank', i:idx[0]};
+  if(s2 >= OMR_FILL && s2 >= 0.6*s1) return {v:'?', state:'multi', i:idx[0], i2:idx[1]};
+  return {v:opts[idx[0]].v, state:'ok', i:idx[0]};
+}
+const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12};
+function wakGeom(n){
+  const ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = Math.ceil(n/ncol), H = Math.round((WAK.y0 + (R-1)*WAK.pitchY + 8.5)*10)/10;
+  const pos = (k, j)=>{ const c = Math.floor(k/R), r = k % R; return {x: WAK.x0 + c*WAK.colW + WAK.bx + j*WAK.bp, y: WAK.y0 + r*WAK.pitchY}; };
+  return {ncol, R, H, pos};
+}
+function wakLocate(gray, w, h){
+  const {cands} = omrFindMarkerCandidates(gray, w, h); if(cands.length < 4) return null;
+  const span = WAK.W - 4, us = []; for(let i=0;i<WAK.idN;i++) us.push((WAK.idX + i*WAK.idP + WAK.idW/2 - 2)/span);
+  const ru = 0.9/span; let best = null; const n = cands.length;
+  for(let a=0;a<n;a++) for(let b=a+1;b<n;b++) for(let c=b+1;c<n;c++) for(let e=c+1;e<n;e++){
+    const pts = [cands[a],cands[b],cands[c],cands[e]], sides = pts.map(p=> p.side);
+    if(Math.min(...sides)/Math.max(...sides) < 0.6) continue;
+    const cx = pts.reduce((t,p)=> t+p.x, 0)/4, cy = pts.reduce((t,p)=> t+p.y, 0)/4;
+    const ord = pts.slice().sort((p,q)=> Math.atan2(p.y-cy,p.x-cx) - Math.atan2(q.y-cy,q.x-cx));
+    for(let k=0;k<4;k++){
+      const TL = ord[k], TR = ord[(k+1)%4], BR = ord[(k+2)%4], BL = ord[(k+3)%4];
+      const top = Math.hypot(TR.x-TL.x, TR.y-TL.y), bot = Math.hypot(BR.x-BL.x, BR.y-BL.y), lef = Math.hypot(BL.x-TL.x, BL.y-TL.y), rig = Math.hypot(BR.x-TR.x, BR.y-TR.y);
+      if(Math.min(top,bot)/Math.max(top,bot) < 0.8 || Math.min(lef,rig)/Math.max(lef,rig) < 0.8) continue;
+      const asp = ((top+bot)/2)/((lef+rig)/2); if(asp < 2 || asp > 16) continue;
+      const sideMm = (TL.side+TR.side+BL.side+BR.side)/4/((top+bot)/2)*span; if(sideMm < 2.4 || sideMm > 6.5) continue;
+      const map = omrSolveHomography([[0,0],[1,0],[1,1],[0,1]], [[TL.x,TL.y],[TR.x,TR.y],[BR.x,BR.y],[BL.x,BL.y]]); if(!map) continue;
+      const ink = [[0,0],[1,0],[1,1],[0,1]].reduce((t,[u,v])=> t + omrMeanGray(gray,w,h,map,u,v,ru), 0)/4;
+      const topM = us.map(u=> omrMeanGray(gray,w,h,map,u,0,ru)), botM = us.map(u=> omrMeanGray(gray,w,h,map,u,1,ru));
+      const paper = topM.reduce((t,x)=> t+x, 0)/topM.length, mid = (ink + paper)/2;
+      if(paper - ink < 45 || Math.min(...topM) < mid || botM[0] > mid) continue;   // hàng trên phải trắng, ô đầu hàng dưới phải đen
+      const bits = botM.map(m=> m < mid ? 1 : 0); let id = 0, ones = 0; for(let i=0;i<10;i++){ id |= bits[i+1] << i; ones += bits[i+1]; }
+      if(bits[11] !== (ones % 2 ? 0 : 1)) continue;
+      const score = paper - botM[0];
+      if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span};
+    } }
+  return best;
+}
+function wakRead(img, pickTest){
+  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h);
+  if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
+  const test = pickTest(loc.id);
+  if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
+  const G = wakGeom(test.rows.length), span = WAK.W - 4, vs = G.H - 4, uv = (x, y)=> [(x-2)/span, (y-2)/vs], opts2 = ['Đ','S'], opts4 = ['A','B','C','D'];
+  const mapMm = (x, y)=>{ const [u,v] = uv(x,y); return loc.map(u, v); };
+  const meanAt = (x, y)=>{ const [u,v] = uv(x,y); return omrMeanGray(gray, w, h, loc.map, u, v, 1.15/span); };
+  const means = test.rows.map((r,k)=> Array.from({length:r.n}, (_,j)=>{ const p = G.pos(k, j); return meanAt(p.x, p.y); }));
+  const all = means.flat().sort((a,b)=> a-b), paper = all[Math.floor(all.length*0.7)], rng = Math.max(30, paper - loc.ink), sc = m=> Math.max(0, Math.min(1, (paper - m)/rng));
+  let pts = 0, max = 0, right = 0; const warn = [];
+  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = omrPickGroup(o, means[k].map(sc));
+    const ok = pk.state==='ok' && pk.v===r.key; max += r.pt; if(ok){ pts += r.pt; right++; }
+    if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`);
+    return {k, pk, ok, keyIdx:(r.n===2 ? opts2 : opts4).indexOf(r.key)}; });
+  const r2 = x=> Math.round(x*100)/100;
+  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:r2(pts), max:r2(max), right, total:test.rows.length, warn, corners:loc.corners};
+}
+function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô đúng, đỏ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống / tô mờ / tô nhiều ô; ghi điểm cạnh khung
+  const k = Math.min(1, 1700/canvas.width), c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
+  const ctx = c.getContext('2d'); ctx.drawImage(canvas, 0, 0, c.width, c.height);
+  if(!res.ok){ ctx.fillStyle = 'rgba(208,48,43,.9)'; ctx.font = `bold ${Math.round(c.width/38)}px Arial`; ctx.fillText('KHÔNG ĐỌC ĐƯỢC KHUNG TRẢ LỜI', c.width*0.04, c.width*0.05); return c; }
+  const mm = res.pxPerMm*k, P = (x, y)=>{ const [px,py] = res.mapMm(x, y); return [px*k, py*k]; };
+  const ring = (x, y, col, fill)=>{ const [px,py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 2.3*mm, 0, Math.PI*2); if(fill){ ctx.fillStyle = fill; ctx.fill(); } ctx.lineWidth = Math.max(2, 0.45*mm); ctx.strokeStyle = col; ctx.stroke(); };
+  const GREEN = '#12a150', RED = '#d0302b', ORG = '#e08a00';
+  res.picks.forEach(p=>{ const key = res.G.pos(p.k, p.keyIdx);
+    if(p.ok) ring(key.x, key.y, GREEN, 'rgba(18,161,80,.22)');
+    else if(p.pk.state==='ok'){ const ch = res.G.pos(p.k, p.pk.i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); const [px,py] = P(ch.x, ch.y), d = 2.1*mm; ctx.beginPath(); ctx.moveTo(px-d,py-d); ctx.lineTo(px+d,py+d); ctx.moveTo(px+d,py-d); ctx.lineTo(px-d,py+d); ctx.stroke(); ring(key.x, key.y, GREEN); }
+    else { if(p.pk.state==='multi'){ [p.pk.i, p.pk.i2].forEach(i=>{ const ch = res.G.pos(p.k, i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); }); } ring(key.x, key.y, ORG); } });
+  // điểm: ghi ở dải đáy của khung, bên phải (chỗ trống cạnh mã bài)
+  const txt = `Điểm TN: ${fmtVN(res.pts)}/${fmtVN(res.max)}  (đúng ${res.right}/${res.total})`, fs = Math.max(13, 3.7*mm);
+  ctx.font = `bold ${fs}px Arial`; const tw = ctx.measureText(txt).width, [tx, ty] = P(WAK.W - 6, res.G.H - 0.7);
+  const [ax, ay] = P(WAK.W - 6 - 10, res.G.H - 0.7), ang = Math.atan2(ty-ay, tx-ax);
+  ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(-tw - 10, -fs*1.05, tw + 14, fs*1.35); ctx.fillStyle = RED; ctx.fillText(txt, -tw - 3, 0); ctx.restore();
+  // ảnh chụp ngang hoặc ngược: xoay lại cho khung nằm đúng chiều để dễ đọc tên
+  const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
+  if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); return o; }
+  return c;
+}
+
+/* ===== Mã đáp án (QR / chữ): MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
+function parsePayload(s){
+  const m = String(s||'').trim().match(/^MBP1;(\d+);([^;]*);(.+)$/s); if(!m) return null;
+  const rows = [];
+  for(const tok of m[3].split(',')){ const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z])$/); if(!t) return null;
+    const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:parseInt(t[3], 36)/4}); }
+  return rows.length ? {id:+m[1], name:m[2], rows, at:Date.now()} : null;
+}
+/* ===== Trạng thái ===== */
+const $ = id=> document.getElementById(id);
+let tests = []; try{ tests = JSON.parse(localStorage.getItem('mbpscan_tests') || '[]'); }catch(e){}
+let results = [];
+const saveTests = ()=>{ try{ localStorage.setItem('mbpscan_tests', JSON.stringify(tests)); }catch(e){} };
+const pickTest = id=> tests.find(t=> t.id===id);
+function toast(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(()=> el.classList.remove('on'), ms || 2200); }
+/* kết quả giữ trong IndexedDB để không mất khi lỡ đóng ứng dụng */
+const idb = { db:null,
+  open(){ return new Promise(res=>{ try{ const r = indexedDB.open('mbpscan', 1); r.onupgradeneeded = ()=> r.result.createObjectStore('kv'); r.onsuccess = ()=>{ idb.db = r.result; res(); }; r.onerror = ()=> res(); }catch(e){ res(); } }); },
+  get(k){ return new Promise(res=>{ if(!idb.db) return res(null); const q = idb.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=> res(q.result); q.onerror = ()=> res(null); }); },
+  set(k, v){ if(!idb.db) return; try{ idb.db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); }catch(e){} } };
+const saveResults = ()=> idb.set('results', results);
+
+/* ===== Điều hướng ===== */
+let view = 'scan';
+function go(v){ view = v; document.querySelectorAll('.view').forEach(s=> s.classList.toggle('on', s.id==='v-'+v)); document.querySelectorAll('nav button').forEach(b=> b.classList.toggle('on', b.dataset.v===v));
+  if(v==='scan') camStart(); else camStop(); if(v!=='tests') qrStop(); if(v==='tests') drawTests(); if(v==='res') drawResults(); drawHeader(); }
+document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=> go(b.dataset.v));
+function drawHeader(){ $('hdInfo').textContent = tests.length + ' đề · ' + results.length + ' bài đã chấm'; }
+
+/* ===== Camera + vòng lặp đọc ===== */
+let stream = null, loopOn = false, lastSig = '', sameCount = 0, frozen = false, pending = null;
+const work = document.createElement('canvas');
+async function camStart(){
+  if(stream || frozen) { loopOn = !frozen; if(loopOn) tick(); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('hint').innerHTML = '<b>Trình duyệt này không mở được camera trực tiếp</b>Hãy dùng nút “Chọn ảnh” ở góc trên để chụp từng bài.'; return; }
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:2560}, height:{ideal:1440}}});
+    const v = $('vid'); v.srcObject = stream; await v.play().catch(()=>{});
+    const tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    if(caps.torch){ const b = $('bTorch'); b.style.display = ''; let on = false; b.onclick = ()=>{ on = !on; tr.applyConstraints({advanced:[{torch:on}]}).catch(()=>{}); b.style.background = on ? 'var(--gold)' : ''; }; }
+    try{ if(caps.focusMode && caps.focusMode.includes('continuous')) tr.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
+    loopOn = true; lastSig = ''; sameCount = 0; tick();
+  }catch(e){ $('hint').innerHTML = '<b>Chưa được phép dùng camera</b>Hãy cho phép camera cho trang này, hoặc dùng nút “Chọn ảnh”.'; }
+}
+function camStop(){ loopOn = false; if(stream){ stream.getTracks().forEach(t=> t.stop()); stream = null; $('vid').srcObject = null; } }
+function hint(a, b){ $('hint').innerHTML = '<b>' + a + '</b>' + (b||''); }
+function drawQuad(corners, sx, sy, col){ const c = $('ov'), v = $('vid'); c.width = v.clientWidth; c.height = v.clientHeight; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); if(!corners) return;
+  // video hiển thị kiểu "contain": tính tỉ lệ và lề
+  const k = Math.min(c.width/v.videoWidth, c.height/v.videoHeight), ox = (c.width - v.videoWidth*k)/2, oy = (c.height - v.videoHeight*k)/2;
+  x.lineWidth = 4; x.strokeStyle = col; x.beginPath(); corners.forEach((p,i)=>{ const px = ox + p.x*sx*k, py = oy + p.y*sy*k; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.closePath(); x.stroke(); }
+function tick(){
+  if(!loopOn) return; const v = $('vid');
+  if(!v.videoWidth){ setTimeout(tick, 200); return; }
+  if(!tests.length){ hint('Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án từ máy tính.'); drawQuad(null); setTimeout(tick, 600); return; }
+  const k = Math.min(1, 1500/Math.max(v.videoWidth, v.videoHeight)); work.width = Math.round(v.videoWidth*k); work.height = Math.round(v.videoHeight*k);
+  const cx = work.getContext('2d', {willReadFrequently:true}); cx.drawImage(v, 0, 0, work.width, work.height);
+  let res; try{ res = wakRead(cx.getImageData(0, 0, work.width, work.height), pickTest); }catch(e){ res = {ok:false}; }
+  if(!res.ok){
+    if(res.id != null){ hint('Mã bài ' + res.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'); }
+    else hint('Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.');
+    drawQuad(null); lastSig = ''; sameCount = 0; setTimeout(tick, 160); return;
+  }
+  const sig = res.id + '|' + res.picks.map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state[0]).join('');
+  sameCount = sig===lastSig ? sameCount + 1 : 0; lastSig = sig;
+  drawQuad(res.corners, 1/k, 1/k, sameCount ? '#12a150' : '#e0b030'); hint('Đã thấy khung — giữ yên…', 'Mã bài ' + res.id + ' · ' + res.test.name);
+  if(sameCount >= 2){ capture(); return; }
+  setTimeout(tick, 120);
+}
+function capture(){   // đọc lại trên khung hình đủ nét rồi chốt
+  const v = $('vid'), full = document.createElement('canvas'); full.width = v.videoWidth; full.height = v.videoHeight; const cx = full.getContext('2d'); cx.drawImage(v, 0, 0);
+  let res; try{ res = wakRead(cx.getImageData(0, 0, full.width, full.height), pickTest); }catch(e){ res = {ok:false}; }
+  if(!res.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 120); return; }
+  showShot(full, res);
+}
+function showShot(canvas, res){
+  const url = wakAnnotate(canvas, res).toDataURL('image/jpeg', 0.85);
+  pending = {url, ok:res.ok, id:res.id, pts:res.pts, max:res.max, right:res.right, total:res.total, warn:res.warn||[], at:Date.now()};
+  frozen = true; loopOn = false; drawQuad(null);
+  $('shotImg').src = url; $('shotScore').innerHTML = fmtVN(res.pts) + '<small>/' + fmtVN(res.max) + ' · đúng ' + res.right + '/' + res.total + '</small>';
+  $('shotWarn').textContent = (res.warn && res.warn.length) ? '⚠ Xem lại: ' + res.warn.join('; ') : '';
+  $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
+}
+function closeShot(keep){ if(keep && pending){ results.push(pending); saveResults(); } pending = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
+$('bNext').onclick = ()=> closeShot(true);
+$('bDrop').onclick = ()=> closeShot(false);
+/* chọn ảnh có sẵn / chụp bằng ứng dụng camera */
+$('fPick').onchange = async e=>{
+  const files = [...e.target.files]; e.target.value = ''; if(!files.length) return;
+  if(!tests.length){ toast('Chưa có đáp án — vào thẻ “Đề” để nạp trước.'); return; }
+  let okN = 0, last = null;
+  for(const f of files){
+    const img = await new Promise(res=>{ const im = new Image(); im.onload = ()=> res(im); im.onerror = ()=> res(null); im.src = URL.createObjectURL(f); }); if(!img) continue;
+    const k = Math.min(1, 2400/Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, c.width, c.height);
+    let res; try{ res = wakRead(cx.getImageData(0, 0, c.width, c.height), pickTest); }catch(err){ res = {ok:false}; }
+    if(res.ok){ okN++; if(files.length===1){ last = {c, res}; } else { results.push({url:wakAnnotate(c, res).toDataURL('image/jpeg', 0.85), ok:true, id:res.id, pts:res.pts, max:res.max, right:res.right, total:res.total, warn:res.warn||[], at:Date.now()}); } }
+  }
+  if(last){ showShot(last.c, last.res); return; }
+  saveResults(); drawHeader(); toast(files.length===1 ? 'Không đọc được khung trả lời trong ảnh này.' : 'Đã chấm ' + okN + '/' + files.length + ' ảnh.', 3000); if(okN && files.length > 1) go('res');
+};
+
+/* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
+function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); drawTests(); drawHeader(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
+function drawTests(){ const el = $('testList');
+  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') : '<p class="mut" style="margin:0">Chưa có đề nào.</p>';
+  el.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ if(confirm('Xoá đáp án mã bài ' + b.dataset.del + '?')){ tests = tests.filter(t=> String(t.id)!==b.dataset.del); saveTests(); drawTests(); drawHeader(); } }); }
+const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let qrStream = null, qrOn = false;
+async function qrStart(){
+  if(!('BarcodeDetector' in window)){ toast('Máy này không quét được mã QR trong trình duyệt. Hãy dán mã đáp án dạng chữ (mục bên dưới).', 4200); return; }
+  try{ qrStream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}}}); }catch(e){ toast('Chưa được phép dùng camera.'); return; }
+  $('qrBox').style.display = ''; $('bQr').style.display = 'none'; const v = $('qrVid'); v.srcObject = qrStream; await v.play().catch(()=>{});
+  const det = new BarcodeDetector({formats:['qr_code']}); qrOn = true;
+  const loop = async ()=>{ if(!qrOn) return; try{ const codes = await det.detect(v); for(const c of codes){ const t = parsePayload(c.rawValue); if(t){ qrStop(); addTest(t); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){} return; } } }catch(e){} setTimeout(loop, 180); };
+  loop();
+}
+function qrStop(){ qrOn = false; if(qrStream){ qrStream.getTracks().forEach(t=> t.stop()); qrStream = null; } $('qrBox').style.display = 'none'; $('bQr').style.display = ''; }
+$('bQr').onclick = qrStart; $('bQrStop').onclick = qrStop;
+$('bPaste').onclick = ()=>{ const t = parsePayload($('tPaste').value); if(!t){ toast('Mã không đúng định dạng (phải bắt đầu bằng MBP1;).'); return; } $('tPaste').value = ''; addTest(t); };
+
+/* ===== Kết quả ===== */
+const fileName = (r, i)=> String(i+1).padStart(2, '0') + '_diem_' + fmtVN(r.pts) + '.jpg';
+const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
+function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
+async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài kiểm tra đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i])=> download(r, i)); }
+function drawResults(){ const avg = results.length ? Math.round(100*results.reduce((s,r)=> s + r.pts, 0)/results.length)/100 : 0;
+  $('resTitle').textContent = results.length ? results.length + ' bài · trung bình ' + fmtVN(avg) : 'Chưa có bài nào';
+  ['bShare','bSave','bClear'].forEach(id=> $(id).disabled = !results.length);
+  $('resGrid').innerHTML = results.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt=""><div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+  $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i)); }
+let zi = -1;
+function zoom(i){ zi = i; $('zoomImg').src = results[i].url; $('zoom').classList.add('on'); }
+$('zClose').onclick = ()=> $('zoom').classList.remove('on');
+$('zSave').onclick = ()=> download(results[zi], zi);
+$('zShare').onclick = ()=> share([[results[zi], zi]]);
+$('zDel').onclick = ()=>{ if(confirm('Xoá bài này khỏi kết quả?')){ results.splice(zi, 1); saveResults(); $('zoom').classList.remove('on'); drawResults(); drawHeader(); } };
+$('bShare').onclick = ()=> share(results.map((r,i)=> [r, i]));
+$('bSave').onclick = ()=> results.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
+$('bClear').onclick = ()=>{ if(confirm('Xoá toàn bộ ' + results.length + ' bài đã chấm trên điện thoại?')){ results = []; saveResults(); drawResults(); drawHeader(); } };
+
+/* ===== Khởi động ===== */
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
+(async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; drawHeader(); go(tests.length ? 'scan' : 'tests'); })();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
