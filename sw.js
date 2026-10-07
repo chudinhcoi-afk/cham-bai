@@ -1,5 +1,5 @@
 // MBP Chấm bài — lưu sẵn ứng dụng để mở được khi không có mạng. Đổi số phiên bản khi cập nhật tệp.
-const CACHE = 'mbp-scan-v3';
+const CACHE = 'mbp-scan-v4';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e=>{ e.waitUntil(caches.open(CACHE).then(c=> c.addAll(FILES)).then(()=> self.skipWaiting())); });
 self.addEventListener('activate', e=>{ e.waitUntil(caches.keys().then(ks=> Promise.all(ks.filter(k=> k!==CACHE).map(k=> caches.delete(k)))).then(()=> self.clients.claim())); });

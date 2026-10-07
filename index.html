@@ -42,6 +42,13 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .hint{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;color:#fff;font-size:.92rem;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.72))}
 .hint b{display:block;font-size:1rem;margin-bottom:2px}
 .camtop{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px}
+#nowBar{position:absolute;top:56px;left:10px;right:10px;background:rgba(20,28,58,.82);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-size:.9rem;text-align:left;line-height:1.3;display:flex;align-items:center;gap:8px}
+#nowBar b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#nowBar small{opacity:.75;font-size:.75rem;display:block}
+#nowBar .tx{flex:1;min-width:0}
+.test.tap{cursor:pointer}
+.test.cur .nm{font-weight:700}
+.test.cur{background:#fff8e0;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:8px}
 .chip{background:rgba(20,28,58,.78);color:#fff;border:0;border-radius:20px;padding:8px 13px;font-size:.85rem;font-weight:600;min-height:38px}
 .shot{display:none;position:absolute;inset:0;background:#0d1226;flex-direction:column}
 .shot.on{display:flex}
@@ -101,6 +108,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
         <button class="chip" id="bMode">📝 Kiểm tra</button><button class="chip" id="bTorch" style="display:none">🔦 Đèn</button>
         <label class="chip" style="margin-left:auto;display:inline-flex;align-items:center">🖼 Chọn ảnh<input type="file" id="fPick" accept="image/*" multiple hidden></label>
       </div>
+      <button id="nowBar"><span class="tx"><small>Đang chấm</small><b id="nowName"></b></span><span>Đổi ›</span></button>
       <div class="hint" id="hint"><b>Đang mở camera…</b></div>
       <div class="shot" id="shot">
         <div class="pic"><img id="shotImg" alt="Bài đã chấm"></div>
@@ -503,7 +511,7 @@ function examAnnotate(canvas, res, ex, g){   // xanh = đúng, đỏ ✕ = tô s
 /* ===== Trạng thái ===== */
 const $ = id=> document.getElementById(id);
 const ls = (k, d)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } }, lsSet = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
-let tests = ls('mbpscan_tests', []), exams = ls('mbpscan_exams', []), activeExam = ls('mbpscan_active', null), mode = ls('mbpscan_mode', 'ws');
+let tests = ls('mbpscan_tests', []), exams = ls('mbpscan_exams', []), activeExam = ls('mbpscan_active', null), mode = ls('mbpscan_mode', 'ws'), pinTest = ls('mbpscan_pin', null);   // pinTest: mã bài kiểm tra đang chấm (null = tự nhận theo mã in trên đề)
 let results = [], xres = {};   // xres[id đề thi] = danh sách bài đã chấm
 const saveTests = ()=> lsSet('mbpscan_tests', tests), saveExams = ()=>{ lsSet('mbpscan_exams', exams); lsSet('mbpscan_active', activeExam); };
 const pickTest = id=> tests.find(t=> t.id===id), curExam = ()=> exams.find(e=> e.id===activeExam) || null;
@@ -520,7 +528,12 @@ let view = 'scan';
 function go(v){ view = v; document.querySelectorAll('.view').forEach(s=> s.classList.toggle('on', s.id==='v-'+v)); document.querySelectorAll('nav button').forEach(b=> b.classList.toggle('on', b.dataset.v===v));
   if(v==='scan') camStart(); else camStop(); if(v!=='tests') qrStop(); if(v==='tests') drawTests(); if(v==='res') drawResults(); drawHeader(); }
 document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=> go(b.dataset.v));
-function drawHeader(){ const ex = curExam(), nx = ex ? (xres[ex.id]||[]).length : 0; $('hdInfo').textContent = mode==='exam' ? (ex ? nx + ' phiếu đã chấm' : 'chưa có đề thi') : tests.length + ' đề · ' + results.length + ' bài'; $('bMode').textContent = mode==='exam' ? '🎓 Đề thi' : '📝 Kiểm tra'; }
+function drawHeader(){ const ex = curExam(), nx = ex ? (xres[ex.id]||[]).length : 0; $('hdInfo').textContent = mode==='exam' ? (ex ? nx + ' phiếu đã chấm' : 'chưa có đề thi') : tests.length + ' đề · ' + results.length + ' bài'; $('bMode').textContent = mode==='exam' ? '🎓 Đề thi' : '📝 Kiểm tra';
+  if(pinTest != null && !pickTest(pinTest)){ pinTest = null; lsSet('mbpscan_pin', null); }
+  const pt = pinTest != null ? pickTest(pinTest) : null;
+  $('nowName').textContent = mode==='exam' ? (ex ? ex.title : 'Chưa có đề thi — chạm để nạp') : pt ? 'Mã bài ' + pt.id + ' · ' + (pt.name || 'Bài kiểm tra') : tests.length ? 'Tự nhận đề theo mã in trên bài (' + tests.length + ' đề)' : 'Chưa có đáp án — chạm để nạp'; }
+$('nowBar').onclick = ()=> go('tests');
+function startGrade(kind, id){ if(kind==='exam'){ activeExam = id; saveExams(); } else { pinTest = id; lsSet('mbpscan_pin', id); } setMode(kind); go('scan'); }
 function setMode(m){ mode = m; lsSet('mbpscan_mode', m); lastSig = ''; sameCount = 0; drawHeader(); }
 $('bMode').onclick = ()=>{ setMode(mode==='exam' ? 'ws' : 'exam'); toast(mode==='exam' ? 'Chế độ ĐỀ THI: phiếu trả lời chung, có số báo danh và mã đề.' : 'Chế độ KIỂM TRA: đề có khung trả lời ở đầu trang.', 2600); };
 
@@ -554,6 +567,7 @@ function readFrame(img){
   if(!tests.length) return {ok:false, why:['Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án từ máy tính.']};
   let r; try{ r = wakRead(img, pickTest); }catch(e){ r = {ok:false}; }
   if(!r.ok) return {ok:false, why: r.id != null ? ['Mã bài ' + r.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'] : ['Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.']};
+  if(pinTest != null && r.id !== pinTest) return {ok:false, corners:r.corners, why:['Bài này thuộc đề khác: mã bài ' + r.id + ' · ' + esc(r.test.name || ''), 'Đang chấm mã bài ' + pinTest + '. Chạm tên đề ở trên để đổi.']};
   return {ok:true, kind:'ws', r, corners:r.corners, sig:r.id + '|' + r.picks.map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state[0]).join(''), label:'Mã bài ' + r.id + ' · ' + r.test.name};
 }
 function tick(){
@@ -584,6 +598,7 @@ function showShot(canvas, f){
   pending = makeRecord(canvas, f); frozen = true; loopOn = false; drawQuad(null);
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
+  { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
   $('shotWarn').textContent = pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '';
   $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
 }
@@ -603,7 +618,7 @@ $('fPick').onchange = async e=>{
 };
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
-function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); setMode('ws'); drawTests(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
+function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); pinTest = t.id; lsSet('mbpscan_pin', t.id); setMode('ws'); drawTests(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
 function addExam(ex){ const i = exams.findIndex(x=> x.id===ex.id); if(i >= 0) exams[i] = ex; else exams.push(ex); if(exams.length > 12) exams.shift(); activeExam = ex.id; saveExams(); setMode('exam'); drawTests(); toast('Đã nạp đề thi: ' + Object.keys(ex.variants).length + ' mã đề, ' + ex.order.length + ' học sinh.', 3200); }
 async function takeCode(raw){   // trả về true nếu đã nạp xong một đề
   raw = String(raw||'').trim();
@@ -618,11 +633,13 @@ async function takeCode(raw){   // trả về true nếu đã nạp xong một �
 }
 function drawTests(){
   const xl = $('examList');
-  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<label class="test"><input type="radio" name="ax" value="' + e.id + '"' + (e.id===activeExam ? ' checked' : '') + '><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div><button class="btn" data-xdel="' + e.id + '">Xoá</button></label>').join('') + '<p class="mut" style="margin:8px 0 0">Dấu chọn là đề đang chấm.</p>' : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
-  xl.querySelectorAll('input[name=ax]').forEach(r=> r.onchange = ()=>{ activeExam = r.value; saveExams(); setMode('exam'); });
+  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<label class="test tap' + (mode==='exam' && e.id===activeExam ? ' cur' : '') + '"><input type="radio" name="ax" value="' + e.id + '"' + (e.id===activeExam ? ' checked' : '') + '><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div><button class="btn" data-xdel="' + e.id + '">Xoá</button></label>').join('') + '<p class="mut" style="margin:8px 0 0">Chạm vào một đề để mở máy ảnh chấm đề đó.</p>' : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
+  xl.querySelectorAll('input[name=ax]').forEach(r=> r.onclick = ()=> startGrade('exam', r.value));
   xl.querySelectorAll('[data-xdel]').forEach(b=> b.onclick = ev=>{ ev.preventDefault(); if(confirm('Xoá đề thi này cùng các bài đã chấm của nó trên điện thoại?')){ const id = b.dataset.xdel; exams = exams.filter(e=> e.id!==id); delete xres[id]; if(activeExam===id) activeExam = exams.length ? exams[exams.length-1].id : null; saveExams(); saveX(); drawTests(); drawHeader(); } });
   const el = $('testList');
-  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
+  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test tap' + (mode==='ws' && pinTest===t.id ? ' cur' : '') + '" data-go="' + t.id + '"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') + '<p class="mut" style="margin:8px 0 0">Chạm vào một đề để mở máy ảnh chấm riêng đề đó (bài của đề khác sẽ bị báo).' + (tests.length > 1 ? ' <a href="#" id="aAuto">Chấm lẫn nhiều đề, tự nhận theo mã bài</a>' : '') + '</p>' : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
+  el.querySelectorAll('[data-go]').forEach(d=> d.onclick = ev=>{ if(ev.target.closest('[data-del]')) return; startGrade('ws', +d.dataset.go); });
+  const au = $('aAuto'); if(au) au.onclick = ev=>{ ev.preventDefault(); pinTest = null; lsSet('mbpscan_pin', null); setMode('ws'); go('scan'); };
   el.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ if(confirm('Xoá đáp án mã bài ' + b.dataset.del + '?')){ tests = tests.filter(t=> String(t.id)!==b.dataset.del); saveTests(); drawTests(); drawHeader(); } }); }
 let qrStream = null, qrOn = false;
 async function qrStart(){
