@@ -137,7 +137,8 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
         <div class="pic"><img id="shotImg" alt="Bài đã chấm"></div>
         <div class="bar">
           <div><div class="score" id="shotScore"></div><div class="warn" id="shotWarn"></div></div>
-          <button class="btn" id="bDrop" style="margin-left:auto">Bỏ</button>
+          <button class="btn" id="bSend" style="margin-left:auto" aria-label="Gửi ảnh bài này qua Zalo hoặc ứng dụng khác">📤 Gửi</button>
+          <button class="btn" id="bDrop">Bỏ</button>
           <button class="btn pri" id="bNext">Bài tiếp ➜</button>
         </div>
       </div>
@@ -187,7 +188,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 </nav>
 <div id="sheet"></div>
 <div id="toast"></div>
-<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Chia sẻ</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
+<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Gửi (Zalo…)</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
 
 <script>
 "use strict";
@@ -637,6 +638,7 @@ function showShot(canvas, f){
 function closeShot(ok){ if(ok && pending) keep(pending); pending = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
 $('bNext').onclick = ()=> closeShot(true);
 $('bDrop').onclick = ()=> closeShot(false);
+$('bSend').onclick = ()=>{ if(pending) share([[pending, 0]]); };   // gửi ngay ảnh vừa chấm (Zalo, Messenger, Gmail… theo bảng chia sẻ của máy)
 $('fPick').onchange = async e=>{
   const files = [...e.target.files]; e.target.value = ''; if(!files.length) return; let okN = 0, last = null;
   for(const file of files){
@@ -764,7 +766,7 @@ function drawResults(){
   const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> r.pts), mx = list.length ? list[0].max : 0, ex = rvExam();
   $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
   $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
-  $('gActs').innerHTML = (ex ? '<button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '') + '<button class="btn' + (ex ? '' : ' gold') + '" id="bShare">📤 Chia sẻ ảnh</button><button class="btn" id="bSave">⬇ Tải ảnh</button>';
+  $('gActs').innerHTML = (ex ? '<button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '') + '<button class="btn' + (ex ? '' : ' gold') + '" id="bShare">📤 Gửi ảnh (Zalo…)</button><button class="btn" id="bSave">⬇ Tải ảnh</button>';
   $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i])); $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
   $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
   if(ex){
