@@ -75,6 +75,19 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .tb tr.bad td{background:#fff4f2}
 .tb b{color:var(--bad)}
 .test input[type=radio]{width:20px;height:20px}
+.grp{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.grp .ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:#eef0f7;flex:none}
+.grp .tx{flex:1;min-width:0}
+.grp .tx b{display:block;font-size:.98rem;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp .tx small{color:var(--mut);font-size:.82rem}
+.grp .sc{text-align:right;flex:none}
+.grp .sc b{display:block;font-size:1.15rem;color:var(--navy)}
+.grp .sc small{color:var(--mut);font-size:.74rem}
+.sec{font-size:.78rem;font-weight:700;letter-spacing:.06em;color:var(--mut);text-transform:uppercase;margin:14px 2px 8px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.stats div{background:#f4f5f9;border-radius:10px;padding:8px 4px;text-align:center}
+.stats b{display:block;font-size:1.15rem}
+.stats small{color:var(--mut);font-size:.72rem}
 </style>
 </head>
 <body>
@@ -119,27 +132,21 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
   </section>
 
   <section class="view" id="v-res">
-    <div class="card" id="xCard" style="display:none">
-      <h3 id="xTitle">Bảng điểm</h3>
-      <div class="row" style="margin:8px 0 10px">
-        <button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button>
-        <button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>
-        <button class="btn" id="bXImgs">📤 Ảnh</button>
-        <button class="btn" id="bXClear" style="margin-left:auto">🗑</button>
+    <div id="resList"></div>
+    <div id="resDetail" style="display:none">
+      <div class="row" style="margin-bottom:10px"><button class="btn" id="bBack">‹ Các lần chấm</button><button class="btn" id="bRename" style="margin-left:auto">✏ Đổi tên</button><button class="btn" id="bGDel">🗑</button></div>
+      <div class="card">
+        <h3 id="gTitle" style="margin-bottom:2px"></h3>
+        <div class="mut" id="gSub"></div>
+        <div class="stats" id="gStats"></div>
+        <div class="row" id="gActs" style="margin-top:12px"></div>
       </div>
-      <div style="overflow:auto;max-height:52vh;border:1px solid var(--line);border-radius:10px"><table class="tb" id="xTable"></table></div>
-      <p class="mut" style="margin:8px 0 0">Chạm vào một dòng đã chấm để xem ảnh. Dòng “—” là học sinh chưa có bài.</p>
-    </div>
-    <div class="card">
-      <div class="row"><h3 style="margin:0" id="resTitle">Kết quả</h3></div>
-      <div class="row" style="margin-top:10px">
-        <button class="btn gold" id="bShare">📤 Chia sẻ tất cả</button>
-        <button class="btn" id="bSave">⬇ Tải tất cả</button>
-        <button class="btn" id="bClear" style="margin-left:auto">🗑 Xoá</button>
+      <div class="card" id="xCard" style="display:none;padding:0;overflow:hidden">
+        <div style="overflow:auto;max-height:58vh"><table class="tb" id="xTable"></table></div>
+        <p class="mut" style="margin:8px 12px 10px">Chạm vào một dòng đã chấm để xem ảnh. Dòng “—” là học sinh chưa có bài.</p>
       </div>
-      <p class="mut" style="margin:10px 0 0">Ảnh đã ghi điểm trắc nghiệm; tên học sinh đọc trên ảnh. Chạm vào ảnh để xem lớn.</p>
+      <div class="grid" id="resGrid"></div>
     </div>
-    <div class="grid" id="resGrid"></div>
   </section>
 </main>
 <nav>
@@ -570,7 +577,7 @@ function capture(){
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).slice(); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
     return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
-  const r = f.r; return {kind:'ws', ok:true, id:r.id, pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
+  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
 }
 function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 function showShot(canvas, f){
@@ -592,7 +599,7 @@ $('fPick').onchange = async e=>{
     okN++; if(files.length===1) last = {c, f}; else keep(makeRecord(c, f));
   }
   if(last){ showShot(last.c, last.f); return; }
-  drawHeader(); if(files.length > 1){ toast('Đã chấm ' + okN + '/' + files.length + ' ảnh.', 3000); if(okN) go('res'); }
+  drawHeader(); if(files.length > 1){ toast('Đã chấm ' + okN + '/' + files.length + ' ảnh.', 3000); if(okN){ rv = null; go('res'); } }
 };
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
@@ -630,45 +637,77 @@ function qrStop(){ qrOn = false; if(qrStream){ qrStream.getTracks().forEach(t=> 
 $('bQr').onclick = qrStart; $('bQrStop').onclick = qrStop;
 $('bPaste').onclick = async ()=>{ if(await takeCode($('tPaste').value)) $('tPaste').value = ''; else toast('Mã không đúng (phải bắt đầu bằng MBP1; hoặc MBPZ;).', 3000); };
 
-/* ===== Kết quả ===== */
+/* ===== Kết quả: mỗi LẦN CHẤM là một nhóm =====
+   Đề thi: một nhóm cho mỗi đề đã nạp. Bài kiểm tra: một nhóm cho mỗi (mã bài, ngày chấm). Nhóm đặt lại tên được (ví dụ "11A3 – 15 phút"). */
+let rv = null, labels = ls('mbpscan_labels', {});   // rv = nhóm đang mở: {kind:'x'|'w', key}
+const dayKey = t=>{ const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const dayVN = k=>{ const [y,m,d] = k.split('-'); return d + '/' + m + '/' + y; }, hm = t=>{ const d = new Date(t); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); };
+const avgOf = a=> a.length ? Math.round(100*a.reduce((s,r)=> s + r.pts, 0)/a.length)/100 : 0;
+const wKey = r=> r.id + '@' + dayKey(r.at), wList = key=> results.filter(r=> wKey(r)===key).sort((a,b)=> a.at - b.at);
+function groups(){
+  const out = [];
+  exams.forEach(e=>{ const a = xres[e.id] || []; if(a.length) out.push({kind:'x', key:e.id, title:labels['x'+e.id] || e.title, sub:Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', n:a.length, total:e.order.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+  const by = {}; results.forEach(r=> (by[wKey(r)] = by[wKey(r)] || []).push(r));
+  Object.keys(by).forEach(key=>{ const a = by[key], id = a[0].id, t = pickTest(id), nm = a[0].name || (t && t.name) || 'Bài kiểm tra';
+    out.push({kind:'w', key, title:labels['w'+key] || nm, sub:'Mã bài ' + id, n:a.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+  return out.sort((a,b)=> b.at - a.at);
+}
 const fileName = (r, i)=> r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_' + fmtVN(r.pts) + '.jpg' : String(i+1).padStart(2, '0') + '_diem_' + fmtVN(r.pts) + '.jpg';
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
 function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
 async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
 function xRows(ex){ const list = xres[ex.id] || [], by = {}; list.forEach(r=>{ if(r.sbd) by[r.sbd] = r; }); const rows = ex.order.map(sbd=> ({sbd, st:ex.students[sbd], r:by[sbd]||null})); list.forEach(r=>{ if(!r.sbd || !ex.students[r.sbd]) rows.push({sbd:r.sbd || '?', st:null, r}); }); return rows; }
+const curList = ()=> !rv ? [] : rv.kind==='x' ? (xres[rv.key] || []) : wList(rv.key), rvExam = ()=> rv && rv.kind==='x' ? exams.find(e=> e.id===rv.key) : null;
 function drawResults(){
-  const ex = curExam(), list = ex ? (xres[ex.id] || []) : []; $('xCard').style.display = ex ? '' : 'none';
-  if(ex){ const rows = xRows(ex), done = rows.filter(x=> x.r).length, avg = list.length ? Math.round(100*list.reduce((s,r)=> s + r.pts, 0)/list.length)/100 : 0;
-    $('xTitle').textContent = ex.title + ' — đã chấm ' + done + '/' + rows.length + (list.length ? ' · TB ' + fmtVN(avg) : '');
-    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th><th>Điểm</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td><td><b>' + fmtVN(r.pts) + '</b>' + (r.warn.length ? ' ⚠' : '') + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
-    $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom('x', i); });
-    ['bXSend','bXCsv','bXImgs','bXClear'].forEach(id=> $(id).disabled = !list.length); }
-  const avg = results.length ? Math.round(100*results.reduce((s,r)=> s + r.pts, 0)/results.length)/100 : 0;
-  $('resTitle').textContent = results.length ? 'Bài kiểm tra: ' + results.length + ' bài · trung bình ' + fmtVN(avg) : 'Bài kiểm tra: chưa có bài nào';
-  ['bShare','bSave','bClear'].forEach(id=> $(id).disabled = !results.length);
-  $('resGrid').innerHTML = results.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt=""><div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
-  $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom('w', +el.dataset.i)); }
+  const gs = groups(); if(rv && !gs.some(g=> g.kind===rv.kind && g.key===rv.key)) rv = null;
+  $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
+  if(!rv){
+    const card = g=> '<div class="grp" data-k="' + g.kind + '" data-key="' + esc(g.key) + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + dayVN(dayKey(g.at)) + ' · ' + esc(g.sub) + '</small></div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + '</b><small>bài · TB ' + fmtVN(g.avg) + '</small></div></div>';
+    const xs = gs.filter(g=> g.kind==='x'), ws = gs.filter(g=> g.kind==='w');
+    $('resList').innerHTML = gs.length ? (xs.length ? '<div class="sec">Đề thi giữa kỳ, cuối kỳ</div>' + xs.map(card).join('') : '') + (ws.length ? '<div class="sec">Bài kiểm tra</div>' + ws.map(card).join('') : '')
+      : '<div class="card"><h3>Chưa có bài nào được chấm</h3><p class="mut" style="margin:0">Mỗi lần chấm sẽ thành một mục riêng ở đây: đề thi xếp theo từng đề, bài kiểm tra xếp theo mã bài và ngày chấm.</p></div>';
+    $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; drawResults(); $('v-res').parentElement.scrollTop = 0; });
+    return;
+  }
+  const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> r.pts), mx = list.length ? list[0].max : 0, ex = rvExam();
+  $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
+  $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
+  $('gActs').innerHTML = (ex ? '<button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '') + '<button class="btn' + (ex ? '' : ' gold') + '" id="bShare">📤 Chia sẻ ảnh</button><button class="btn" id="bSave">⬇ Tải ảnh</button>';
+  $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i])); $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
+  $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
+  if(ex){
+    const rows = xRows(ex);
+    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(r.pts) + '</b>' + (r.warn.length ? ' ⚠' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
+    $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
+    $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('bXSend').onclick = ()=> sendToPc(ex);
+  } else {
+    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt=""><div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + ' · ' + hm(r.at) + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+    $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
+  }
+}
+$('bBack').onclick = ()=>{ rv = null; drawResults(); };
+$('bRename').onclick = ()=>{ if(!rv) return; const k = rv.kind + rv.key, g = groups().find(x=> x.kind===rv.kind && x.key===rv.key), v = prompt('Tên của lần chấm này (ví dụ: 11A3 – kiểm tra 15 phút):', g ? g.title : ''); if(v === null) return; if(v.trim()) labels[k] = v.trim(); else delete labels[k]; lsSet('mbpscan_labels', labels); drawResults(); };
+$('bGDel').onclick = ()=>{ if(!rv) return; const n = curList().length; if(!confirm('Xoá toàn bộ ' + n + ' bài của lần chấm này trên điện thoại?')) return;
+  if(rv.kind==='x'){ delete xres[rv.key]; saveX(); } else { const key = rv.key; results = results.filter(r=> wKey(r)!==key); saveResults(); } delete labels[rv.kind + rv.key]; lsSet('mbpscan_labels', labels); rv = null; drawResults(); drawHeader(); };
 const csvCell = t=> '"' + String(t == null ? '' : t).replace(/"/g, '""') + '"';
-$('bXCsv').onclick = async ()=>{ const ex = curExam(); if(!ex) return;
+async function exportCsv(ex, title){
   const csv = '﻿STT,SBD,Họ và tên,Lớp,Mã đề,Phần I,Phần II,Phần III,Điểm trắc nghiệm,Tối đa\n' + xRows(ex).map((x,i)=>{ const r = x.r; return [i+1, csvCell(x.sbd), csvCell(x.st ? x.st.name : ''), csvCell(x.st ? x.st.lop : ''), r ? csvCell(r.made) : '', r ? r.c[0] + '/' + r.c[1] : '', r ? r.c[2] + '/' + r.c[3] : '', r ? r.c[4] + '/' + r.c[5] : '', r ? csvCell(fmtVN(r.pts)) : '', r ? csvCell(fmtVN(r.max)) : ''].join(','); }).join('\n') + '\n';
-  const file = new File([csv], 'bang_diem.csv', {type:'text/csv'});
+  const name = 'Bang_diem_' + String(title).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0, 40) + '.csv', file = new File([csv], name, {type:'text/csv'});
   try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Bảng điểm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = 'bang_diem.csv'; document.body.appendChild(a); a.click(); a.remove(); };
-$('bXSend').onclick = async ()=>{ const ex = curExam(); if(!ex) return; const list = xres[ex.id] || [];
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+}
+async function sendToPc(ex){ const list = xres[ex.id] || [];
   const text = 'MBPR;' + ex.id + '\n' + list.filter(r=> r.sbd).map(r=> [r.sbd, r.made, r.tn, r.ds.replace(/Đ/g,'T').replace(/S/g,'F'), (r.tln||[]).join('|')].join(';')).join('\n');
   try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
-  try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } };
-$('bXImgs').onclick = ()=>{ const ex = curExam(); if(ex) share((xres[ex.id]||[]).map((r,i)=> [r, i])); };
-$('bXClear').onclick = ()=>{ const ex = curExam(); if(ex && confirm('Xoá toàn bộ ' + (xres[ex.id]||[]).length + ' phiếu đã chấm của đề này trên điện thoại?')){ delete xres[ex.id]; saveX(); drawResults(); drawHeader(); } };
-let zk = 'w', zi = -1; const zList = ()=> zk==='x' ? (xres[activeExam] || []) : results;
-function zoom(kind, i){ zk = kind; zi = i; $('zoomImg').src = zList()[i].url; $('zoom').classList.add('on'); }
+  try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } }
+let zi = -1;
+function zoom(i){ zi = i; $('zoomImg').src = curList()[i].url; $('zoom').classList.add('on'); }
 $('zClose').onclick = ()=> $('zoom').classList.remove('on');
-$('zSave').onclick = ()=> download(zList()[zi], zi);
-$('zShare').onclick = ()=> share([[zList()[zi], zi]]);
-$('zDel').onclick = ()=>{ if(confirm('Xoá bài này khỏi kết quả?')){ zList().splice(zi, 1); zk==='x' ? saveX() : saveResults(); $('zoom').classList.remove('on'); drawResults(); drawHeader(); } };
-$('bShare').onclick = ()=> share(results.map((r,i)=> [r, i]));
-$('bSave').onclick = ()=> results.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
-$('bClear').onclick = ()=>{ if(confirm('Xoá toàn bộ ' + results.length + ' bài kiểm tra đã chấm trên điện thoại?')){ results = []; saveResults(); drawResults(); drawHeader(); } };
+$('zSave').onclick = ()=> download(curList()[zi], zi);
+$('zShare').onclick = ()=> share([[curList()[zi], zi]]);
+$('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) return; const r = curList()[zi];
+  if(rv.kind==='x'){ const a = xres[rv.key]; a.splice(a.indexOf(r), 1); if(!a.length) delete xres[rv.key]; saveX(); } else { results.splice(results.indexOf(r), 1); saveResults(); }
+  $('zoom').classList.remove('on'); drawResults(); drawHeader(); };
 
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
