@@ -441,6 +441,14 @@ function wakLocate(gray, w, h){
     } }
   return best;
 }
+// Khung trả lời bài kiểm tra: mỗi câu chỉ tô MỘT ô nên xét thêm độ NỔI BẬT so với các ô còn lại trong câu.
+// Bút chì / bản photo thường nhạt hơn ngưỡng tuyệt đối; ô đậm rõ nhất và hơn hẳn ô đứng thứ hai thì vẫn nhận.
+function wakPick(opts, scores){
+  const pk = omrPickGroup(opts, scores); if(pk.state==='ok' || pk.state==='multi') return pk;
+  const idx = scores.map((s,i)=> i).sort((a,b)=> scores[b]-scores[a]), s1 = scores[idx[0]], s2 = idx.length > 1 ? scores[idx[1]] : 0;
+  if(s1 >= 0.16 && s1 - s2 >= 0.10 && s2 <= 0.55*s1) return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:s1 < 0.26};
+  return pk;
+}
 function wakRead(img, pickTest){
   const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h);
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
@@ -452,9 +460,9 @@ function wakRead(img, pickTest){
   const means = test.rows.map((r,k)=> Array.from({length:r.n}, (_,j)=>{ const p = G.pos(k, j); return meanAt(p.x, p.y); }));
   const all = means.flat().sort((a,b)=> a-b), paper = all[Math.floor(all.length*0.7)], rng = Math.max(30, paper - loc.ink), sc = m=> Math.max(0, Math.min(1, (paper - m)/rng));
   let pts = 0, max = 0, right = 0; const warn = [];
-  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = omrPickGroup(o, means[k].map(sc));
+  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = wakPick(o, means[k].map(sc));
     const ok = pk.state==='ok' && pk.v===r.key; max += r.pt; if(ok){ pts += r.pt; right++; }
-    if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`);
+    if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, ok, keyIdx:(r.n===2 ? opts2 : opts4).indexOf(r.key)}; });
   const r2 = x=> Math.round(x*100)/100;
   return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:r2(pts), max:r2(max), right, total:test.rows.length, warn, corners:loc.corners};
