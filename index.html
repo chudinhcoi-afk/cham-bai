@@ -67,6 +67,14 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 #zoom.on{display:block}
 #zoom img{width:100%;display:block}
 #zoom .zb{position:sticky;bottom:0;background:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+.tb{width:100%;border-collapse:collapse;font-size:.86rem}
+.tb th,.tb td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.tb th{position:sticky;top:0;background:#f0f2f8;font-weight:700}
+.tb td.n{white-space:normal;min-width:120px}
+.tb tr.done td{background:#f5fbf7}
+.tb tr.bad td{background:#fff4f2}
+.tb b{color:var(--bad)}
+.test input[type=radio]{width:20px;height:20px}
 </style>
 </head>
 <body>
@@ -77,7 +85,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
       <video id="vid" playsinline muted autoplay></video>
       <canvas class="ov" id="ov"></canvas>
       <div class="camtop">
-        <button class="chip" id="bTorch" style="display:none">🔦 Đèn</button>
+        <button class="chip" id="bMode">📝 Kiểm tra</button><button class="chip" id="bTorch" style="display:none">🔦 Đèn</button>
         <label class="chip" style="margin-left:auto;display:inline-flex;align-items:center">🖼 Chọn ảnh<input type="file" id="fPick" accept="image/*" multiple hidden></label>
       </div>
       <div class="hint" id="hint"><b>Đang mở camera…</b></div>
@@ -95,21 +103,33 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
   <section class="view" id="v-tests">
     <div class="card">
       <h3>Nạp đáp án từ máy tính</h3>
-      <p class="mut" style="margin:0 0 10px">Trên MathBankPro: <b>Chấm bài → Bài kiểm tra → Bài kiểm tra đã lưu đáp án → 📱 Mã QR</b>. Mỗi đề chỉ cần nạp một lần; chấm không cần mạng.</p>
+      <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
         <div class="cam" style="height:300px;border-radius:12px"><video id="qrVid" playsinline muted autoplay></video></div>
-        <button class="btn wide" id="bQrStop" style="margin-top:8px">Dừng quét</button>
+        <div class="mut" id="qrStat" style="text-align:center;margin-top:6px"></div><button class="btn wide" id="bQrStop" style="margin-top:8px">Dừng quét</button>
       </div>
       <details style="margin-top:12px"><summary class="mut">Không quét được? Dán mã đáp án dạng chữ</summary>
-        <textarea id="tPaste" placeholder="MBP1;12;…" style="margin-top:8px"></textarea>
+        <textarea id="tPaste" placeholder="MBP1;… hoặc MBPZ;…" style="margin-top:8px"></textarea>
         <button class="btn wide" id="bPaste" style="margin-top:6px">Nạp mã đã dán</button>
       </details>
     </div>
-    <div class="card"><h3>Đề đã nạp</h3><div id="testList"></div></div>
+    <div class="card"><h3>Đề thi giữa kỳ, cuối kỳ</h3><div id="examList"></div></div>
+    <div class="card"><h3>Bài kiểm tra</h3><div id="testList"></div></div>
   </section>
 
   <section class="view" id="v-res">
+    <div class="card" id="xCard" style="display:none">
+      <h3 id="xTitle">Bảng điểm</h3>
+      <div class="row" style="margin:8px 0 10px">
+        <button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button>
+        <button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>
+        <button class="btn" id="bXImgs">📤 Ảnh</button>
+        <button class="btn" id="bXClear" style="margin-left:auto">🗑</button>
+      </div>
+      <div style="overflow:auto;max-height:52vh;border:1px solid var(--line);border-radius:10px"><table class="tb" id="xTable"></table></div>
+      <p class="mut" style="margin:8px 0 0">Chạm vào một dòng đã chấm để xem ảnh. Dòng “—” là học sinh chưa có bài.</p>
+    </div>
     <div class="card">
       <div class="row"><h3 style="margin:0" id="resTitle">Kết quả</h3></div>
       <div class="row" style="margin-top:10px">
@@ -132,10 +152,19 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
 <script>
 "use strict";
-/* ===== Lõi đọc khung trả lời — dùng chung với MathBankPro (giữ nguyên) ===== */
+/* ===== Lõi đọc phiếu — dùng chung với MathBankPro (giữ nguyên) ===== */
 const OMR_FILL = 0.38;          // ngưỡng coi là "đã tô" (tỉ lệ đậm so với mực đen của ô định vị)
 const OMR_WEAK = 0.20;          // dưới ngưỡng tô nhưng trên mức này: tô mờ, cần xem lại
 function fmtVN(n){ const r = Math.round((+n||0)*100)/100; return String(r).replace('.', ','); }
+function parseVN(v){ const x = parseFloat(String(v==null?'':v).replace(',','.')); return isNaN(x) ? null : x; }
+function sameShortAnswer(hs, key){
+  const clean = t=> String(t==null?'':t).trim().replace(/\s+/g,'').replace('.',',').replace(/^\+/,'');
+  const a = clean(hs), b = clean(key);
+  if(!a || a==='?') return false;
+  const na = parseVN(a), nb = parseVN(b);
+  if(na!=null && nb!=null) return Math.abs(na-nb) < 1e-9;
+  return a===b;
+}
 function omrGrayFromImageData(img){
   const {width:w, height:h, data} = img;
   const g = new Uint8Array(w*h);
@@ -227,6 +256,119 @@ function omrPickGroup(opts, scores){
   if(s2 >= OMR_FILL && s2 >= 0.6*s1) return {v:'?', state:'multi', i:idx[0], i2:idx[1]};
   return {v:opts[idx[0]].v, state:'ok', i:idx[0]};
 }
+const OMR_MARKERS = {TL:[3.9,4.2], TR:[139.9,4.2], BL:[3.9,99.1], BR:[139.9,99.1], size:4.2};
+function omrLayout(){
+  const digits = '0123456789'.split('');
+  const L = {sbd:[], made:[], p1:[], p2:[], p3:[]};
+  for(let i=0;i<8;i++) L.sbd.push(digits.map((v,d)=>({x:14.0+i*3.1, y:15.2+d*3.13, v})));
+  for(let i=0;i<4;i++) L.made.push(digits.map((v,d)=>({x:44.7+i*3.1, y:15.2+d*3.13, v})));
+  for(let c=0;c<3;c++) for(let r=0;r<6;r++){
+    const x0 = 56.7 + c*18.2, y = 27.7 + r*3.14;
+    L.p1[c*6+r] = ['A','B','C','D'].map((v,k)=>({x:x0+5.9+k*3.1, y, v}));
+  }
+  for(let q=0;q<4;q++){
+    const bx = (q%2===0) ? 111.2 : 123.5, by = (q<2) ? 8.3 : 27.2;
+    L.p2.push([0,1,2,3].map(j=>{ const y = by + 6.1 + j*3.33; return [{x:bx+6.4, y, v:'Đ'}, {x:bx+9.4, y, v:'S'}]; }));
+  }
+  for(let c=0;c<6;c++){
+    const x0 = 8 + c*21.3;
+    const dcol = dx=> digits.map((v,d)=>({x:x0+dx, y:64.1+d*3.12, v}));
+    L.p3.push([
+      [{x:x0+6.0, y:57.9, v:'-'}, ...dcol(6.0)],
+      [{x:x0+10.2, y:61, v:','}, ...dcol(10.2)],
+      [{x:x0+14.3, y:61, v:','}, ...dcol(14.3)],
+      dcol(18.4)
+    ]);
+  }
+  return L;
+}
+function omrAllBubbles(){
+  const L = omrLayout(), out = [];
+  L.sbd.forEach(g=>out.push(...g)); L.made.forEach(g=>out.push(...g)); L.p1.forEach(g=>out.push(...g));
+  L.p2.forEach(q=>q.forEach(g=>out.push(...g))); L.p3.forEach(q=>q.forEach(g=>out.push(...g)));
+  return out;
+}
+function omrLocateSheet(gray, w, h){
+  const {cands} = omrFindMarkerCandidates(gray, w, h);
+  if(cands.length < 4) return null;
+  const M = OMR_MARKERS;
+  const sheetW = M.TR[0]-M.TL[0], sheetH = M.BL[1]-M.TL[1];
+  const timing = [31.7,53,74.3,95.7,117].map(x=>[x,98.1]);
+  let best = null;
+  const n = cands.length;
+  for(let a=0;a<n;a++) for(let b=a+1;b<n;b++) for(let c=b+1;c<n;c++) for(let d=c+1;d<n;d++){
+    const pts = [cands[a],cands[b],cands[c],cands[d]];
+    const sides = pts.map(p=>p.side);
+    if(Math.min(...sides)/Math.max(...sides) < 0.6) continue;
+    const cx = pts.reduce((t,p)=>t+p.x,0)/4, cy = pts.reduce((t,p)=>t+p.y,0)/4;
+    const ord = pts.slice().sort((p,q)=> Math.atan2(p.y-cy,p.x-cx) - Math.atan2(q.y-cy,q.x-cx)); // theo chiều kim đồng hồ trên ảnh
+    for(let k=0;k<4;k++){
+      const TL = ord[k], TR = ord[(k+1)%4], BR = ord[(k+2)%4], BL = ord[(k+3)%4];
+      const top = Math.hypot(TR.x-TL.x, TR.y-TL.y), bot = Math.hypot(BR.x-BL.x, BR.y-BL.y);
+      const lef = Math.hypot(BL.x-TL.x, BL.y-TL.y), rig = Math.hypot(BR.x-TR.x, BR.y-TR.y);
+      if(Math.min(top,bot)/Math.max(top,bot) < 0.85 || Math.min(lef,rig)/Math.max(lef,rig) < 0.85) continue;
+      const asp = ((top+bot)/2)/((lef+rig)/2);
+      if(Math.abs(asp/(sheetW/sheetH) - 1) > 0.12) continue;
+      const sideRel = (TL.side+TR.side+BL.side+BR.side)/4 / ((top+bot)/2) * sheetW;
+      if(sideRel < 2.6 || sideRel > 6.5) continue;
+      const map = omrSolveHomography([M.TL,M.TR,M.BR,M.BL], [[TL.x,TL.y],[TR.x,TR.y],[BR.x,BR.y],[BL.x,BL.y]]);
+      if(!map) continue;
+      // Kiểm tra hướng phiếu bằng 5 vạch định vị ở đáy (phải đen) và vị trí đối xứng ở đỉnh (phải trắng)
+      const paper = omrMeanGray(gray,w,h,map,72,48.4,0.8);
+      const dark = timing.reduce((t,[X,Y])=> t + omrMeanGray(gray,w,h,map,X,Y,0.6), 0)/timing.length;
+      const topMirror = timing.reduce((t,[X])=> t + omrMeanGray(gray,w,h,map,144-X,1.5,0.6), 0)/timing.length;
+      const score = (topMirror - dark) + (paper - dark)*0.2;
+      if(!best || score > best.score) best = {score, map, corners:[TL,TR,BR,BL], dark, paper};
+    }
+  }
+  if(!best || best.score < 40) return null;
+  return best;
+}
+function omrReadImageData(img, counts){
+  counts = counts || {};
+  const nTN = counts.nTN ?? 12, nDS = counts.nDS ?? 0, nTLN = counts.nTLN ?? 0;
+  const {width:w, height:h} = img;
+  const gray = omrGrayFromImageData(img);
+  const loc = omrLocateSheet(gray, w, h);
+  if(!loc) return {ok:false, error:'Không tìm thấy đủ 4 ô vuông định vị ở góc phiếu (ảnh bị cắt góc, quá mờ, hoặc đây không phải trang phiếu trả lời).'};
+  const map = loc.map;
+  const M = OMR_MARKERS;
+  const ink = [M.TL,M.TR,M.BL,M.BR].reduce((t,[X,Y])=> t + omrMeanGray(gray,w,h,map,X,Y,1.2), 0)/4;
+  const L = omrLayout();
+  const measure = g=> g.map(b=> omrMeanGray(gray,w,h,map,b.x,b.y,0.62));
+  // Mức giấy trắng: lấy phân vị 70% độ sáng của tất cả ô tròn (đa số ô không tô)
+  const allMeans = omrAllBubbles().map(b=> omrMeanGray(gray,w,h,map,b.x,b.y,0.62)).sort((a,b)=>a-b);
+  const paper = allMeans[Math.floor(allMeans.length*0.7)];
+  const span = Math.max(30, paper - ink);
+  const score = m=> Math.max(0, Math.min(1, (paper - m)/span));
+  const marks = [];   // để vẽ ảnh xem lại
+  const warnings = [];
+  const pick = (g, label)=>{
+    const sc = measure(g).map(score);
+    const r = omrPickGroup(g, sc);
+    if(r.state==='ok') marks.push({b:g[r.i], c:'ok'});
+    else if(r.state==='multi'){ marks.push({b:g[r.i], c:'bad'}); marks.push({b:g[r.i2], c:'bad'}); warnings.push(`${label}: tô nhiều hơn 1 ô`); }
+    else if(r.state==='weak'){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: tô mờ, chưa chắc`); }
+    return r;
+  };
+  const digitsOf = (cols, label)=>{
+    let s = ''; cols.forEach((g,i)=>{ const r = pick(g, `${label} cột ${i+1}`); if(r.v) s += r.v; });
+    return s;
+  };
+  const sbd = digitsOf(L.sbd, 'Số báo danh');
+  const made = digitsOf(L.made, 'Mã đề');
+  let tn = '';
+  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`); tn += r.v || '?'; }
+  let ds = '';
+  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`); ds += r.v || '?'; }
+  const tln = [];
+  for(let q=0;q<Math.min(nTLN,6);q++){
+    let s = '';
+    L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; });
+    tln.push(s);
+  }
+  return {ok:true, source:'offline', sbd, made, tn, ds, tln, warnings, marks, corners:loc.corners, map, ink, paper};
+}
 const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12};
 function wakGeom(n){
   const ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = Math.ceil(n/ncol), H = Math.round((WAK.y0 + (R-1)*WAK.pitchY + 8.5)*10)/10;
@@ -300,7 +442,7 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
   return c;
 }
 
-/* ===== Mã đáp án (QR / chữ): MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
+/* ===== Mã đáp án bài kiểm tra: MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
 function parsePayload(s){
   const m = String(s||'').trim().match(/^MBP1;(\d+);([^;]*);(.+)$/s); if(!m) return null;
   const rows = [];
@@ -308,33 +450,79 @@ function parsePayload(s){
     const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:parseInt(t[3], 36)/4}); }
   return rows.length ? {id:+m[1], name:m[2], rows, at:Date.now()} : null;
 }
+/* ===== Đề thi: chuỗi mã QR MBPX;<id>;<i>;<n>;<mảnh> → ghép → giải nén → MBPE… ===== */
+async function unpack(packed){
+  const flag = packed[0], b64 = packed.slice(1).replace(/-/g,'+').replace(/_/g,'/'), bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+  let bytes = Uint8Array.from(bin, c=> c.charCodeAt(0));
+  if(flag==='z') bytes = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+  return new TextDecoder().decode(bytes);
+}
+function parseExam(text){
+  const lines = String(text||'').split('\n'), hd = (lines[0]||'').split(';'); if(hd[0]!=='MBPE' || hd.length < 8) return null;
+  const ex = {title:hd[1], p:{TN:+hd[2], DSy:+hd[3], TLN:+hd[4]}, n:{nTN:+hd[5], nDS:+hd[6], nTLN:+hd[7]}, variants:{}, students:{}, order:[], at:Date.now()};
+  lines.slice(1).forEach(l=>{ const a = l.slice(1).split(':');
+    if(l[0]==='V' && a.length >= 4) ex.variants[a[0]] = {tn:a[1], ds:a[2].replace(/T/g,'Đ').replace(/F/g,'S'), tln:a[3] ? a[3].split('|') : []};
+    else if(l[0]==='S' && a.length >= 2){ ex.students[a[0]] = {name:a[1], lop:a[2]||''}; ex.order.push(a[0]); } });
+  let h = 0; for(let i = 0; i < text.length; i++) h = (h*31 + text.charCodeAt(i)) >>> 0; ex.id = h.toString(36);
+  return Object.keys(ex.variants).length ? ex : null;
+}
+function gradeExam(ex, res){
+  const v = ex.variants[res.made]; if(!v) return null; const r2 = x=> Math.round(x*100)/100;
+  const tn = [...v.tn].map((k,i)=> (res.tn[i]||'?')===k), ds = [...v.ds].map((k,i)=> (res.ds[i]||'?')===k), tl = v.tln.map((k,i)=> sameShortAnswer((res.tln||[])[i]||'', k));
+  const c = [tn.filter(Boolean).length, tn.length, ds.filter(Boolean).length, ds.length, tl.filter(Boolean).length, tl.length];
+  return {v, tn, ds, tl, c, pts:r2(c[0]*ex.p.TN + c[2]*ex.p.DSy + c[4]*ex.p.TLN), max:r2(c[1]*ex.p.TN + c[3]*ex.p.DSy + c[5]*ex.p.TLN)};
+}
+function examAnnotate(canvas, res, ex, g){   // xanh = đúng, đỏ ✕ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống; dải trên cùng ghi SBD, tên, mã đề, điểm
+  const k = Math.min(1, 1700/canvas.width); let c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
+  let ctx = c.getContext('2d'); ctx.drawImage(canvas, 0, 0, c.width, c.height);
+  const P = (x, y)=>{ const [px,py] = res.map(x, y); return [px*k, py*k]; }, [ox, oy] = P(0, 0), [ux, uy] = P(1, 0), u = Math.hypot(ux-ox, uy-oy), L = omrLayout();
+  const GREEN = '#12a150', RED = '#d0302b', ORG = '#e08a00';
+  const ring = (b, col, fill, cross)=>{ const [px,py] = P(b.x, b.y); ctx.beginPath(); ctx.arc(px, py, 1.55*u, 0, Math.PI*2); if(fill){ ctx.fillStyle = fill; ctx.fill(); } ctx.lineWidth = Math.max(2, 0.34*u); ctx.strokeStyle = col; ctx.stroke();
+    if(cross){ const d = 1.4*u; ctx.beginPath(); ctx.moveTo(px-d,py-d); ctx.lineTo(px+d,py+d); ctx.moveTo(px+d,py-d); ctx.lineTo(px-d,py+d); ctx.stroke(); } };
+  const mark = (grp, chosen, key, ok)=>{ const bi = grp.findIndex(b=> b.v===chosen), ki = grp.findIndex(b=> b.v===key);
+    if(ok) ring(grp[ki], GREEN, 'rgba(18,161,80,.22)'); else if(bi >= 0){ ring(grp[bi], RED, 'rgba(208,48,43,.22)', true); if(ki >= 0) ring(grp[ki], GREEN); } else if(ki >= 0) ring(grp[ki], ORG); };
+  [...g.v.tn].forEach((key,i)=>{ if(L.p1[i]) mark(L.p1[i], res.tn[i], key, g.tn[i]); });
+  [...g.v.ds].forEach((key,i)=>{ const q = Math.floor(i/4), j = i % 4; if(L.p2[q]) mark(L.p2[q][j], res.ds[i], key, g.ds[i]); });
+  g.v.tln.forEach((key,i)=>{ if(!L.p3[i]) return; const b = L.p3[i][0][0], [px,py] = P(b.x + 6.2, b.y - 3.4), ok = g.tl[i]; ctx.font = `bold ${Math.max(12, 3.2*u)}px Arial`; ctx.textAlign = 'center';
+    const t = ok ? '✓' : '✕ ' + key; const w = ctx.measureText(t).width; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(px - w/2 - 3, py - 3.1*u, w + 6, 3.9*u); ctx.fillStyle = ok ? GREEN : RED; ctx.fillText(t, px, py); });
+  ctx.textAlign = 'left';
+  const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
+  if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); c = o; ctx = c.getContext('2d'); }
+  const st = ex.students[res.sbd], l1 = `${fmtVN(g.pts)}/${fmtVN(g.max)} điểm   ·   I ${g.c[0]}/${g.c[1]}  II ${g.c[2]}/${g.c[3]}  III ${g.c[4]}/${g.c[5]}`, l2 = `SBD ${res.sbd || '?'}${st ? ' · ' + st.name + (st.lop ? ' · ' + st.lop : '') : ' · (không có trong danh sách)'} · Mã đề ${res.made}`;
+  const fs = Math.max(15, c.width/36); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fillRect(0, 0, c.width, fs*2.9); ctx.fillStyle = RED; ctx.font = `bold ${fs}px Arial`; ctx.fillText(l1, fs*0.5, fs*1.15); ctx.fillStyle = '#141c3a'; ctx.font = `600 ${fs*0.8}px Arial`; ctx.fillText(l2, fs*0.5, fs*2.4);
+  return c;
+}
+
 /* ===== Trạng thái ===== */
 const $ = id=> document.getElementById(id);
-let tests = []; try{ tests = JSON.parse(localStorage.getItem('mbpscan_tests') || '[]'); }catch(e){}
-let results = [];
-const saveTests = ()=>{ try{ localStorage.setItem('mbpscan_tests', JSON.stringify(tests)); }catch(e){} };
-const pickTest = id=> tests.find(t=> t.id===id);
+const ls = (k, d)=>{ try{ const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } }, lsSet = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} };
+let tests = ls('mbpscan_tests', []), exams = ls('mbpscan_exams', []), activeExam = ls('mbpscan_active', null), mode = ls('mbpscan_mode', 'ws');
+let results = [], xres = {};   // xres[id đề thi] = danh sách bài đã chấm
+const saveTests = ()=> lsSet('mbpscan_tests', tests), saveExams = ()=>{ lsSet('mbpscan_exams', exams); lsSet('mbpscan_active', activeExam); };
+const pickTest = id=> tests.find(t=> t.id===id), curExam = ()=> exams.find(e=> e.id===activeExam) || null;
 function toast(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(()=> el.classList.remove('on'), ms || 2200); }
-/* kết quả giữ trong IndexedDB để không mất khi lỡ đóng ứng dụng */
 const idb = { db:null,
   open(){ return new Promise(res=>{ try{ const r = indexedDB.open('mbpscan', 1); r.onupgradeneeded = ()=> r.result.createObjectStore('kv'); r.onsuccess = ()=>{ idb.db = r.result; res(); }; r.onerror = ()=> res(); }catch(e){ res(); } }); },
   get(k){ return new Promise(res=>{ if(!idb.db) return res(null); const q = idb.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=> res(q.result); q.onerror = ()=> res(null); }); },
   set(k, v){ if(!idb.db) return; try{ idb.db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); }catch(e){} } };
-const saveResults = ()=> idb.set('results', results);
+const saveResults = ()=> idb.set('results', results), saveX = ()=> idb.set('xres', xres);
+const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ===== Điều hướng ===== */
 let view = 'scan';
 function go(v){ view = v; document.querySelectorAll('.view').forEach(s=> s.classList.toggle('on', s.id==='v-'+v)); document.querySelectorAll('nav button').forEach(b=> b.classList.toggle('on', b.dataset.v===v));
   if(v==='scan') camStart(); else camStop(); if(v!=='tests') qrStop(); if(v==='tests') drawTests(); if(v==='res') drawResults(); drawHeader(); }
 document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=> go(b.dataset.v));
-function drawHeader(){ $('hdInfo').textContent = tests.length + ' đề · ' + results.length + ' bài đã chấm'; }
+function drawHeader(){ const ex = curExam(), nx = ex ? (xres[ex.id]||[]).length : 0; $('hdInfo').textContent = mode==='exam' ? (ex ? nx + ' phiếu đã chấm' : 'chưa có đề thi') : tests.length + ' đề · ' + results.length + ' bài'; $('bMode').textContent = mode==='exam' ? '🎓 Đề thi' : '📝 Kiểm tra'; }
+function setMode(m){ mode = m; lsSet('mbpscan_mode', m); lastSig = ''; sameCount = 0; drawHeader(); }
+$('bMode').onclick = ()=>{ setMode(mode==='exam' ? 'ws' : 'exam'); toast(mode==='exam' ? 'Chế độ ĐỀ THI: phiếu trả lời chung, có số báo danh và mã đề.' : 'Chế độ KIỂM TRA: đề có khung trả lời ở đầu trang.', 2600); };
 
 /* ===== Camera + vòng lặp đọc ===== */
 let stream = null, loopOn = false, lastSig = '', sameCount = 0, frozen = false, pending = null;
 const work = document.createElement('canvas');
 async function camStart(){
-  if(stream || frozen) { loopOn = !frozen; if(loopOn) tick(); return; }
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('hint').innerHTML = '<b>Trình duyệt này không mở được camera trực tiếp</b>Hãy dùng nút “Chọn ảnh” ở góc trên để chụp từng bài.'; return; }
+  if(stream || frozen){ loopOn = !frozen; if(loopOn) tick(); return; }
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ hint('Trình duyệt này không mở được camera trực tiếp', 'Hãy dùng nút “Chọn ảnh” ở góc trên để chụp từng bài.'); return; }
   try{
     stream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:2560}, height:{ideal:1440}}});
     const v = $('vid'); v.srcObject = stream; await v.play().catch(()=>{});
@@ -342,106 +530,150 @@ async function camStart(){
     if(caps.torch){ const b = $('bTorch'); b.style.display = ''; let on = false; b.onclick = ()=>{ on = !on; tr.applyConstraints({advanced:[{torch:on}]}).catch(()=>{}); b.style.background = on ? 'var(--gold)' : ''; }; }
     try{ if(caps.focusMode && caps.focusMode.includes('continuous')) tr.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
     loopOn = true; lastSig = ''; sameCount = 0; tick();
-  }catch(e){ $('hint').innerHTML = '<b>Chưa được phép dùng camera</b>Hãy cho phép camera cho trang này, hoặc dùng nút “Chọn ảnh”.'; }
+  }catch(e){ hint('Chưa được phép dùng camera', 'Hãy cho phép camera cho trang này, hoặc dùng nút “Chọn ảnh”.'); }
 }
 function camStop(){ loopOn = false; if(stream){ stream.getTracks().forEach(t=> t.stop()); stream = null; $('vid').srcObject = null; } }
 function hint(a, b){ $('hint').innerHTML = '<b>' + a + '</b>' + (b||''); }
-function drawQuad(corners, sx, sy, col){ const c = $('ov'), v = $('vid'); c.width = v.clientWidth; c.height = v.clientHeight; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); if(!corners) return;
-  // video hiển thị kiểu "contain": tính tỉ lệ và lề
+function drawQuad(corners, s, col){ const c = $('ov'), v = $('vid'); c.width = v.clientWidth; c.height = v.clientHeight; const x = c.getContext('2d'); x.clearRect(0, 0, c.width, c.height); if(!corners || !v.videoWidth) return;
   const k = Math.min(c.width/v.videoWidth, c.height/v.videoHeight), ox = (c.width - v.videoWidth*k)/2, oy = (c.height - v.videoHeight*k)/2;
-  x.lineWidth = 4; x.strokeStyle = col; x.beginPath(); corners.forEach((p,i)=>{ const px = ox + p.x*sx*k, py = oy + p.y*sy*k; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.closePath(); x.stroke(); }
+  x.lineWidth = 4; x.strokeStyle = col; x.beginPath(); corners.forEach((p,i)=>{ const px = ox + p.x*s*k, py = oy + p.y*s*k; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.closePath(); x.stroke(); }
+/* đọc một khung hình theo chế độ đang chọn → {ok, sig, corners, label, …} hoặc {ok:false, why:[tiêu đề, gợi ý]} */
+function readFrame(img){
+  if(mode==='exam'){ const ex = curExam(); if(!ex) return {ok:false, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính.']};
+    let r; try{ r = omrReadImageData(img, ex.n); }catch(e){ r = {ok:false}; }
+    if(!r.ok) return {ok:false, why:['Đưa cả phiếu trả lời vào màn hình', 'Thấy đủ 4 ô vuông đen ở góc phiếu; giữ máy yên một chút.']};
+    if(!ex.variants[r.made]) return {ok:false, corners:r.corners, why:['Mã đề “' + (r.made || '?') + '” không có trong đề đang chấm', 'Kiểm tra ô mã đề học sinh tô, hoặc chọn đúng đề ở thẻ “Đề”.']};
+    return {ok:true, kind:'exam', r, ex, corners:r.corners, sig:[r.sbd, r.made, r.tn, r.ds, (r.tln||[]).join('|')].join('/'), label:'SBD ' + (r.sbd || '?') + ' · mã đề ' + r.made}; }
+  if(!tests.length) return {ok:false, why:['Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án từ máy tính.']};
+  let r; try{ r = wakRead(img, pickTest); }catch(e){ r = {ok:false}; }
+  if(!r.ok) return {ok:false, why: r.id != null ? ['Mã bài ' + r.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'] : ['Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.']};
+  return {ok:true, kind:'ws', r, corners:r.corners, sig:r.id + '|' + r.picks.map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state[0]).join(''), label:'Mã bài ' + r.id + ' · ' + r.test.name};
+}
 function tick(){
   if(!loopOn) return; const v = $('vid');
   if(!v.videoWidth){ setTimeout(tick, 200); return; }
-  if(!tests.length){ hint('Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án từ máy tính.'); drawQuad(null); setTimeout(tick, 600); return; }
   const k = Math.min(1, 1500/Math.max(v.videoWidth, v.videoHeight)); work.width = Math.round(v.videoWidth*k); work.height = Math.round(v.videoHeight*k);
   const cx = work.getContext('2d', {willReadFrequently:true}); cx.drawImage(v, 0, 0, work.width, work.height);
-  let res; try{ res = wakRead(cx.getImageData(0, 0, work.width, work.height), pickTest); }catch(e){ res = {ok:false}; }
-  if(!res.ok){
-    if(res.id != null){ hint('Mã bài ' + res.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'); }
-    else hint('Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.');
-    drawQuad(null); lastSig = ''; sameCount = 0; setTimeout(tick, 160); return;
-  }
-  const sig = res.id + '|' + res.picks.map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state[0]).join('');
-  sameCount = sig===lastSig ? sameCount + 1 : 0; lastSig = sig;
-  drawQuad(res.corners, 1/k, 1/k, sameCount ? '#12a150' : '#e0b030'); hint('Đã thấy khung — giữ yên…', 'Mã bài ' + res.id + ' · ' + res.test.name);
+  const f = readFrame(cx.getImageData(0, 0, work.width, work.height));
+  if(!f.ok){ hint(f.why[0], f.why[1]); drawQuad(f.corners || null, 1/k, '#d0302b'); lastSig = ''; sameCount = 0; setTimeout(tick, f.corners ? 350 : 160); return; }
+  sameCount = f.sig===lastSig ? sameCount + 1 : 0; lastSig = f.sig;
+  drawQuad(f.corners, 1/k, sameCount ? '#12a150' : '#e0b030'); hint('Đã thấy phiếu — giữ yên…', esc(f.label));
   if(sameCount >= 2){ capture(); return; }
   setTimeout(tick, 120);
 }
-function capture(){   // đọc lại trên khung hình đủ nét rồi chốt
+function capture(){
   const v = $('vid'), full = document.createElement('canvas'); full.width = v.videoWidth; full.height = v.videoHeight; const cx = full.getContext('2d'); cx.drawImage(v, 0, 0);
-  let res; try{ res = wakRead(cx.getImageData(0, 0, full.width, full.height), pickTest); }catch(e){ res = {ok:false}; }
-  if(!res.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 120); return; }
-  showShot(full, res);
+  const f = readFrame(cx.getImageData(0, 0, full.width, full.height));
+  if(!f.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 120); return; }
+  showShot(full, f);
 }
-function showShot(canvas, res){
-  const url = wakAnnotate(canvas, res).toDataURL('image/jpeg', 0.85);
-  pending = {url, ok:res.ok, id:res.id, pts:res.pts, max:res.max, right:res.right, total:res.total, warn:res.warn||[], at:Date.now()};
-  frozen = true; loopOn = false; drawQuad(null);
-  $('shotImg').src = url; $('shotScore').innerHTML = fmtVN(res.pts) + '<small>/' + fmtVN(res.max) + ' · đúng ' + res.right + '/' + res.total + '</small>';
-  $('shotWarn').textContent = (res.warn && res.warn.length) ? '⚠ Xem lại: ' + res.warn.join('; ') : '';
+function makeRecord(canvas, f){
+  if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).slice(); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
+    return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
+  const r = f.r; return {kind:'ws', ok:true, id:r.id, pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
+}
+function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
+function showShot(canvas, f){
+  pending = makeRecord(canvas, f); frozen = true; loopOn = false; drawQuad(null);
+  $('shotImg').src = pending.url;
+  $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
+  $('shotWarn').textContent = pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '';
   $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
 }
-function closeShot(keep){ if(keep && pending){ results.push(pending); saveResults(); } pending = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
+function closeShot(ok){ if(ok && pending) keep(pending); pending = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
 $('bNext').onclick = ()=> closeShot(true);
 $('bDrop').onclick = ()=> closeShot(false);
-/* chọn ảnh có sẵn / chụp bằng ứng dụng camera */
 $('fPick').onchange = async e=>{
-  const files = [...e.target.files]; e.target.value = ''; if(!files.length) return;
-  if(!tests.length){ toast('Chưa có đáp án — vào thẻ “Đề” để nạp trước.'); return; }
-  let okN = 0, last = null;
-  for(const f of files){
-    const img = await new Promise(res=>{ const im = new Image(); im.onload = ()=> res(im); im.onerror = ()=> res(null); im.src = URL.createObjectURL(f); }); if(!img) continue;
+  const files = [...e.target.files]; e.target.value = ''; if(!files.length) return; let okN = 0, last = null;
+  for(const file of files){
+    const img = await new Promise(res=>{ const im = new Image(); im.onload = ()=> res(im); im.onerror = ()=> res(null); im.src = URL.createObjectURL(file); }); if(!img) continue;
     const k = Math.min(1, 2400/Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, c.width, c.height);
-    let res; try{ res = wakRead(cx.getImageData(0, 0, c.width, c.height), pickTest); }catch(err){ res = {ok:false}; }
-    if(res.ok){ okN++; if(files.length===1){ last = {c, res}; } else { results.push({url:wakAnnotate(c, res).toDataURL('image/jpeg', 0.85), ok:true, id:res.id, pts:res.pts, max:res.max, right:res.right, total:res.total, warn:res.warn||[], at:Date.now()}); } }
+    const f = readFrame(cx.getImageData(0, 0, c.width, c.height)); if(!f.ok){ if(files.length===1) toast(f.why[0], 3200); continue; }
+    okN++; if(files.length===1) last = {c, f}; else keep(makeRecord(c, f));
   }
-  if(last){ showShot(last.c, last.res); return; }
-  saveResults(); drawHeader(); toast(files.length===1 ? 'Không đọc được khung trả lời trong ảnh này.' : 'Đã chấm ' + okN + '/' + files.length + ' ảnh.', 3000); if(okN && files.length > 1) go('res');
+  if(last){ showShot(last.c, last.f); return; }
+  drawHeader(); if(files.length > 1){ toast('Đã chấm ' + okN + '/' + files.length + ' ảnh.', 3000); if(okN) go('res'); }
 };
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
-function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); drawTests(); drawHeader(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
-function drawTests(){ const el = $('testList');
-  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') : '<p class="mut" style="margin:0">Chưa có đề nào.</p>';
+function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); setMode('ws'); drawTests(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
+function addExam(ex){ const i = exams.findIndex(x=> x.id===ex.id); if(i >= 0) exams[i] = ex; else exams.push(ex); if(exams.length > 12) exams.shift(); activeExam = ex.id; saveExams(); setMode('exam'); drawTests(); toast('Đã nạp đề thi: ' + Object.keys(ex.variants).length + ' mã đề, ' + ex.order.length + ' học sinh.', 3200); }
+async function takeCode(raw){   // trả về true nếu đã nạp xong một đề
+  raw = String(raw||'').trim();
+  if(raw.startsWith('MBP1;')){ const t = parsePayload(raw); if(t){ addTest(t); return true; } return false; }
+  if(raw.startsWith('MBPZ;')){ try{ const ex = parseExam(await unpack(raw.slice(5))); if(ex){ addExam(ex); return true; } }catch(e){} return false; }
+  const m = raw.match(/^MBPX;([0-9a-z]+);(\d+);(\d+);(.+)$/s); if(!m) return false;
+  const P = takeCode.parts || (takeCode.parts = {}), g = P[m[1]] || (P[m[1]] = {n:+m[3], got:{}}); g.got[+m[2]] = m[4];
+  const have = Object.keys(g.got).length; $('qrStat').textContent = 'Đã nhận ' + have + '/' + g.n + ' mã — giữ yên điện thoại…';
+  if(have < g.n) return false;
+  let s = ''; for(let i = 1; i <= g.n; i++) s += g.got[i]; delete P[m[1]];
+  try{ const ex = parseExam(await unpack(s)); if(ex){ addExam(ex); return true; } }catch(e){} toast('Mã nhận được bị lỗi, hãy quét lại.'); return false;
+}
+function drawTests(){
+  const xl = $('examList');
+  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<label class="test"><input type="radio" name="ax" value="' + e.id + '"' + (e.id===activeExam ? ' checked' : '') + '><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div><button class="btn" data-xdel="' + e.id + '">Xoá</button></label>').join('') + '<p class="mut" style="margin:8px 0 0">Dấu chọn là đề đang chấm.</p>' : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
+  xl.querySelectorAll('input[name=ax]').forEach(r=> r.onchange = ()=>{ activeExam = r.value; saveExams(); setMode('exam'); });
+  xl.querySelectorAll('[data-xdel]').forEach(b=> b.onclick = ev=>{ ev.preventDefault(); if(confirm('Xoá đề thi này cùng các bài đã chấm của nó trên điện thoại?')){ const id = b.dataset.xdel; exams = exams.filter(e=> e.id!==id); delete xres[id]; if(activeExam===id) activeExam = exams.length ? exams[exams.length-1].id : null; saveExams(); saveX(); drawTests(); drawHeader(); } });
+  const el = $('testList');
+  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
   el.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ if(confirm('Xoá đáp án mã bài ' + b.dataset.del + '?')){ tests = tests.filter(t=> String(t.id)!==b.dataset.del); saveTests(); drawTests(); drawHeader(); } }); }
-const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let qrStream = null, qrOn = false;
 async function qrStart(){
   if(!('BarcodeDetector' in window)){ toast('Máy này không quét được mã QR trong trình duyệt. Hãy dán mã đáp án dạng chữ (mục bên dưới).', 4200); return; }
-  try{ qrStream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}}}); }catch(e){ toast('Chưa được phép dùng camera.'); return; }
-  $('qrBox').style.display = ''; $('bQr').style.display = 'none'; const v = $('qrVid'); v.srcObject = qrStream; await v.play().catch(()=>{});
+  try{ qrStream = await navigator.mediaDevices.getUserMedia({audio:false, video:{facingMode:{ideal:'environment'}, width:{ideal:1920}}}); }catch(e){ toast('Chưa được phép dùng camera.'); return; }
+  $('qrBox').style.display = ''; $('bQr').style.display = 'none'; $('qrStat').textContent = 'Chĩa vào mã QR trên màn hình máy tính'; takeCode.parts = {}; const v = $('qrVid'); v.srcObject = qrStream; await v.play().catch(()=>{});
   const det = new BarcodeDetector({formats:['qr_code']}); qrOn = true;
-  const loop = async ()=>{ if(!qrOn) return; try{ const codes = await det.detect(v); for(const c of codes){ const t = parsePayload(c.rawValue); if(t){ qrStop(); addTest(t); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){} return; } } }catch(e){} setTimeout(loop, 180); };
+  const loop = async ()=>{ if(!qrOn) return; try{ const codes = await det.detect(v); for(const c of codes){ if(await takeCode(c.rawValue)){ qrStop(); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){} return; } } }catch(e){} setTimeout(loop, 90); };
   loop();
 }
 function qrStop(){ qrOn = false; if(qrStream){ qrStream.getTracks().forEach(t=> t.stop()); qrStream = null; } $('qrBox').style.display = 'none'; $('bQr').style.display = ''; }
 $('bQr').onclick = qrStart; $('bQrStop').onclick = qrStop;
-$('bPaste').onclick = ()=>{ const t = parsePayload($('tPaste').value); if(!t){ toast('Mã không đúng định dạng (phải bắt đầu bằng MBP1;).'); return; } $('tPaste').value = ''; addTest(t); };
+$('bPaste').onclick = async ()=>{ if(await takeCode($('tPaste').value)) $('tPaste').value = ''; else toast('Mã không đúng (phải bắt đầu bằng MBP1; hoặc MBPZ;).', 3000); };
 
 /* ===== Kết quả ===== */
-const fileName = (r, i)=> String(i+1).padStart(2, '0') + '_diem_' + fmtVN(r.pts) + '.jpg';
+const fileName = (r, i)=> r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_' + fmtVN(r.pts) + '.jpg' : String(i+1).padStart(2, '0') + '_diem_' + fmtVN(r.pts) + '.jpg';
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
 function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
-async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài kiểm tra đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i])=> download(r, i)); }
-function drawResults(){ const avg = results.length ? Math.round(100*results.reduce((s,r)=> s + r.pts, 0)/results.length)/100 : 0;
-  $('resTitle').textContent = results.length ? results.length + ' bài · trung bình ' + fmtVN(avg) : 'Chưa có bài nào';
+async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
+function xRows(ex){ const list = xres[ex.id] || [], by = {}; list.forEach(r=>{ if(r.sbd) by[r.sbd] = r; }); const rows = ex.order.map(sbd=> ({sbd, st:ex.students[sbd], r:by[sbd]||null})); list.forEach(r=>{ if(!r.sbd || !ex.students[r.sbd]) rows.push({sbd:r.sbd || '?', st:null, r}); }); return rows; }
+function drawResults(){
+  const ex = curExam(), list = ex ? (xres[ex.id] || []) : []; $('xCard').style.display = ex ? '' : 'none';
+  if(ex){ const rows = xRows(ex), done = rows.filter(x=> x.r).length, avg = list.length ? Math.round(100*list.reduce((s,r)=> s + r.pts, 0)/list.length)/100 : 0;
+    $('xTitle').textContent = ex.title + ' — đã chấm ' + done + '/' + rows.length + (list.length ? ' · TB ' + fmtVN(avg) : '');
+    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th><th>Điểm</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td><td><b>' + fmtVN(r.pts) + '</b>' + (r.warn.length ? ' ⚠' : '') + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
+    $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom('x', i); });
+    ['bXSend','bXCsv','bXImgs','bXClear'].forEach(id=> $(id).disabled = !list.length); }
+  const avg = results.length ? Math.round(100*results.reduce((s,r)=> s + r.pts, 0)/results.length)/100 : 0;
+  $('resTitle').textContent = results.length ? 'Bài kiểm tra: ' + results.length + ' bài · trung bình ' + fmtVN(avg) : 'Bài kiểm tra: chưa có bài nào';
   ['bShare','bSave','bClear'].forEach(id=> $(id).disabled = !results.length);
   $('resGrid').innerHTML = results.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt=""><div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
-  $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i)); }
-let zi = -1;
-function zoom(i){ zi = i; $('zoomImg').src = results[i].url; $('zoom').classList.add('on'); }
+  $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom('w', +el.dataset.i)); }
+const csvCell = t=> '"' + String(t == null ? '' : t).replace(/"/g, '""') + '"';
+$('bXCsv').onclick = async ()=>{ const ex = curExam(); if(!ex) return;
+  const csv = '﻿STT,SBD,Họ và tên,Lớp,Mã đề,Phần I,Phần II,Phần III,Điểm trắc nghiệm,Tối đa\n' + xRows(ex).map((x,i)=>{ const r = x.r; return [i+1, csvCell(x.sbd), csvCell(x.st ? x.st.name : ''), csvCell(x.st ? x.st.lop : ''), r ? csvCell(r.made) : '', r ? r.c[0] + '/' + r.c[1] : '', r ? r.c[2] + '/' + r.c[3] : '', r ? r.c[4] + '/' + r.c[5] : '', r ? csvCell(fmtVN(r.pts)) : '', r ? csvCell(fmtVN(r.max)) : ''].join(','); }).join('\n') + '\n';
+  const file = new File([csv], 'bang_diem.csv', {type:'text/csv'});
+  try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Bảng điểm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = 'bang_diem.csv'; document.body.appendChild(a); a.click(); a.remove(); };
+$('bXSend').onclick = async ()=>{ const ex = curExam(); if(!ex) return; const list = xres[ex.id] || [];
+  const text = 'MBPR;' + ex.id + '\n' + list.filter(r=> r.sbd).map(r=> [r.sbd, r.made, r.tn, r.ds.replace(/Đ/g,'T').replace(/S/g,'F'), (r.tln||[]).join('|')].join(';')).join('\n');
+  try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } };
+$('bXImgs').onclick = ()=>{ const ex = curExam(); if(ex) share((xres[ex.id]||[]).map((r,i)=> [r, i])); };
+$('bXClear').onclick = ()=>{ const ex = curExam(); if(ex && confirm('Xoá toàn bộ ' + (xres[ex.id]||[]).length + ' phiếu đã chấm của đề này trên điện thoại?')){ delete xres[ex.id]; saveX(); drawResults(); drawHeader(); } };
+let zk = 'w', zi = -1; const zList = ()=> zk==='x' ? (xres[activeExam] || []) : results;
+function zoom(kind, i){ zk = kind; zi = i; $('zoomImg').src = zList()[i].url; $('zoom').classList.add('on'); }
 $('zClose').onclick = ()=> $('zoom').classList.remove('on');
-$('zSave').onclick = ()=> download(results[zi], zi);
-$('zShare').onclick = ()=> share([[results[zi], zi]]);
-$('zDel').onclick = ()=>{ if(confirm('Xoá bài này khỏi kết quả?')){ results.splice(zi, 1); saveResults(); $('zoom').classList.remove('on'); drawResults(); drawHeader(); } };
+$('zSave').onclick = ()=> download(zList()[zi], zi);
+$('zShare').onclick = ()=> share([[zList()[zi], zi]]);
+$('zDel').onclick = ()=>{ if(confirm('Xoá bài này khỏi kết quả?')){ zList().splice(zi, 1); zk==='x' ? saveX() : saveResults(); $('zoom').classList.remove('on'); drawResults(); drawHeader(); } };
 $('bShare').onclick = ()=> share(results.map((r,i)=> [r, i]));
 $('bSave').onclick = ()=> results.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
-$('bClear').onclick = ()=>{ if(confirm('Xoá toàn bộ ' + results.length + ' bài đã chấm trên điện thoại?')){ results = []; saveResults(); drawResults(); drawHeader(); } };
+$('bClear').onclick = ()=>{ if(confirm('Xoá toàn bộ ' + results.length + ' bài kiểm tra đã chấm trên điện thoại?')){ results = []; saveResults(); drawResults(); drawHeader(); } };
 
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
-(async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; drawHeader(); go(tests.length ? 'scan' : 'tests'); })();
+(async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; const x = await idb.get('xres'); if(x && typeof x==='object') xres = x;
+  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go(tests.length || exams.length ? 'scan' : 'tests'); })();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
