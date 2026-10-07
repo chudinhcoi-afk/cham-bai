@@ -62,6 +62,22 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .kc{border:1px solid var(--line);border-radius:10px;padding:7px 8px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
 .kc .kl{font-size:.78rem;color:var(--mut);font-weight:700}
 .kc .kv{font-size:1.25rem;color:var(--navy)}
+.shBox.full{max-height:100vh;height:100%;border-radius:0}
+.shBox.full .shBody{flex:1}
+.ah{font-size:.8rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px}
+.ah:first-child{margin-top:0}
+.ah small{font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0}
+.ag{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.ag span{display:flex;align-items:baseline;justify-content:center;gap:5px;border:1px solid var(--line);border-radius:8px;padding:6px 2px;background:#fafbfe}
+.ag i,.ads i{font-style:normal;font-size:.8rem;color:var(--mut);font-weight:600}
+.ag b{font-size:1.08rem;color:var(--navy)}
+.ads{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.ads div{display:flex;align-items:baseline;gap:7px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:#fafbfe}
+.ads i{min-width:1.3em}
+.ads span{display:inline-flex;align-items:baseline;gap:2px}
+.ads u{text-decoration:none;font-size:.78rem;color:var(--mut)}
+.ads b.d{color:var(--ok)}.ads b.s{color:var(--bad)}
+.vt{font-weight:800;font-size:1rem;margin-bottom:6px}
 .vbox{border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px}
 .vbox label{display:block;margin:7px 0 3px;font-size:.8rem}
 .kline{font-family:ui-monospace,monospace;font-size:.95rem;margin-top:4px;word-break:break-all}
@@ -710,6 +726,17 @@ function delKey(k, id){
   drawTests(); drawHeader();
 }
 /* ===== Tấm xem / sửa đáp án ===== */
+// Bảng đáp án gọn (để chụp màn hình gửi học sinh): trắc nghiệm xếp lưới "1 C", đúng–sai gom theo câu "5  a Đ  b S…"
+const keyGrid = cells=> '<div class="ag">' + cells.map(([l, v])=> '<span><i>' + esc(l) + '</i><b>' + esc(v) + '</b></span>').join('') + '</div>';
+const keyDs = groups=> '<div class="ads">' + groups.map(([l, its])=> '<div><i>' + esc(l) + '</i>' + its.map(([a, v])=> '<span>' + (a ? '<u>' + esc(a) + '</u>' : '') + '<b class="' + (v==='Đ' ? 'd' : 's') + '">' + v + '</b></span>').join('') + '</div>').join('') + '</div>';
+function wsKeyHtml(T){
+  const tn = T.rows.filter(r=> r.n===4), ds = T.rows.filter(r=> r.n===2), g = {}; ds.forEach(r=>{ const m = String(r.lab).match(/^(\d+)([a-d]?)$/) || [0, r.lab, '']; (g[m[1]] = g[m[1]] || []).push([m[2], r.key]); });
+  const same = a=> a.length && a.every(r=> r.pt===a[0].pt) ? fmtVN(a[0].pt) : null, pT = same(tn), pD = same(ds);
+  return (tn.length ? '<div class="ah">Trắc nghiệm' + (pT ? ' <small>mỗi câu ' + pT + ' đ</small>' : '') + '</div>' + keyGrid(tn.map(r=> [r.lab, r.key])) : '') +
+    (ds.length ? '<div class="ah">Đúng – sai' + (pD ? ' <small>mỗi ý ' + pD + ' đ</small>' : '') + '</div>' + keyDs(Object.keys(g).map(k=> [k, g[k]])) : '');
+}
+function exKeyHtml(T, c){ const v = T.variants[c], dsG = []; for(let i = 0; i < v.ds.length; i += 4) dsG.push([String(i/4 + 1), [...v.ds.slice(i, i + 4)].map((x, j)=> ['abcd'[j], x])]);
+  return '<div class="vbox"><div class="vt">Mã đề ' + esc(c) + '</div>' + (v.tn.length ? '<div class="ah">Phần I</div>' + keyGrid([...v.tn].map((x, i)=> [String(i + 1), x])) : '') + (dsG.length ? '<div class="ah">Phần II</div>' + keyDs(dsG) : '') + (v.tln.length ? '<div class="ah">Phần III</div>' + keyGrid(v.tln.map((x, i)=> [String(i + 1), x])) : '') + '</div>'; }
 function sheetClose(){ $('sheet').classList.remove('on'); }
 function sheetKey(k, id, edit){
   const sh = $('sheet'), T = k==='ws' ? pickTest(id) : exams.find(e=> e.id===id); if(!T) return;
@@ -718,7 +745,7 @@ function sheetKey(k, id, edit){
   if(k==='ws'){
     const sel = (r, i)=> edit ? '<select data-i="' + i + '" class="kSel">' + (r.n===2 ? ['Đ','S'] : ['A','B','C','D']).map(o=> '<option' + (o===r.key ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' : '<b class="kv">' + r.key + '</b>';
     const pt = (r, i)=> edit ? '<input class="kPt" data-i="' + i + '" inputmode="decimal" value="' + fmtVN(r.pt) + '">' : '<span class="mut">' + fmtVN(r.pt) + ' đ</span>';
-    body = (edit ? '<label class="mut">Tên bài kiểm tra</label><input id="shName" value="' + esc(T.name||'') + '" style="margin-bottom:10px">' : '') +
+    body = !edit ? wsKeyHtml(T) + '<p class="mut" style="margin:10px 0 0;text-align:right">Tổng ' + fmtVN(testMax(T)) + ' điểm</p>' : (edit ? '<label class="mut">Tên bài kiểm tra</label><input id="shName" value="' + esc(T.name||'') + '" style="margin-bottom:10px">' : '') +
       '<div class="kgrid">' + T.rows.map((r,i)=> '<div class="kc"><span class="kl">' + esc(r.lab) + '</span>' + sel(r, i) + pt(r, i) + '</div>').join('') + '</div>' +
       '<p class="mut" style="margin:10px 0 0">' + (edit ? 'Sửa đáp án hoặc điểm từng ô. Bài đã chấm trước đó không tự chấm lại — hãy chụp lại nếu cần.' : 'Tổng ' + fmtVN(testMax(T)) + ' điểm · ' + T.rows.length + ' ô chấm.') + '</p>';
   } else {
@@ -726,9 +753,10 @@ function sheetKey(k, id, edit){
     body = (edit ? '<label class="mut">Tên đề thi</label><input id="shName" value="' + esc(T.title||'') + '" style="margin-bottom:10px">' : '<p class="mut" style="margin:0 0 8px">Điểm mỗi câu: phần I ' + fmtVN(T.p.TN) + ' · phần II ' + fmtVN(T.p.DSy) + '/ý · phần III ' + fmtVN(T.p.TLN) + '.</p>') +
       codes.map(c=>{ const v = T.variants[c]; return '<div class="vbox"><b>Mã đề ' + esc(c) + '</b>' + (edit
         ? '<label class="mut">Phần I (' + v.tn.length + ' câu)</label><input class="vTn" data-c="' + esc(c) + '" value="' + esc(v.tn) + '" autocapitalize="characters"><label class="mut">Phần II (Đ/S, ' + v.ds.length + ' ý)</label><input class="vDs" data-c="' + esc(c) + '" value="' + esc(v.ds) + '" autocapitalize="characters"><label class="mut">Phần III (cách nhau bằng dấu |)</label><input class="vTl" data-c="' + esc(c) + '" value="' + esc(v.tln.join(' | ')) + '">'
-        : '<div class="kline"><span class="mut">I</span> ' + esc(v.tn.replace(/(.{5})/g, '$1 ')) + '</div><div class="kline"><span class="mut">II</span> ' + esc(v.ds.replace(/(.{4})/g, '$1 ')) + '</div>' + (v.tln.length ? '<div class="kline"><span class="mut">III</span> ' + esc(v.tln.join(' | ')) + '</div>' : '')) + '</div>'; }).join('');
+        : '') + '</div>'; }).join('');
+    if(!edit) body = codes.map(c=> exKeyHtml(T, c)).join('') + '<p class="mut" style="margin:6px 0 0">Điểm: phần I ' + fmtVN(T.p.TN) + '/câu · phần II ' + fmtVN(T.p.DSy) + '/ý · phần III ' + fmtVN(T.p.TLN) + '/câu</p>';
   }
-  sh.innerHTML = '<div class="shBox"><div class="shHead"><b>' + (edit ? 'Sửa đáp án' : 'Đáp án') + (k==='ws' ? ' · mã bài ' + T.id : '') + '</b>' + (edit ? '' : '<span class="mut" style="display:block">' + esc(k==='ws' ? (T.name||'Bài kiểm tra') : T.title) + '</span>') + '</div><div class="shBody">' + body + '</div><div class="shFoot">' + foot + '</div></div>';
+  sh.innerHTML = '<div class="shBox' + (edit ? '' : ' full') + '"><div class="shHead">' + (edit ? '<b>Sửa đáp án' + (k==='ws' ? ' · mã bài ' + T.id : '') + '</b>' : '<small class="mut">ĐÁP ÁN' + (k==='ws' ? ' · mã bài ' + T.id : '') + '</small><b style="display:block">' + esc(k==='ws' ? (T.name||'Bài kiểm tra') : T.title) + '</b>') + '</div><div class="shBody">' + body + '</div><div class="shFoot">' + foot + '</div></div>';
   sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target===sh) sheetClose(); };
   $('shCancel').onclick = sheetClose;
   if(!edit){ $('shEdit').onclick = ()=> sheetKey(k, id, true); $('shGo').onclick = ()=>{ sheetClose(); startGrade(k, id); }; return; }
