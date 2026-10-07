@@ -42,6 +42,29 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .hint{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;color:#fff;font-size:.92rem;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.72))}
 .hint b{display:block;font-size:1rem;margin-bottom:2px}
 .camtop{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px}
+.titem{padding:12px;border:1px solid var(--line);border-radius:14px;margin-top:10px;background:#fff;box-shadow:0 1px 3px rgba(20,28,58,.06)}
+.titem.cur{border-color:var(--gold);background:#fffaf0}
+.titem .test{padding:0;border:0}
+.titem .now{font-size:.72rem;font-weight:700;color:#fff;background:var(--gold);border-radius:20px;padding:3px 9px;white-space:nowrap}
+.acts{display:flex;gap:8px;margin-top:11px}
+.fab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;border:0;background:#fff;color:var(--ink);border-radius:12px;padding:0 10px;min-height:46px;font-size:.92rem;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 #d6dae6,0 5px 10px rgba(20,28,58,.14);transition:transform .06s,box-shadow .06s;white-space:nowrap}
+.fab:active{transform:translateY(3px);box-shadow:0 0 0 #d6dae6,0 1px 3px rgba(20,28,58,.2)}
+.fab.go{flex:1.5;background:linear-gradient(#22306a,#141c3a);color:#fff;box-shadow:0 3px 0 #0a0f24,0 6px 12px rgba(20,28,58,.3)}
+.fab.del{flex:0 0 46px;color:var(--bad)}
+#sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:50}
+#sheet.on{display:flex}
+.shBox{background:#fff;width:100%;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
+.shHead{padding:14px 16px 10px;border-bottom:1px solid var(--line);font-size:1.02rem}
+.shBody{padding:12px 16px;overflow:auto}
+.shFoot{display:flex;gap:8px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.shBody input,.shBody select{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font-size:1rem;background:#fff;color:var(--ink)}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.kc{border:1px solid var(--line);border-radius:10px;padding:7px 8px;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.kc .kl{font-size:.78rem;color:var(--mut);font-weight:700}
+.kc .kv{font-size:1.25rem;color:var(--navy)}
+.vbox{border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px}
+.vbox label{display:block;margin:7px 0 3px;font-size:.8rem}
+.kline{font-family:ui-monospace,monospace;font-size:.95rem;margin-top:4px;word-break:break-all}
 #nowBar{position:absolute;top:56px;left:10px;right:10px;background:rgba(20,28,58,.82);color:#fff;border:0;border-radius:12px;padding:8px 12px;font-size:.9rem;text-align:left;line-height:1.3;display:flex;align-items:center;gap:8px}
 #nowBar b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #nowBar small{opacity:.75;font-size:.75rem;display:block}
@@ -162,6 +185,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
   <button data-v="tests"><i>🗂</i>Đề</button>
   <button data-v="res"><i>📑</i>Kết quả</button>
 </nav>
+<div id="sheet"></div>
 <div id="toast"></div>
 <div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Chia sẻ</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
 
@@ -632,15 +656,58 @@ async function takeCode(raw){   // trả về true nếu đã nạp xong một �
   try{ const ex = parseExam(await unpack(s)); if(ex){ addExam(ex); return true; } }catch(e){} toast('Mã nhận được bị lỗi, hãy quét lại.'); return false;
 }
 function drawTests(){
+  const acts = (kind, id)=> '<div class="acts"><button class="fab go" data-a="go" data-k="' + kind + '" data-id="' + id + '">📷 Chấm</button><button class="fab" data-a="view" data-k="' + kind + '" data-id="' + id + '">👁 Xem</button><button class="fab" data-a="edit" data-k="' + kind + '" data-id="' + id + '">✏ Sửa</button><button class="fab del" data-a="del" data-k="' + kind + '" data-id="' + id + '" aria-label="Xoá">🗑</button></div>';
   const xl = $('examList');
-  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<label class="test tap' + (mode==='exam' && e.id===activeExam ? ' cur' : '') + '"><input type="radio" name="ax" value="' + e.id + '"' + (e.id===activeExam ? ' checked' : '') + '><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div><button class="btn" data-xdel="' + e.id + '">Xoá</button></label>').join('') + '<p class="mut" style="margin:8px 0 0">Chạm vào một đề để mở máy ảnh chấm đề đó.</p>' : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
-  xl.querySelectorAll('input[name=ax]').forEach(r=> r.onclick = ()=> startGrade('exam', r.value));
-  xl.querySelectorAll('[data-xdel]').forEach(b=> b.onclick = ev=>{ ev.preventDefault(); if(confirm('Xoá đề thi này cùng các bài đã chấm của nó trên điện thoại?')){ const id = b.dataset.xdel; exams = exams.filter(e=> e.id!==id); delete xres[id]; if(activeExam===id) activeExam = exams.length ? exams[exams.length-1].id : null; saveExams(); saveX(); drawTests(); drawHeader(); } });
+  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<div class="titem' + (mode==='exam' && e.id===activeExam ? ' cur' : '') + '"><div class="test"><span class="id">🎓</span><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div>' + (mode==='exam' && e.id===activeExam ? '<span class="now">đang chấm</span>' : '') + '</div>' + acts('exam', e.id) + '</div>').join('') : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
   const el = $('testList');
-  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="test tap' + (mode==='ws' && pinTest===t.id ? ' cur' : '') + '" data-go="' + t.id + '"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100) + ' điểm</small></div><button class="btn" data-del="' + t.id + '">Xoá</button></div>').join('') + '<p class="mut" style="margin:8px 0 0">Chạm vào một đề để mở máy ảnh chấm riêng đề đó (bài của đề khác sẽ bị báo).' + (tests.length > 1 ? ' <a href="#" id="aAuto">Chấm lẫn nhiều đề, tự nhận theo mã bài</a>' : '') + '</p>' : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
-  el.querySelectorAll('[data-go]').forEach(d=> d.onclick = ev=>{ if(ev.target.closest('[data-del]')) return; startGrade('ws', +d.dataset.go); });
+  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="titem' + (mode==='ws' && pinTest===t.id ? ' cur' : '') + '"><div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(testMax(t)) + ' điểm</small></div>' + (mode==='ws' && pinTest===t.id ? '<span class="now">đang chấm</span>' : '') + '</div>' + acts('ws', t.id) + '</div>').join('') + (tests.length > 1 ? '<p class="mut" style="margin:10px 0 0"><a href="#" id="aAuto">Chấm lẫn nhiều đề, tự nhận theo mã bài</a></p>' : '') : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
+  document.querySelectorAll('#v-tests .fab').forEach(b=> b.onclick = ()=>{ const k = b.dataset.k, id = k==='ws' ? +b.dataset.id : b.dataset.id, a = b.dataset.a;
+    if(a==='go') startGrade(k, id); else if(a==='view') sheetKey(k, id, false); else if(a==='edit') sheetKey(k, id, true); else delKey(k, id); });
   const au = $('aAuto'); if(au) au.onclick = ev=>{ ev.preventDefault(); pinTest = null; lsSet('mbpscan_pin', null); setMode('ws'); go('scan'); };
-  el.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ if(confirm('Xoá đáp án mã bài ' + b.dataset.del + '?')){ tests = tests.filter(t=> String(t.id)!==b.dataset.del); saveTests(); drawTests(); drawHeader(); } }); }
+}
+const testMax = t=> Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100;
+function delKey(k, id){
+  if(k==='ws'){ if(!confirm('Xoá đáp án mã bài ' + id + '?')) return; tests = tests.filter(t=> t.id!==id); saveTests(); }
+  else { if(!confirm('Xoá đề thi này cùng các bài đã chấm của nó trên điện thoại?')) return; exams = exams.filter(e=> e.id!==id); delete xres[id]; if(activeExam===id) activeExam = exams.length ? exams[exams.length-1].id : null; saveExams(); saveX(); }
+  drawTests(); drawHeader();
+}
+/* ===== Tấm xem / sửa đáp án ===== */
+function sheetClose(){ $('sheet').classList.remove('on'); }
+function sheetKey(k, id, edit){
+  const sh = $('sheet'), T = k==='ws' ? pickTest(id) : exams.find(e=> e.id===id); if(!T) return;
+  const foot = edit ? '<button class="fab" id="shCancel">Huỷ</button><button class="fab go" id="shSave">💾 Lưu</button>' : '<button class="fab" id="shCancel">Đóng</button><button class="fab" id="shEdit">✏ Sửa</button><button class="fab go" id="shGo">📷 Chấm</button>';
+  let body;
+  if(k==='ws'){
+    const sel = (r, i)=> edit ? '<select data-i="' + i + '" class="kSel">' + (r.n===2 ? ['Đ','S'] : ['A','B','C','D']).map(o=> '<option' + (o===r.key ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' : '<b class="kv">' + r.key + '</b>';
+    const pt = (r, i)=> edit ? '<input class="kPt" data-i="' + i + '" inputmode="decimal" value="' + fmtVN(r.pt) + '">' : '<span class="mut">' + fmtVN(r.pt) + ' đ</span>';
+    body = (edit ? '<label class="mut">Tên bài kiểm tra</label><input id="shName" value="' + esc(T.name||'') + '" style="margin-bottom:10px">' : '') +
+      '<div class="kgrid">' + T.rows.map((r,i)=> '<div class="kc"><span class="kl">' + esc(r.lab) + '</span>' + sel(r, i) + pt(r, i) + '</div>').join('') + '</div>' +
+      '<p class="mut" style="margin:10px 0 0">' + (edit ? 'Sửa đáp án hoặc điểm từng ô. Bài đã chấm trước đó không tự chấm lại — hãy chụp lại nếu cần.' : 'Tổng ' + fmtVN(testMax(T)) + ' điểm · ' + T.rows.length + ' ô chấm.') + '</p>';
+  } else {
+    const codes = Object.keys(T.variants);
+    body = (edit ? '<label class="mut">Tên đề thi</label><input id="shName" value="' + esc(T.title||'') + '" style="margin-bottom:10px">' : '<p class="mut" style="margin:0 0 8px">Điểm mỗi câu: phần I ' + fmtVN(T.p.TN) + ' · phần II ' + fmtVN(T.p.DSy) + '/ý · phần III ' + fmtVN(T.p.TLN) + '.</p>') +
+      codes.map(c=>{ const v = T.variants[c]; return '<div class="vbox"><b>Mã đề ' + esc(c) + '</b>' + (edit
+        ? '<label class="mut">Phần I (' + v.tn.length + ' câu)</label><input class="vTn" data-c="' + esc(c) + '" value="' + esc(v.tn) + '" autocapitalize="characters"><label class="mut">Phần II (Đ/S, ' + v.ds.length + ' ý)</label><input class="vDs" data-c="' + esc(c) + '" value="' + esc(v.ds) + '" autocapitalize="characters"><label class="mut">Phần III (cách nhau bằng dấu |)</label><input class="vTl" data-c="' + esc(c) + '" value="' + esc(v.tln.join(' | ')) + '">'
+        : '<div class="kline"><span class="mut">I</span> ' + esc(v.tn.replace(/(.{5})/g, '$1 ')) + '</div><div class="kline"><span class="mut">II</span> ' + esc(v.ds.replace(/(.{4})/g, '$1 ')) + '</div>' + (v.tln.length ? '<div class="kline"><span class="mut">III</span> ' + esc(v.tln.join(' | ')) + '</div>' : '')) + '</div>'; }).join('');
+  }
+  sh.innerHTML = '<div class="shBox"><div class="shHead"><b>' + (edit ? 'Sửa đáp án' : 'Đáp án') + (k==='ws' ? ' · mã bài ' + T.id : '') + '</b>' + (edit ? '' : '<span class="mut" style="display:block">' + esc(k==='ws' ? (T.name||'Bài kiểm tra') : T.title) + '</span>') + '</div><div class="shBody">' + body + '</div><div class="shFoot">' + foot + '</div></div>';
+  sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target===sh) sheetClose(); };
+  $('shCancel').onclick = sheetClose;
+  if(!edit){ $('shEdit').onclick = ()=> sheetKey(k, id, true); $('shGo').onclick = ()=>{ sheetClose(); startGrade(k, id); }; return; }
+  $('shSave').onclick = ()=>{
+    if(k==='ws'){ const pts = [...sh.querySelectorAll('.kPt')].map(i=> parseFloat(i.value.replace(',', '.')));
+      if(pts.some(x=> !(x >= 0 && x <= 10))){ toast('Điểm mỗi ô phải là số từ 0 đến 10.', 2800); return; }
+      sh.querySelectorAll('.kSel').forEach(e=>{ T.rows[+e.dataset.i].key = e.value; }); pts.forEach((x,i)=>{ T.rows[i].pt = Math.round(x*100)/100; }); T.name = $('shName').value.trim(); saveTests(); }
+    else { const up = {}; let err = '';
+      Object.keys(T.variants).forEach(c=>{ const v = T.variants[c], q = cls=> [...sh.querySelectorAll(cls)].find(e=> e.dataset.c===c).value;
+        const tn = q('.vTn').toUpperCase().replace(/[^ABCD]/g, ''), ds = q('.vDs').toUpperCase().replace(/D/g, 'Đ').replace(/[^ĐS]/g, ''), tl = v.tln.length ? q('.vTl').split('|').map(x=> x.trim()) : [];
+        if(tn.length!==v.tn.length) err = 'Mã đề ' + c + ': phần I cần đúng ' + v.tn.length + ' chữ A–D.'; else if(ds.length!==v.ds.length) err = 'Mã đề ' + c + ': phần II cần đúng ' + v.ds.length + ' chữ Đ/S.'; else if(tl.length!==v.tln.length || tl.some(x=> !x)) err = 'Mã đề ' + c + ': phần III cần đúng ' + v.tln.length + ' đáp số.';
+        up[c] = {tn, ds, tln:tl}; });
+      if(err){ toast(err, 3400); return; }
+      Object.assign(T.variants, up); T.title = $('shName').value.trim() || T.title; saveExams(); }
+    sheetClose(); drawTests(); drawHeader(); toast('Đã lưu đáp án.');
+  };
+}
 let qrStream = null, qrOn = false;
 async function qrStart(){
   if(!('BarcodeDetector' in window)){ toast('Máy này không quét được mã QR trong trình duyệt. Hãy dán mã đáp án dạng chữ (mục bên dưới).', 4200); return; }
