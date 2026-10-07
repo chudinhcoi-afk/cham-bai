@@ -440,7 +440,7 @@ function wakGeom(n){
   const pos = (k, j)=>{ const c = Math.floor(k/R), r = k % R; return {x: WAK.x0 + c*WAK.colW + WAK.bx + j*WAK.bp, y: WAK.y0 + r*WAK.pitchY}; };
   return {ncol, R, H, pos};
 }
-function wakLocate(gray, w, h){
+function wakLocate(gray, w, h, pickTest){
   const {cands} = omrFindMarkerCandidates(gray, w, h); if(cands.length < 4) return null;
   const span = WAK.W - 4, us = []; for(let i=0;i<WAK.idN;i++) us.push((WAK.idX + i*WAK.idP + WAK.idW/2 - 2)/span);
   const ru = 0.9/span; let best = null; const n = cands.length;
@@ -462,36 +462,70 @@ function wakLocate(gray, w, h){
       if(paper - ink < 45 || Math.min(...topM) < mid || botM[0] > mid) continue;   // hàng trên phải trắng, ô đầu hàng dưới phải đen
       const bits = botM.map(m=> m < mid ? 1 : 0); let id = 0, ones = 0; for(let i=0;i<10;i++){ id |= bits[i+1] << i; ones += bits[i+1]; }
       if(bits[11] !== (ones % 2 ? 0 : 1)) continue;
-      const score = paper - botM[0];
+      // Kiểm chứng bằng chính bố cục khung: tại vị trí mỗi ô phải có VÒNG TRÒN in sẵn (tối hơn giấy ở giữa các ô).
+      // Bộ bốn điểm ghép nhầm từ các ô học sinh tô đậm sẽ không khớp bố cục này.
+      let score = paper - botM[0]; const test = pickTest ? pickTest(id) : null;
+      if(test){ const G = wakGeom(test.rows.length), vs = G.H - 4, mp = (x, y)=> map((x-2)/span, (y-2)/vs); let hit = 0, tot = 0;
+        const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
+        for(let k = 0; k < test.rows.length; k++) for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j); let ring = 0; for(let t = 0; t < 12; t++){ const an = t*Math.PI/6; ring += px(p.x + 1.65*Math.cos(an), p.y + 1.65*Math.sin(an)); } ring /= 12;
+          const bg = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]].map(([dx,dy])=> px(p.x+dx, p.y+dy)).sort((x,y)=> y-x)[1]; tot++; if(bg - ring > 0.12*(paper - ink)) hit++; }
+        const fit = hit/Math.max(1, tot); if(fit < 0.55) continue; score += 1000*fit; }
       if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span};
     } }
   return best;
 }
-// Khung trả lời bài kiểm tra: mỗi câu chỉ tô MỘT ô nên xét thêm độ NỔI BẬT so với các ô còn lại trong câu.
-// Bút chì / bản photo thường nhạt hơn ngưỡng tuyệt đối; ô đậm rõ nhất và hơn hẳn ô đứng thứ hai thì vẫn nhận.
-function wakPick(opts, scores){
-  const pk = omrPickGroup(opts, scores); if(pk.state==='ok' || pk.state==='multi') return pk;
-  const idx = scores.map((s,i)=> i).sort((a,b)=> scores[b]-scores[a]), s1 = scores[idx[0]], s2 = idx.length > 1 ? scores[idx[1]] : 0;
-  if(s1 >= 0.16 && s1 - s2 >= 0.10 && s2 <= 0.55*s1) return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:s1 < 0.26};
-  return pk;
+
+// Đọc khung trả lời — bản 2: độ tương phản CỤC BỘ (so với giấy ngay quanh ô), trừ nền chữ in theo từng cột phương án, ngưỡng TỰ THÍCH NGHI theo chính bài đó.
+function wakScores(gray, w, h, loc, test, G){
+  const span = WAK.W - 4, vs = G.H - 4, mp = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
+  const [ax, ay] = mp(50, 10), [bx, by] = mp(60, 10), ppm = Math.hypot(bx-ax, by-ay)/10;                 // điểm ảnh / mm tại khung
+  const disc = (cx, cy, r)=>{ let s = 0, n = 0; const x0 = Math.max(0, Math.floor(cx-r)), x1 = Math.min(w-1, Math.ceil(cx+r)), y0 = Math.max(0, Math.floor(cy-r)), y1 = Math.min(h-1, Math.ceil(cy+r));
+    for(let y = y0; y <= y1; y++) for(let x = x0; x <= x1; x++) if((x-cx)*(x-cx) + (y-cy)*(y-cy) <= r*r){ s += gray[y*w+x]; n++; } return n ? s/n : 255; };
+  const rIn = Math.max(1.5, 1.0*ppm), rBg = Math.max(1, 0.4*ppm);
+  const raw = test.rows.map((r, k)=> Array.from({length:r.n}, (_, j)=>{ const p = G.pos(k, j), [cx, cy] = mp(p.x, p.y), m = disc(cx, cy, rIn);
+    // giấy quanh ô: 4 điểm chéo (giữa các ô, không chạm vòng tròn in và số câu), lấy điểm sáng thứ nhì
+    const bg = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]].map(([dx,dy])=>{ const [qx,qy] = mp(p.x+dx, p.y+dy); return disc(qx, qy, rBg); }).sort((a,b)=> b-a)[1];
+    return {m, bg, c: Math.max(0, (bg - m)/Math.max(30, bg))}; }));
+  // Nền của ô TRỐNG (vòng tròn + chữ in sẵn lọt vào vùng đo). Mỗi chữ có lượng mực khác nhau (B, Đ đậm hơn C, S) nên tính riêng từng cột phương án:
+  // lấy phân vị thấp của cột đó, nhưng kẹp quanh giá trị chuẩn của chữ (đo trên phiếu trắng) để không bị lệch khi cả cột đều được tô.
+  const all = raw.flat().map(o=> o.c).sort((x,y)=> x-y), g = all[Math.floor(all.length*0.2)], cInk = Math.max(0.2, (loc.paper - loc.ink)/Math.max(30, loc.paper));
+  const K = {4:[0.004, 0.031, 0, 0.016], 2:[0.031, 0.007]}, cols = {}; test.rows.forEach((r, k)=> raw[k].forEach((o, j)=>{ (cols[r.n+'_'+j] = cols[r.n+'_'+j] || []).push(o.c); }));
+  const base = {}; Object.keys(cols).forEach(key=>{ const n = +key[0], j = +key.slice(2), a = cols[key].sort((x,y)=> x-y), q = a[Math.floor(a.length*(n===2 ? 0.15 : 0.3))], k0 = (K[n]||[])[j] || 0.01;
+    base[key] = Math.min(g + (k0 + 0.04)*cInk, Math.max(g + (k0 - 0.02)*cInk, q)); });
+  return raw.map((row, k)=> row.map((o, j)=> Math.max(0, o.c - base[test.rows[k].n+'_'+j])));
+}
+function wakThreshold(sc){
+  const all = sc.flat().slice().sort((a,b)=> a-b), n = all.length; if(n < 4) return {thr:0.12, floor:0.05};
+  let best = -1, thr = 0.12; const sum = all.reduce((s,x)=> s+x, 0); let s0 = 0;                       // Otsu trên điểm đậm của mọi ô trong bài
+  for(let i = 1; i < n; i++){ s0 += all[i-1]; const m0 = s0/i, m1 = (sum - s0)/(n - i), v = i*(n-i)*(m1-m0)*(m1-m0); if(v > best){ best = v; thr = (all[i-1] + all[i])/2; } }
+  const lo = all.slice(0, Math.floor(n*0.5)), med = lo[Math.floor(lo.length/2)], mad = lo.map(x=> Math.abs(x-med)).sort((a,b)=> a-b)[Math.floor(lo.length/2)];
+  const floor = med + 6*mad + 0.018;                                                                    // mức nhiễu của ô trống
+  return {thr:Math.max(thr, floor, 0.04), floor};
+}
+function wakPick2(opts, s, T){
+  const idx = s.map((_, i)=> i).sort((a,b)=> s[b]-s[a]), s1 = s[idx[0]], s2 = idx.length > 1 ? s[idx[1]] : 0, thr = T.thr;
+  if(s1 < thr){
+    if(s1 >= Math.max(0.6*thr, T.floor, 0.03) && s2 <= 0.35*s1) return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:true};   // nhạt nhưng nổi bật hẳn trong câu
+    return {v:'', state: s1 >= T.floor ? 'weak' : 'blank', i:idx[0]}; }
+  if(s2 >= thr && s2 >= 0.5*s1) return {v:'?', state:'multi', i:idx[0], i2:idx[1]};
+  if(s2 >= Math.max(T.floor, 0.4*s1)) return {v:'', state:'weak', i:idx[0]};   // ô thứ hai cũng có vết đáng kể: không đoán, để giáo viên quyết
+  return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:s1 < 1.3*thr};
 }
 function wakRead(img, pickTest){
-  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h);
+  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h, pickTest);
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
   const test = pickTest(loc.id);
   if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
-  const G = wakGeom(test.rows.length), span = WAK.W - 4, vs = G.H - 4, uv = (x, y)=> [(x-2)/span, (y-2)/vs], opts2 = ['Đ','S'], opts4 = ['A','B','C','D'];
-  const mapMm = (x, y)=>{ const [u,v] = uv(x,y); return loc.map(u, v); };
-  const meanAt = (x, y)=>{ const [u,v] = uv(x,y); return omrMeanGray(gray, w, h, loc.map, u, v, 1.15/span); };
-  const means = test.rows.map((r,k)=> Array.from({length:r.n}, (_,j)=>{ const p = G.pos(k, j); return meanAt(p.x, p.y); }));
-  const all = means.flat().sort((a,b)=> a-b), paper = all[Math.floor(all.length*0.7)], rng = Math.max(30, paper - loc.ink), sc = m=> Math.max(0, Math.min(1, (paper - m)/rng));
+  const G = wakGeom(test.rows.length), span = WAK.W - 4, vs = G.H - 4, opts2 = ['Đ','S'], opts4 = ['A','B','C','D'];
+  const mapMm = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
+  const sc = wakScores(gray, w, h, loc, test, G), T = wakThreshold(sc), thr = T.thr;
   let pts = 0, max = 0, right = 0; const warn = [];
-  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = wakPick(o, means[k].map(sc));
+  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = wakPick2(o, sc[k], T);
     const ok = pk.state==='ok' && pk.v===r.key; max += r.pt; if(ok){ pts += r.pt; right++; }
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, ok, keyIdx:(r.n===2 ? opts2 : opts4).indexOf(r.key)}; });
   const r2 = x=> Math.round(x*100)/100;
-  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:r2(pts), max:r2(max), right, total:test.rows.length, warn, corners:loc.corners};
+  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:r2(pts), max:r2(max), right, total:test.rows.length, warn, corners:loc.corners, thr};
 }
 function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô đúng, đỏ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống / tô mờ / tô nhiều ô; ghi điểm cạnh khung
   const k = Math.min(1, 1700/canvas.width), c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
