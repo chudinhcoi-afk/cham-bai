@@ -42,6 +42,13 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .hint{position:absolute;left:0;right:0;bottom:0;padding:26px 14px 12px;color:#fff;font-size:.92rem;text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.72))}
 .hint b{display:block;font-size:1rem;margin-bottom:2px}
 .camtop{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px}
+.miss{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.miss .ml{flex:0 0 46%;min-width:0}
+.miss .ml b{display:block;font-size:.9rem}
+.miss .ml small{color:var(--mut);font-size:.76rem}
+.miss .mb{flex:1;height:9px;border-radius:5px;background:#eef0f5;overflow:hidden}
+.miss .mb i{display:block;height:100%}
+.miss .mp{width:42px;text-align:right;font-weight:800;font-size:.9rem}
 .titem{padding:12px;border:1px solid var(--line);border-radius:14px;margin-top:10px;background:#fff;box-shadow:0 1px 3px rgba(20,28,58,.06)}
 .titem.cur{border-color:var(--gold);background:#fffaf0}
 .titem .test{padding:0;border:0}
@@ -198,6 +205,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
         <div class="stats" id="gStats"></div>
         <div class="row" id="gActs" style="margin-top:12px"></div>
       </div>
+      <div class="card" id="gMiss"></div>
       <div class="card" id="xCard" style="display:none;padding:0;overflow:hidden">
         <div style="overflow:auto;max-height:58vh"><table class="tb" id="xTable"></table></div>
         <p class="mut" style="margin:8px 12px 10px">Chạm vào một dòng đã chấm để xem ảnh. Dòng “—” là học sinh chưa có bài.</p>
@@ -568,7 +576,9 @@ function parseExam(text){
   const lines = String(text||'').split('\n'), hd = (lines[0]||'').split(';'); if(hd[0]!=='MBPE' || hd.length < 8) return null;
   const ex = {title:hd[1], p:{TN:+hd[2], DSy:+hd[3], TLN:+hd[4]}, n:{nTN:+hd[5], nDS:+hd[6], nTLN:+hd[7]}, variants:{}, students:{}, order:[], at:Date.now()};
   lines.slice(1).forEach(l=>{ const a = l.slice(1).split(':');
-    if(l[0]==='V' && a.length >= 4) ex.variants[a[0]] = {tn:a[1], ds:a[2].replace(/T/g,'Đ').replace(/F/g,'S'), tln:a[3] ? a[3].split('|') : []};
+    if(l[0]==='V' && a.length >= 4){ ex.variants[a[0]] = {tn:a[1], ds:a[2].replace(/T/g,'Đ').replace(/F/g,'S'), tln:a[3] ? a[3].split('|') : []};
+      // ánh xạ về câu của ĐỀ GỐC (để thống kê câu sai theo đề gốc, không theo vị trí đã trộn): R<đề gốc>:<TN>:<ĐS câu-thứ tự ý>:<TLN>
+      if(a[4] && a[4][0]==='R'){ const nums = t=> t ? t.split(',').map(Number) : []; ex.variants[a[0]].map = {root:a[4].slice(1), tn:nums(a[5]), ds:(a[6] ? a[6].split(',') : []).map(x=>{ const [q, p] = x.split('-'); return {q:+q, p:p||'abcd'}; }), tln:nums(a[7])}; } }
     else if(l[0]==='S' && a.length >= 2){ ex.students[a[0]] = {name:a[1], lop:a[2]||''}; ex.order.push(a[0]); } });
   let h = 0; for(let i = 0; i < text.length; i++) h = (h*31 + text.charCodeAt(i)) >>> 0; ex.id = h.toString(36);
   return Object.keys(ex.variants).length ? ex : null;
@@ -683,7 +693,7 @@ function capture(){
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).slice(); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
     return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
-  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
+  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
 }
 function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 let pendSrc = null;   // ảnh gốc + kết quả đọc của bài đang xem, để chấm tay lại các câu máy chưa chắc
@@ -840,6 +850,28 @@ const fileName = (r, i)=> r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_'
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
 function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
 async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
+/* Thống kê câu sai nhiều trong một lần chấm: tỉ lệ học sinh làm sai (kể cả bỏ trống) theo từng câu */
+function missStats(list, ex){
+  const M = {}, add = (key, label, st)=>{ const o = M[key] || (M[key] = {label, n:0, wrong:0, blank:0}); o.n++; if(st==='x') o.wrong++; else if(st==='-') o.blank++; };
+  if(ex){ const roots = new Set(Object.values(ex.variants).map(v=> v.map ? v.map.root : null)), multi = roots.size > 1, rt = v=> multi && v.map ? ' · đề gốc ' + v.map.root : '';
+    list.forEach(r=>{ const v = ex.variants[r.made]; if(!v) return; const g = gradeExam(ex, r); if(!g) return; const mp = v.map;
+      [...v.tn].forEach((k,i)=>{ const o = mp && mp.tn[i] ? mp.tn[i] : null, st = g.tn[i] ? 'o' : 'ABCD'.includes(r.tn[i]||'?') ? 'x' : '-';
+        add(o ? 'I:' + mp.root + ':' + o : r.made + ':I:' + (i+1), o ? 'Phần I · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần I câu ' + (i+1), st); });
+      [...v.ds].forEach((k,i)=>{ const q = Math.floor(i/4), j = i % 4, d = mp && mp.ds[q] ? mp.ds[q] : null, lab = d ? d.q + (d.p[j] || 'abcd'[j]) : null, st = g.ds[i] ? 'o' : 'ĐS'.includes(r.ds[i]||'?') ? 'x' : '-';
+        add(lab ? 'II:' + mp.root + ':' + lab : r.made + ':II:' + (q+1) + 'abcd'[j], lab ? 'Phần II · câu ' + lab + rt(v) : 'Mã ' + r.made + ' · phần II câu ' + (q+1) + 'abcd'[j], st); });
+      v.tln.forEach((k,i)=>{ const o = mp && mp.tln[i] ? mp.tln[i] : null, st = g.tl[i] ? 'o' : String((r.tln||[])[i]||'').trim() ? 'x' : '-';
+        add(o ? 'III:' + mp.root + ':' + o : r.made + ':III:' + (i+1), o ? 'Phần III · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần III câu ' + (i+1), st); }); }); }
+  else list.forEach(r=>{ const t = pickTest(r.id); if(!t || !r.qa) return; t.rows.forEach((row,i)=> add('w' + row.lab, 'Câu ' + row.lab, r.qa[i] || '-')); });
+  return Object.values(M).filter(o=> o.wrong + o.blank > 0).sort((a,b)=> (b.wrong + b.blank)/b.n - (a.wrong + a.blank)/a.n || b.n - a.n);
+}
+function missHtml(list, ex){
+  const a = missStats(list, ex); if(!list.length) return '';
+  if(!a.length) return '<h3 style="margin-bottom:4px">Câu sai nhiều</h3><p class="mut" style="margin:0">' + (ex || list.some(r=> r.qa) ? 'Không có câu nào sai.' : 'Các bài chấm trước bản này chưa lưu chi tiết từng câu — bài chấm từ nay sẽ được thống kê.') + '</p>';
+  const mapped = !ex || Object.values(ex.variants).every(v=> v.map);
+  return '<h3 style="margin-bottom:2px">Câu sai nhiều</h3><p class="mut" style="margin:0 0 8px">' + (ex ? (mapped ? 'Đánh số theo đề gốc (đã quy đổi từ các mã đề trộn).' : 'Đề nạp từ bản cũ chưa có thông tin đề gốc nên thống kê theo từng mã đề.') : 'Tính trên các bài có lưu chi tiết.') + ' Tỉ lệ = sai + bỏ trống.</p>'
+    + a.slice(0, 12).map(o=>{ const pc = Math.round(100*(o.wrong + o.blank)/o.n); return '<div class="miss"><div class="ml"><b>' + esc(o.label) + '</b><small>sai ' + o.wrong + (o.blank ? ' · trống ' + o.blank : '') + ' / ' + o.n + ' bài</small></div><div class="mb"><i style="width:' + pc + '%;background:' + (pc >= 50 ? '#d0302b' : pc >= 30 ? '#e08a00' : '#b8892b') + '"></i></div><div class="mp">' + pc + '%</div></div>'; }).join('')
+    + (a.length > 12 ? '<p class="mut" style="margin:6px 0 0">… và ' + (a.length - 12) + ' câu khác có học sinh sai.</p>' : '');
+}
 function xRows(ex){ const list = xres[ex.id] || [], by = {}; list.forEach(r=>{ if(r.sbd) by[r.sbd] = r; }); const rows = ex.order.map(sbd=> ({sbd, st:ex.students[sbd], r:by[sbd]||null})); list.forEach(r=>{ if(!r.sbd || !ex.students[r.sbd]) rows.push({sbd:r.sbd || '?', st:null, r}); }); return rows; }
 const curList = ()=> !rv ? [] : rv.kind==='x' ? (xres[rv.key] || []) : wList(rv.key), rvExam = ()=> rv && rv.kind==='x' ? exams.find(e=> e.id===rv.key) : null;
 function drawResults(){
@@ -856,6 +888,7 @@ function drawResults(){
   const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> r.pts), mx = list.length ? list[0].max : 0, ex = rvExam();
   $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
   $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
+  $('gMiss').innerHTML = missHtml(list, ex); $('gMiss').style.display = $('gMiss').innerHTML ? '' : 'none';
   $('gActs').innerHTML = (ex ? '<button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '') + '<button class="btn' + (ex ? '' : ' gold') + '" id="bShare">📤 Gửi ảnh (Zalo…)</button><button class="btn" id="bSave">⬇ Tải ảnh</button>';
   $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i])); $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
   $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
