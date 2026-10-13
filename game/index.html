@@ -30,6 +30,16 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
 .world .bar{height:6px;border-radius:6px;background:rgba(0,0,0,.35);margin-top:12px;overflow:hidden}.world .bar>div{height:100%;background:var(--gold)}
 .howto{max-width:1100px;margin:20px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
 .howto div{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5}
+#acct{max-width:640px;margin:0 auto 18px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+#acct h3{margin:0 0 8px;font-size:16px}
+#acct .row{display:flex;gap:8px;flex-wrap:wrap}
+#acct input{flex:1;min-width:120px;background:#0c1124;border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:11px 12px;font-size:16px}
+#acct .go2{background:linear-gradient(180deg,#ffd76a,#f2a93b);color:#2b1a00;border:none;border-radius:12px;padding:11px 16px;font-weight:800;font-size:15px;cursor:pointer}
+#acct .err{color:#ff8a8a;font-size:14px;margin-top:8px}
+#acct .muted{opacity:.75;font-size:13px;margin-top:8px}
+#acct .me{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#cloud{font-size:10px;opacity:.85;margin-top:3px}
+.lvchip{display:inline-block;border-radius:8px;padding:1px 7px;font-weight:800;font-size:13px}
 #loading{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:rgba(8,11,24,.92);font-size:18px;font-weight:700}
 #loading .spin{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.15);border-top-color:var(--gold);animation:spin 0.8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -104,20 +114,21 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
   <button class="ibtn" id="menuGear">⚙ Cài đặt</button>
   <h1>⚔ Thế Giới Toán Học</h1>
   <p class="sub">Phiêu lưu qua 7 vùng đất từ <b>Lớp 6</b> đến <b>Lớp 12</b>. Mỗi con quái vật sẽ <b>đố bạn một câu toán</b> trước khi giao chiến: trả lời đúng thì nó yếu đi và dễ hạ gục, trả lời sai thì nó <b>biến hình</b> và mạnh hơn rất nhiều!</p>
-  <div class="who"><input id="pname" maxlength="20" placeholder="Tên nhân vật của bạn"><div class="card" id="pinfo"></div></div>
+  <div id="acct"></div>
+  <div class="who"><div class="card" id="pinfo"></div></div>
   <div class="worlds" id="worlds"></div>
   <div class="howto">
     <div>🎮 <b>Di chuyển:</b> phím W A S D hoặc mũi tên · kéo chuột để xoay góc nhìn · lăn chuột để phóng to. Điện thoại: cần điều khiển bên trái, vuốt màn hình để xoay.</div>
     <div>👾 <b>Gặp quái:</b> đến gần rồi bấm <b>Thách đấu</b> (phím E). Quái vật đố một câu trắc nghiệm, có thời gian đếm ngược.</div>
     <div>⚔ <b>Chiến đấu:</b> bấm <b>Đánh</b> (phím Space) và <b>Tuyệt chiêu</b> (phím Q). Hạ quái để nhận kinh nghiệm và lên cấp.</div>
-    <div>📖 <b>Sổ tay</b> ghi lại số câu đúng theo từng chương, để biết chương nào cần ôn thêm.</div>
+    <div>📖 <b>Sổ tay</b> ghi điểm chuyên cần từng chương (7 → 10) và còn thiếu gì để lên mức tiếp theo. Đạt 10 điểm thì nhận <b>danh hiệu</b> của chương.</div>
   </div>
 </div>
 
 <div id="game" class="hidden">
   <div id="hud"><div class="av" id="avTxt">?</div><div class="bars"><div class="nm" id="hudName"></div>
     <div class="pbar"><div id="hpBar" style="background:linear-gradient(90deg,#e5484d,#ff7a59)"></div><span id="hpTxt"></span></div>
-    <div class="pbar"><div id="xpBar" style="background:linear-gradient(90deg,#4aa3ff,#7b5cff)"></div><span id="xpTxt"></span></div></div></div>
+    <div class="pbar"><div id="xpBar" style="background:linear-gradient(90deg,#4aa3ff,#7b5cff)"></div><span id="xpTxt"></span></div><div id="cloud"></div></div></div>
   <div id="zone">Trại xuất phát</div>
   <div id="topR"><canvas id="mini" width="300" height="300"></canvas>
     <div style="display:flex;gap:6px"><button class="ibtn" id="bBook">📖 Sổ tay</button><button class="ibtn" id="bGear" title="Cài đặt">⚙</button><button class="ibtn" id="bHome">🗺 Bản đồ</button></div></div>
@@ -164,9 +175,94 @@ const WORLDS = {
   11:{name:'Núi Lửa Lượng Giác', mood:'🌋', sky:0x1a0808, fog:0x8a3a22, sunC:0xff9a6a, ground:[0x4a3330,0x2e2220], patch:0x5a2a1e, path:0x6b4a3a, shore:0x1e1412, rock:0x3a2a28, peak:0x2a1a18, wl:-2.0, water:0xff5a1a, lava:true, ol:0x050202, amp:1.15, fq:1.1, fogR:[50,200], hemi:0.8, sun:1.05},
   12:{name:'Thung Lũng Pha Lê Giải Tích', mood:'💎', sky:0x0a0620, fog:0x3e2f80, sunC:0xb0a0ff, ground:[0x6656b0,0x3c3480], patch:0x7462c4, path:0x7a6ac0, shore:0x2a2050, rock:0x5a4ab0, peak:0x8a7ae0, wl:-2.4, water:0x7a5cff, glow:true, stars:true, ol:0x05030f, amp:1, fq:1, fogR:[55,210], hemi:1.25, sun:1.0}};
 const SAVE_KEY = 'mbp_game_v1';
-let save = (()=>{ try{ return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; }catch(e){ return null; } })() || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}};
+const loadSave = key=>{ try{ return JSON.parse(localStorage.getItem(key)) || null; }catch(e){ return null; } };
+const LAST_KEY = 'mbp_game_last';
+let saveKey = (()=>{ try{ return localStorage.getItem(LAST_KEY) || SAVE_KEY; }catch(e){ return SAVE_KEY; } })();
+let save = loadSave(saveKey) || loadSave(SAVE_KEY) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}};
 save.opt = Object.assign({q:'auto', music:true, sfx:true, auto:null}, save.opt || {});
-const persist = ()=>{ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} };
+const persist = ()=>{ try{ localStorage.setItem(saveKey, JSON.stringify(save)); localStorage.setItem(LAST_KEY, saveKey); }catch(e){} };
+// mỗi học sinh (mã lớp + SBD) một bản lưu riêng — dùng chung máy vẫn không lẫn
+function switchSave(key){ const opt = save.opt, tut = save.tut; saveKey = key; save = loadSave(key) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}}; save.opt = Object.assign({}, opt, save.opt || {}); if(tut && !save.tut) save.tut = tut; persist(); }
+
+/* ======================= LỚP HỌC: ĐĂNG NHẬP, ĐỒNG BỘ, ĐIỂM CHUYÊN CẦN ======================= */
+const FB = {db:'https://kho-de-toan-vonhai-default-rtdb.firebaseio.com', key:'AIzaSyATpXxpfSc03NLbzFQG6J04tFZOptfuL1s'};
+const AUTH_KEY = 'mbp_game_auth';
+let fbAuth = loadSave(AUTH_KEY);
+const saveAuth = ()=>{ try{ localStorage.setItem(AUTH_KEY, JSON.stringify(fbAuth)); }catch(e){} };
+// học sinh đăng nhập ẩn danh (không cần tài khoản); quyền ghi do quy tắc Firebase giới hạn đúng SBD của mình
+async function fbToken(){
+  if(fbAuth && fbAuth.id && fbAuth.exp > Date.now() + 60000) return fbAuth.id;
+  if(fbAuth && fbAuth.rt){ try{ const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB.key, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(fbAuth.rt)}); const d = await r.json();
+    if(r.ok){ fbAuth = {uid:d.user_id, id:d.id_token, rt:d.refresh_token, exp:Date.now() + (+d.expires_in)*1000}; saveAuth(); return fbAuth.id; } }catch(e){} }
+  let r, d; try{ r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB.key, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({returnSecureToken:true})}); d = await r.json(); }catch(e){ throw new Error('Không kết nối được máy chủ — kiểm tra mạng.'); }
+  if(!r.ok) throw new Error(/OPERATION_NOT_ALLOWED|ADMIN_ONLY/.test(d.error && d.error.message || '') ? 'Máy chủ chưa bật đăng nhập cho học sinh — báo thầy/cô.' : 'Không đăng nhập được máy chủ.');
+  fbAuth = {uid:d.localId, id:d.idToken, rt:d.refreshToken, exp:Date.now() + (+d.expiresIn)*1000}; saveAuth(); return fbAuth.id;
+}
+async function fb(path, method = 'GET', body){
+  const t = await fbToken(); let r;
+  try{ r = await fetch(`${FB.db}/${path}.json?auth=${encodeURIComponent(t)}`, {method, headers:{'Content-Type':'application/json'}, body:body === undefined ? undefined : JSON.stringify(body)}); }catch(e){ throw new Error('NET'); }
+  if(r.status === 401 || r.status === 403) throw new Error('DENIED'); if(!r.ok) throw new Error('HTTP ' + r.status); return r.json();
+}
+const norm = s=> String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
+const nameOk = (inp, real)=>{ const a = norm(inp), b = norm(real); return !!a && (a === b || (a.split(' ').length >= 2 && b.endsWith(' ' + a))); };
+const qsLop = (new URLSearchParams(location.search).get('lop') || '').trim().toUpperCase();
+async function login(ma, sbd, ten){
+  ma = ma.trim().toUpperCase(); sbd = String(sbd).replace(/\D/g, '');
+  if(!ma || !sbd || !ten.trim()) throw new Error('Nhập đủ mã lớp, số báo danh và họ tên.');
+  let lop; try{ lop = await fb('game/lop/' + ma); }catch(e){ throw new Error(e.message === 'DENIED' ? 'Máy chủ chưa cho phép học sinh truy cập — báo thầy/cô.' : e.message === 'NET' ? 'Không kết nối được máy chủ — kiểm tra mạng.' : e.message); }
+  if(!lop) throw new Error('Không tìm thấy lớp có mã ' + ma + '.');
+  const hs = lop.hs && lop.hs[sbd]; if(!hs) throw new Error('Số báo danh ' + sbd + ' không có trong danh sách lớp ' + (lop.ten || '') + '.');
+  if(!nameOk(ten, hs.ten)) throw new Error('Họ tên không khớp với số báo danh này.');
+  const cl = await fb(`game/claim/${ma}/${sbd}`);
+  if(cl && cl !== fbAuth.uid) throw new Error('Số báo danh này đã đăng nhập trên một máy khác. Nhờ thầy/cô bấm "Mở khoá máy" trong MathBankPro.');
+  if(!cl) await fb(`game/claim/${ma}/${sbd}`, 'PUT', fbAuth.uid);
+  const kq = await fb(`game/kq/${ma}/${sbd}`) || {};
+  switchSave(`${SAVE_KEY}:${ma}:${sbd}`);
+  save.name = hs.ten; save.acct = {ma, sbd, ten:hs.ten, lop:lop.ten || ma, khoi:+lop.khoi || null};
+  // gộp với bản trên máy chủ (lấy bản làm nhiều hơn)
+  if(kq.ch) Object.keys(kq.ch).forEach(g=>{ save.ch = save.ch || {}; save.ch[g] = save.ch[g] || {}; Object.keys(kq.ch[g]).forEach(ci=>{ const a = save.ch[g][ci], b = kq.ch[g][ci]; if(!a || (b.n || 0) > (a.n || 0)) save.ch[g][ci] = Object.assign({d:{}, days:{}, r:''}, b); }); });
+  if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
+  persist(); syncNow();
+}
+function logout(){ switchSave(SAVE_KEY); renderAcct(); showMenu(); }
+let syncT = null;
+function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
+function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
+async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
+  const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, last:Date.now()}, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
+addEventListener('online', ()=> syncSoon(500));
+
+// ----- điểm chuyên cần từng chương -----
+const today = ()=> new Date().toLocaleDateString('sv');
+function chRec(g, ci){ save.ch = save.ch || {}; const G = save.ch[g] = save.ch[g] || {}; const R = G[ci] = G[ci] || {}; R.d = R.d || {}; R.days = R.days || {}; R.r = R.r || ''; ['n', 'c', 'vd', 'th', 'st', 'best', 'boss', 'lv'].forEach(k=> R[k] = R[k] || 0); return R; }
+function chScore(R, C){
+  if(!R || !R.n) return {s:0, lv:0, need:['bắt đầu trả lời câu đố ở khu vực này'], cov:0, acc:0, days:0, hard:0};
+  const D = Math.min(C.nd || 1, 50), cov = Math.min(1, Object.keys(R.d || {}).length/D), rr = R.r || '', acc = rr.split('').filter(x=> x === '1').length/Math.max(10, rr.length),
+    days = Object.values(R.days || {}).filter(v=> v >= 5).length, hard = C.nv ? (R.vd || 0) : (R.th || 0), hn = C.nv ? 'Vận dụng' : 'Thông hiểu', P = x=> Math.round(x*100) + '%';
+  const L = [
+    {lv:7, c:[[R.n >= 15, `làm ít nhất 15 câu (${R.n}/15)`], [cov >= 0.5, `đúng ≥ 50% số dạng (${P(cov)})`], [acc >= 0.6, `tỉ lệ đúng 30 câu gần nhất ≥ 60% (${P(acc)})`]]},
+    {lv:8, c:[[R.n >= 25, `làm ít nhất 25 câu (${R.n}/25)`], [cov >= 0.7, `đúng ≥ 70% số dạng (${P(cov)})`], [acc >= 0.7, `tỉ lệ đúng ≥ 70% (${P(acc)})`], [hard >= (C.nv ? 3 : 8), `đúng ≥ ${C.nv ? 3 : 8} câu ${hn} (${hard})`]]},
+    {lv:9, c:[[R.n >= 40, `làm ít nhất 40 câu (${R.n}/40)`], [cov >= 0.85, `đúng ≥ 85% số dạng (${P(cov)})`], [acc >= 0.8, `tỉ lệ đúng ≥ 80% (${P(acc)})`], [hard >= (C.nv ? 6 : 15), `đúng ≥ ${C.nv ? 6 : 15} câu ${hn} (${hard})`], [R.boss >= 1, 'hạ Hộ vệ của chương'], [days >= 2, `chơi chương này ít nhất 2 ngày, mỗi ngày ≥ 5 câu (${days})`]]},
+    {lv:10, c:[[R.n >= 60, `làm ít nhất 60 câu (${R.n}/60)`], [cov >= 1, `làm đúng tất cả các dạng (${P(cov)})`], [acc >= 0.85, `tỉ lệ đúng ≥ 85% (${P(acc)})`], [R.best >= 10, `chuỗi 10 câu đúng liên tiếp (kỷ lục ${R.best})`], [R.boss >= 2, 'trả lời đúng cả 3 câu của Hộ vệ rồi hạ Hộ vệ'], [days >= 3, `chơi chương này ít nhất 3 ngày (${days})`]]}];
+  let lv = 0; for(const l of L){ if(l.c.every(x=> x[0])) lv = l.lv; else break; }
+  const next = L.find(l=> l.lv > lv), need = next ? next.c.filter(x=> !x[0]).map(x=> x[1]) : [];
+  const s = lv || Math.floor(70*Math.min(1, R.n/15)*Math.min(1, cov/0.5)*Math.min(1, acc/0.6))/10;
+  return {s, lv, need, cov, acc, days, hard};
+}
+const LVC = {0:'#e5484d', 7:'#cd7f32', 8:'#c9d1d9', 9:'#f2c14e', 10:'#c77dff'}, LVN = {7:'Chiến binh', 8:'Hiệp sĩ', 9:'Dũng sĩ', 10:'Bậc thầy'};
+const shortCh = t=> String(t).replace(/^Chương [IVXL0-9]+\.\s*/, '');
+const fmtS = s=> String(s).replace('.', ',');
+function checkLevel(ci){ const R = chRec(grade, ci), C = META[grade][ci], sc = chScore(R, C); if(sc.lv > (R.lv || 0)){ R.lv = sc.lv;
+  if(sc.lv === 10){ toast(`🏅 DANH HIỆU: BẬC THẦY ${shortCh(C.ten).toUpperCase()}<br><span style="font-size:.6em">Điểm chuyên cần chương: 10</span>`, 5000); hero.victory(); burst(player.position, 0xc77dff, 2, 30); pillar(player.position, 0xc77dff); }
+  else toast(`⭐ ${LVN[sc.lv]} — chương ${shortCh(C.ten)}<br><span style="font-size:.6em">Điểm chuyên cần: ${sc.lv}</span>`, 3200);
+  sfx('lvl'); refreshFlags(); } }
+function recAnswer(q, ok){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
+  if(ok){ R.c++; if(q.k != null) R.d[q.k] = 1; if(q.m === 'VD') R.vd++; if(q.m === 'TH') R.th++; R.st++; R.best = Math.max(R.best, R.st); } else R.st = 0;
+  const t = today(); R.days[t] = (R.days[t] || 0) + 1; const ks = Object.keys(R.days).sort(); while(ks.length > 60) delete R.days[ks.shift()];
+  R.t = Date.now(); checkLevel(q.c); syncSoon(); }
+
 const xpNeed = lv=> Math.round(60*Math.pow(lv, 1.45));
 const pMaxHp = ()=> 100 + save.lv*20, pAtk = ()=> 12 + save.lv*3.6;
 let META = null; const PACK = {};
@@ -267,18 +363,29 @@ const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 let tierName = save.opt.q !== 'auto' ? save.opt.q : (save.opt.auto || (mobile ? 'mid' : 'high')), tier = TIERS[tierName];
 
 /* ======================= MÀN HÌNH CHỌN VÙNG ĐẤT ======================= */
+function renderAcct(err){
+  const el = $('acct'), A = save.acct;
+  if(A){ el.innerHTML = `<div class="me"><div style="font-size:28px">🎓</div><div style="flex:1"><b>${A.ten}</b> · SBD ${A.sbd}<div class="muted" style="margin:2px 0 0">Lớp ${A.lop}${A.khoi ? ' · khối ' + A.khoi : ''} — điểm chuyên cần được gửi cho thầy/cô</div></div><button class="ibtn" id="aOut">Đổi người chơi</button></div>`;
+    $('aOut').onclick = ()=>{ if(confirm('Thoát tài khoản ' + A.ten + '? Tiến độ vẫn được lưu.')) logout(); }; return; }
+  el.innerHTML = `<h3>🎓 Vào lớp (tính điểm chuyên cần)</h3><div class="row">${qsLop ? '' : '<input id="aMa" maxlength="10" placeholder="Mã lớp" style="max-width:130px;text-transform:uppercase">'}<input id="aSbd" inputmode="numeric" maxlength="10" placeholder="Số báo danh" style="max-width:150px"><input id="aTen" maxlength="40" placeholder="Họ và tên (có dấu)"><button class="go2" id="aGo">Vào lớp</button></div>
+    ${qsLop ? `<div class="muted">Mã lớp: <b>${qsLop}</b></div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
+    <div class="muted">Hoặc chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"></div>`;
+  $('aGo').onclick = async ()=>{ const b = $('aGo'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
+    try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); }catch(e){ renderAcct(e.message); } };
+}
 async function showMenu(){
   $('menu').classList.remove('hidden'); $('game').classList.add('hidden'); running = false; musStop(); $('tip').classList.add('hidden');
-  $('pname').value = save.name || '';
+  renderAcct();
   $('pinfo').innerHTML = `<div>⭐ Cấp <b>${save.lv}</b></div><div>🧠 ${save.stars} câu đúng</div><div>👾 ${save.kills} quái</div>`;
+  const acc = save.acct;
   const meta = await loadMeta();
   const css = c=> '#' + c.toString(16).padStart(6,'0');
   $('worlds').innerHTML = Object.keys(WORLDS).map(g=>{ const W = WORLDS[g], st = save.stat[g] || {}, ch = meta[g].filter(c=> c.n > 0).length;
-    const done = Object.values(st).filter(v=> v[0] >= 3).length;
+    const done = meta[g].filter((c, ci)=> c.n && chScore((save.ch || {})[g] && save.ch[g][ci], c).lv >= 7).length, titles = meta[g].filter((c, ci)=> c.n && chScore((save.ch || {})[g] && save.ch[g][ci], c).lv >= 10).length;
     return `<div class="world" data-g="${g}" style="background:linear-gradient(160deg, ${css(W.ground[0])} 0%, ${css(W.sky)} 55%, ${css(W.fog)} 100%);color:${g>=11?'#fff':'#1a1a1a'}">
       <span class="lv">${W.mood} Lớp ${g}</span>${save.badges && save.badges[g] ? ' <span class="lv" title="Đã hạ Ma Vương Vô Cực thức tỉnh">👑 Kẻ Diệt Vô Cực</span>' : ''}<b>${W.name}</b><i>${ch} khu vực (chương) · ${meta[g].reduce((s,c)=> s + c.n, 0)} câu đố</i>
-      <div class="bar"><div style="width:${Math.round(100*done/Math.max(1,ch))}%"></div></div><i>Đã chinh phục ${done}/${ch} khu vực</i></div>`; }).join('');
-  document.querySelectorAll('.world').forEach(el=> el.onclick = ()=>{ const nm = $('pname').value.trim(); if(!nm){ $('pname').focus(); $('pname').placeholder = 'Nhập tên trước đã!'; return; } save.name = nm; persist(); auInit(); sfx('click'); enterWorld(+el.dataset.g); });
+      <div class="bar"><div style="width:${Math.round(100*done/Math.max(1,ch))}%"></div></div><i>Đạt ≥ 7 điểm: ${done}/${ch} chương${titles ? ` · 🏅 ${titles} danh hiệu` : ''}</i>${acc && acc.khoi == g ? '<div style="position:absolute;right:10px;top:10px" class="lv">📌 Lớp của em</div>' : ''}</div>`; }).join('');
+  document.querySelectorAll('.world').forEach(el=> el.onclick = ()=>{ if(!save.acct){ const nm = $('pname') ? $('pname').value.trim() : ''; if(!nm){ ($('aSbd') || $('pname')).focus(); toast('Vào lớp bằng SBD + họ tên, hoặc nhập tên nhân vật để chơi tự do', 2600); return; } save.name = nm; } persist(); auInit(); sfx('click'); enterWorld(+el.dataset.g); });
 }
 
 /* ======================= DỰNG CẢNH 3D ======================= */
@@ -518,6 +625,7 @@ function buildWorld(g){
     const lab = textSprite(`Khu ${i + 1}: ${c.ten.replace(/^Chương [IVXL]+\. /, '')}\nQuái cấp ${Z.lvl}–${Z.lvl + 2}`, {screen:0.03, color:'#ffe6a3'}); lab.position.set(x, y + 6, z); world.add(lab); Z.lab = lab;
     zones.push(Z);
     const n = tier.mons; for(let k = 0; k < n; k++) spawnMonster(Z, k === 0 ? 'elite' : 'normal');
+    if(i < chs.length - 1) spawnMonster(Z, 'guard');
   });
   refreshFlags();
   const lastZ = zones[zones.length - 1]; if(lastZ){ bossZone = lastZ; spawnMonster(lastZ, 'boss'); }
@@ -526,7 +634,8 @@ function buildWorld(g){
   W._hemi = W.hemi; W._sun = W.sun;
   applyTier();
 }
-function refreshFlags(){ const st = save.stat[grade] || {}; zones.forEach(Z=>{ const v = st[Z.ci]; Z.done = !!(v && v[0] >= 3); Z.flagMat.color.set(Z.done ? 0xf2c14e : 0xd94f3a); Z.mark.material.color.set(Z.done ? 0xf2c14e : 0xffffff); }); }
+function refreshFlags(){ zones.forEach(Z=>{ const sc = chScore((save.ch || {})[grade] && save.ch[grade][Z.ci], META[grade][Z.ci]); Z.done = sc.lv >= 7; const col = new THREE.Color(LVC[sc.lv] || LVC[0]); Z.flagMat.color.copy(col); Z.mark.material.color.copy(sc.lv ? col : new THREE.Color(0xffffff));
+  const key = sc.s + '|' + sc.lv; if(Z.lab && Z.labKey !== key){ Z.labKey = key; const p = Z.lab.position.clone(), vis = Z.lab.visible; world.remove(Z.lab); disposeObj(Z.lab); Z.lab = textSprite(`Khu ${Z.idx + 1}: ${shortCh(Z.name)}\n${sc.lv === 10 ? '🏅 Danh hiệu · 10 điểm' : sc.lv ? `★ ${LVN[sc.lv]} · ${sc.lv} điểm` : `Điểm chuyên cần: ${fmtS(sc.s)}`}`, {screen:0.03, color:sc.lv ? LVC[sc.lv] : '#ffe6a3'}); Z.lab.position.copy(p); Z.lab.visible = vis; world.add(Z.lab); } }); }
 
 /* ======================= QUÁI VẬT ======================= */
 const MTYPES = ['slime','golem','bat','spirit','spider'];
@@ -628,16 +737,18 @@ function updBoss(M, d, dt, isC){
 }
 function spawnMonster(Z, kind){
   if(kind === 'boss') return spawnBoss(Z);
-  const type = kind === 'boss' ? 'golem' : MTYPES[Math.floor(Math.random()*MTYPES.length)], color = kind === 'boss' ? 0x9b5de5 : MCOL[Math.floor(Math.random()*MCOL.length)];
-  const {g, mat, det, body, wings} = monsterModel(type, color), lvl = kind === 'boss' ? Z.lvl + 5 : Z.lvl + (kind === 'elite' ? 2 : Math.floor(Math.random()*2));
-  const scale = kind === 'boss' ? 2.6 : kind === 'elite' ? 1.4 : 1;
-  const a = Math.random()*Math.PI*2, r = kind === 'boss' ? 0 : 3 + Math.random()*(Z.r - 4), x = Z.x + Math.cos(a)*r, z = Z.z + Math.sin(a)*r;
+  const guard = kind === 'guard';
+  const type = kind === 'boss' || guard ? 'golem' : MTYPES[Math.floor(Math.random()*MTYPES.length)], color = guard ? [0x3a86ff, 0x2ec4b6, 0xff9f1c, 0x8338ec][Z.idx % 4] : kind === 'boss' ? 0x9b5de5 : MCOL[Math.floor(Math.random()*MCOL.length)];
+  const {g, mat, det, body, wings} = monsterModel(type, color), lvl = guard ? Z.lvl + 3 : kind === 'boss' ? Z.lvl + 5 : Z.lvl + (kind === 'elite' ? 2 : Math.floor(Math.random()*2));
+  const scale = guard ? 2.2 : kind === 'boss' ? 2.6 : kind === 'elite' ? 1.4 : 1;
+  const a = Math.random()*Math.PI*2, r = kind === 'boss' || guard ? 0 : 3 + Math.random()*(Z.r - 4), x = Z.x + Math.cos(a)*r, z = Z.z + Math.sin(a)*r;
   g.position.set(x, height(x, z), z); g.scale.setScalar(0.001); world.add(g);
-  const hpMax = Math.round((40 + lvl*22)*(kind === 'boss' ? 4 : kind === 'elite' ? 1.6 : 1));
-  const M = {g, mat, det, body, wings, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*(kind === 'boss' ? 1.6 : kind === 'elite' ? 1.25 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
-    name:(kind === 'boss' ? 'Trùm ' : kind === 'elite' ? 'Tinh anh ' : '') + MNAMES[type], answered:null, cd:1, dead:false, spawnT:0, baseEm:0x000000, kb:new THREE.Vector3(), wind:0};
+  const hpMax = Math.round((40 + lvl*22)*(guard ? 3 : kind === 'boss' ? 4 : kind === 'elite' ? 1.6 : 1));
+  const M = {g, mat, det, body, wings, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*(guard ? 1.4 : kind === 'boss' ? 1.6 : kind === 'elite' ? 1.25 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
+    name:guard ? 'Hộ vệ chương' : (kind === 'boss' ? 'Trùm ' : kind === 'elite' ? 'Tinh anh ' : '') + MNAMES[type], answered:null, cd:1, dead:false, spawnT:0, baseEm:0x000000, kb:new THREE.Vector3(), wind:0};
   if(kind === 'boss') M.baseEm = 0x1a0830;
-  M.label = textSprite(`${M.name} · Lv${lvl}`, {screen:0.03, color:kind === 'boss' ? '#ffd76a' : kind === 'elite' ? '#ffd0a8' : '#fff'}); world.add(M.label);
+  if(guard){ const cr = new THREE.Mesh(merge([{g:Cy(0.42, 0.36, 0.22, 10), m:M4(0, 3.12, 0), c:0xf2c14e}, ...[0, 1, 2, 3, 4].map(i=>{ const a = i/5*Math.PI*2; return {g:Co(0.09, 0.28, 4), m:M4(Math.cos(a)*0.38, 3.33, Math.sin(a)*0.38), c:0xf2c14e}; })]), toon({vertexColors:true, emissive:0x553300})); g.add(cr); outline(cr, 0.04, true); }
+  M.label = textSprite(`${M.name} · Lv${lvl}`, {screen:guard ? 0.033 : 0.03, color:guard ? '#9fd8ff' : kind === 'boss' ? '#ffd76a' : kind === 'elite' ? '#ffd0a8' : '#fff'}); world.add(M.label);
   M.hpBar = makeBar(); world.add(M.hpBar);
   M.shadow = blob(2.4*scale); world.add(M.shadow);
   monsters.push(M); return M;
@@ -699,7 +810,7 @@ async function enterWorld(g){
   $('menu').classList.add('hidden'); $('game').classList.remove('hidden');
   buildWorld(g); player.position.copy(campPos); pHp = pMaxHp(); target = null; running = true; cine = null; camW = 0;
   scene.remove(nameTag); const nt = textSprite(save.name, {screen:0.03, color:'#ffe6a3'}); nameTag.material = nt.material; nameTag.scale.copy(nt.scale); scene.add(nameTag);
-  $('avTxt').textContent = (save.name || '?').trim().slice(0,1).toUpperCase(); updHud(); toast(`${WORLDS[g].mood} ${WORLDS[g].name}<br><span style="font-size:.6em">Lớp ${g} · ${zones.length} khu vực</span>`, 2600);
+  $('avTxt').textContent = (save.name || '?').trim().split(' ').pop().slice(0,1).toUpperCase(); updHud(); cloudTxt(save.acct ? '☁ ' + save.acct.lop + ' · SBD ' + save.acct.sbd : 'Chơi tự do (không tính điểm)'); toast(`${WORLDS[g].mood} ${WORLDS[g].name}<br><span style="font-size:.6em">Lớp ${g} · ${zones.length} khu vực</span>`, 2600);
   renderer.compile(scene, camera); $('loading').classList.add('hidden');
   perfM.t = 0; perfM.n = 0; perfM.skip = 1; mus.mode = 'explore'; musStart(g);
   if(!save.tut) tutStart();
@@ -716,8 +827,9 @@ function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.l
 const used = new Set();
 function pickQuestion(M){
   const all = PACK[grade], pool = all.map((q, i)=> [q, i]).filter(([q])=> q.c === M.Z.ci);
-  const want = M.kind === 'boss' ? ['VD','TH'] : M.kind === 'elite' ? ['TH','VD'] : ['NB','TH'];
+  const want = M.kind === 'boss' || M.kind === 'guard' ? ['VD','TH'] : M.kind === 'elite' ? ['TH','VD'] : ['NB','TH'];
   let cand = pool.filter(([q, i])=> want.includes(q.m) && !used.has(grade + ':' + i)); if(!cand.length) cand = pool.filter(([q, i])=> !used.has(grade + ':' + i)); if(!cand.length){ pool.forEach(([q, i])=> used.delete(grade + ':' + i)); cand = pool; }
+  { const R = chRec(grade, M.Z.ci), un = cand.filter(([q])=> !R.d[q.k]); if(un.length && Math.random() < 0.75) cand = un; }
   if(window.G && window.G.figOnly){ const f = cand.filter(([q])=> /class="fig"/.test(q.q)); if(f.length) cand = f; }
   const [q, i] = cand[Math.floor(Math.random()*cand.length)]; used.add(grade + ':' + i); return q;
 }
@@ -727,23 +839,23 @@ function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement
 function fitFigs(root){ root.querySelectorAll('.fig').forEach(f=>{ const inner = f.firstElementChild; if(!inner) return; inner.style.zoom = ''; const w = Math.max(inner.scrollWidth, inner.firstElementChild ? inner.firstElementChild.scrollWidth : 0), avail = f.clientWidth; if(w > avail && avail > 0) inner.style.zoom = (avail/w).toFixed(3); }); }
 function askQuiz(M){
   return new Promise(res=>{
-    let step = 0, right = 0; const total = M.kind === 'boss' ? 3 : 1;
+    let step = 0, right = 0; const big = M.kind === 'boss' || M.kind === 'guard', total = big ? 3 : 1;
     const one = ()=>{
       const q = pickQuestion(M); curQ = q; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
-      $('quiz').classList.remove('hidden'); $('qFace').textContent = M.kind === 'boss' ? '👹' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
-      $('qSay').textContent = M.kind === 'boss' ? `Trùm đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!';
+      $('quiz').classList.remove('hidden'); $('qFace').textContent = M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
+      $('qSay').textContent = big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!';
       $('qMeta').textContent = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}`;
       $('qText').innerHTML = q.q; $('qRes').innerHTML = tut && tut.i <= 4 ? '<div class="hint">💡 Trả lời <b>đúng</b>: quái choáng và yếu đi một nửa. Trả lời <b>sai</b> hoặc hết giờ: quái <b>biến hình</b>, mạnh hơn rất nhiều!</div>' : '';
       $('qOpts').innerHTML = q.o.map((o, i)=> `<button class="opt" data-i="${i}"><b>${'ABCD'[i]}</b><span>${String(o).replace(/\.\s*$/, '')}</span></button>`).join('');
       renderMath($('qText')); renderMath($('qOpts')); requestAnimationFrame(()=> fitFigs($('qText')));
       const finish = (i)=>{ if(done) return; done = true; clearInterval(quizTimer); const ok = i === q.a; sfx(ok ? 'ok' : 'bad');
         $('qOpts').querySelectorAll('.opt').forEach((b, j)=>{ b.disabled = true; if(j === q.a) b.classList.add('ok'); else if(j === i) b.classList.add('bad'); });
-        const st = save.stat[grade] = save.stat[grade] || {}; const k = q.c; st[k] = st[k] || [0, 0]; st[k][1]++; if(ok){ st[k][0]++; save.stars++; right++; } persist(); refreshFlags();
+        const st = save.stat[grade] = save.stat[grade] || {}; const k = q.c; st[k] = st[k] || [0, 0]; st[k][1]++; if(ok){ st[k][0]++; save.stars++; right++; } recAnswer(q, ok); persist(); refreshFlags();
         step++; const more = step < total;
-        $('qRes').innerHTML = `<div class="res ${ok ? 'ok' : 'bad'}">${ok ? '✅ <b>Chính xác!</b> ' + (more ? 'Tiếp câu sau…' : M.kind === 'boss' ? '' : 'Quái vật choáng váng và yếu đi một nửa — hạ nó nhanh lên!') : (i < 0 ? '⏰ <b>Hết giờ!</b> ' : '❌ <b>Sai rồi!</b> ') + (more ? '' : 'Quái vật nổi giận và <b>biến hình</b>!')}
+        $('qRes').innerHTML = `<div class="res ${ok ? 'ok' : 'bad'}">${ok ? '✅ <b>Chính xác!</b> ' + (more ? 'Tiếp câu sau…' : big ? '' : 'Quái vật choáng váng và yếu đi một nửa — hạ nó nhanh lên!') : (i < 0 ? '⏰ <b>Hết giờ!</b> ' : '❌ <b>Sai rồi!</b> ') + (more ? '' : 'Quái vật nổi giận và <b>biến hình</b>!')}
           ${!ok && q.s ? `<div class="sol"><b>Lời giải:</b> ${q.s}</div>` : ''}</div><button class="go">${more ? 'Câu tiếp theo ➜' : '⚔ Vào trận!'}</button>`;
         renderMath($('qRes'));
-        $('qRes').querySelector('.go').onclick = ()=>{ sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res(M.kind === 'boss' ? right >= 2 : right === 1); } };
+        $('qRes').querySelector('.go').onclick = ()=>{ sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res({ok:big ? right >= 2 : right === 1, right}); } };
       };
       $('qOpts').querySelectorAll('.opt').forEach(b=> b.onclick = ()=> finish(+b.dataset.i));
       $('qTime').textContent = left; $('qTime').style.color = ''; clearInterval(quizTimer);
@@ -755,7 +867,7 @@ function askQuiz(M){
 let inQuiz = false;
 async function challenge(M){
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
-  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const ok = await askQuiz(M); inQuiz = false; hero.think(false);
+  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
@@ -838,10 +950,11 @@ function hit(M, dmg, crit, isSkill){
 }
 function killMonster(M){
   M.dead = true; M.dying = M.boss ? 0 : 0.4; M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
-  const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? (M.morph ? 24 : 6) : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
+  if((M.kind === 'guard' || M.kind === 'boss') && M.answered !== null){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === 3 ? 2 : 1); toast(M.right === 3 ? '🛡 Hạ Hộ vệ với 3/3 câu đúng!' : '🛡 Đã hạ Hộ vệ chương', 2200); checkLevel(M.Z.ci); syncSoon(800); }
+  const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? (M.morph ? 24 : 6) : M.kind === 'guard' ? 4 : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
   save.kills++; floatText(M.g.position, `+${xp} KN`, '#7fd1ff'); gainXp(xp);
   if(M.kind === 'boss'){ hero.victory(); if(M.morph){ save.badges = save.badges || {}; save.badges[grade] = 1; persist(); toast(`👑 HUYỀN THOẠI! Bạn đã hạ Ma Vương Vô Cực thức tỉnh<br><span style="font-size:.6em">Danh hiệu: Kẻ Diệt Vô Cực — Lớp ${grade}</span>`, 4500); } else toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200); }
-  target = null; M.respawn = M.kind === 'boss' ? 120 : 35; M.label.visible = false; if(M.boss) M.shadow.visible = false; if(M.stars){ M.stars.visible = false; }
+  target = null; M.respawn = M.kind === 'boss' ? 120 : M.kind === 'guard' ? 60 : 35; M.label.visible = false; if(M.boss) M.shadow.visible = false; if(M.stars){ M.stars.visible = false; }
   if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore';
   if(tut) tutEvent('kill');
 }
@@ -926,19 +1039,19 @@ function loop(t){
         if(M.wind > 0){ M.wind -= dt; M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
         else { M.g.rotation.x *= 0.85;
           if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); }
-          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'boss' ? 1.3 : 1.6; M.wind = 0.4; } } } }
+          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.4 : 1.6; M.wind = 0.4; } } } }
       M.g.rotation.y = Math.atan2(player.position.x - M.g.position.x, player.position.z - M.g.position.z);
       if(d > 30){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; target = target === M ? null : target; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
     } else if(M.state !== 'fight'){
       if(M.stars) M.stars.visible = false;
       if(!M.wander || M.t > M.wander.until){ const a = Math.random()*Math.PI*2, r = Math.random()*(M.Z.r - 3); M.wander = {x:M.Z.x + Math.cos(a)*r, z:M.Z.z + Math.sin(a)*r, until:M.t + 4 + Math.random()*5}; }
-      if(M.kind !== 'boss'){ tmp.set(M.wander.x - M.g.position.x, 0, M.wander.z - M.g.position.z); if(tmp.length() > 0.5){ M.g.rotation.y = Math.atan2(tmp.x, tmp.z); tmp.normalize().multiplyScalar(1.4*dt); M.g.position.add(tmp); } }
+      if(M.kind !== 'boss' && M.kind !== 'guard'){ tmp.set(M.wander.x - M.g.position.x, 0, M.wander.z - M.g.position.z); if(tmp.length() > 0.5){ M.g.rotation.y = Math.atan2(tmp.x, tmp.z); tmp.normalize().multiplyScalar(1.4*dt); M.g.position.add(tmp); } }
     }
     const gy = height(M.g.position.x, M.g.position.z); M.g.position.y = gy + fly*M.baseScale;
     if(!isC){ M.home2x = M.g.position.x; M.home2z = M.g.position.z; }
     M.shadow.position.set(M.g.position.x, gy + 0.07, M.g.position.z);
     const top = M.g.position.y + MTOP[M.type]*M.baseScale + 0.35;
-    M.label.position.set(M.g.position.x, top + 0.55, M.g.position.z); M.label.visible = (d < 22 || M.state === 'fight' || (M.kind === 'boss' && d < 60)) && M.spawnT >= 1;
+    M.label.position.set(M.g.position.x, top + 0.55, M.g.position.z); M.label.visible = (d < 22 || M.state === 'fight' || ((M.kind === 'boss' || M.kind === 'guard') && d < 50)) && M.spawnT >= 1;
     M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
   }
   $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near) $('challenge').textContent = `⚔ Thách đấu ${near.name}` + (mobile ? '' : ' (E)');
@@ -992,18 +1105,20 @@ function drawMini(){
   mx.strokeStyle = 'rgba(242,193,78,.35)'; mx.lineWidth = 3; mx.beginPath(); PATH.forEach(([x, z], i)=>{ const [a, b] = P(x, z); if(i) mx.lineTo(a, b); else mx.moveTo(a, b); }); mx.stroke();
   zones.forEach(Z=>{ const [x, y] = P(Z.x, Z.z); mx.strokeStyle = Z.done ? 'rgba(242,193,78,.8)' : 'rgba(255,255,255,.35)'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, Z.r*k, 0, 7); mx.stroke(); });
   { const [x, y] = P(campPos.x, campPos.z); mx.fillStyle = '#f2c14e'; mx.beginPath(); mx.arc(x, y, 7, 0, 7); mx.fill(); }
-  monsters.forEach(M=>{ if(M.dead) return; const [x, y] = P(M.g.position.x, M.g.position.z); mx.fillStyle = M.kind === 'boss' ? '#c77dff' : M.morph ? '#ff2a2a' : M.answered ? '#4aa3ff' : '#ff8a5b'; mx.beginPath(); mx.arc(x, y, M.kind === 'boss' ? 7 : 4, 0, 7); mx.fill(); });
+  monsters.forEach(M=>{ if(M.dead) return; const [x, y] = P(M.g.position.x, M.g.position.z); mx.fillStyle = M.kind === 'boss' ? '#c77dff' : M.kind === 'guard' ? '#9fd8ff' : M.morph ? '#ff2a2a' : M.answered ? '#4aa3ff' : '#ff8a5b'; mx.beginPath(); mx.arc(x, y, M.kind === 'boss' ? 7 : 4, 0, 7); mx.fill(); });
   mx.restore(); mx.fillStyle = '#fff'; mx.beginPath(); mx.moveTo(R, R - 9); mx.lineTo(R - 6, R + 6); mx.lineTo(R + 6, R + 6); mx.fill();
 }
 function openBook(){
-  const st = save.stat[grade] || {};
-  const rows = META[grade].map((c, ci)=> c.n ? (()=>{ const v = st[ci] || [0, 0], p = v[1] ? Math.round(100*v[0]/v[1]) : null; return `<tr><td>${c.ten}</td><td>${v[0]}/${v[1]}</td><td>${p === null ? '—' : `<b style="color:${p >= 80 ? '#3ccf7a' : p >= 50 ? '#f2c14e' : '#ff6b6b'}">${p}%</b>`}</td></tr>`; })() : '').join('');
-  $('bookBox').innerHTML = `<h3 style="margin:0 0 4px">📖 Sổ tay — Lớp ${grade}</h3><p style="margin:0 0 10px;opacity:.75;font-size:13px">Số câu trả lời đúng / số câu đã gặp theo từng chương. Chương dưới 50% nên ôn lại! Trả lời đúng từ 3 câu trở lên ở một khu thì cờ khu đó chuyển màu vàng.</p>
-    <table><tr><th>Chương</th><th>Đúng</th><th>Tỉ lệ</th></tr>${rows}</table><p style="opacity:.75;font-size:13px">⭐ Cấp ${save.lv} · 🧠 ${save.stars} câu đúng · 👾 ${save.kills} quái đã hạ</p><button class="ibtn" onclick="document.getElementById('book').classList.add('hidden')">Đóng</button>`;
+  const rows = META[grade].map((c, ci)=> c.n ? (()=>{ const R = (save.ch || {})[grade] && save.ch[grade][ci], sc = chScore(R, c);
+    return `<tr><td>${c.ten}<div style="font-size:12px;opacity:.75;margin-top:3px">${sc.lv === 10 ? '🏅 Bậc thầy ' + shortCh(c.ten) : sc.need.length ? 'Để lên ' + (sc.lv ? sc.lv + 1 : 7) + ' điểm cần: ' + sc.need.join('; ') : ''}</div></td>
+      <td style="text-align:center"><span class="lvchip" style="background:${sc.lv ? LVC[sc.lv] : 'rgba(255,255,255,.1)'};color:${sc.lv ? '#1a1a1a' : '#fff'}">${fmtS(sc.s)}</span></td><td style="font-size:12px">${R ? `${R.c || 0}/${R.n || 0} đúng<br>${Math.round(sc.cov*100)}% dạng` : '—'}</td></tr>`; })() : '').join('');
+  $('bookBox').innerHTML = `<h3 style="margin:0 0 4px">📖 Sổ tay — Lớp ${grade}${save.acct ? ' · ' + save.acct.ten : ''}</h3>
+    <p style="margin:0 0 10px;opacity:.8;font-size:13px">Điểm chuyên cần từng chương: <b style="color:${LVC[7]}">7 Chiến binh</b> · <b style="color:${LVC[8]}">8 Hiệp sĩ</b> · <b style="color:${LVC[9]}">9 Dũng sĩ</b> · <b style="color:${LVC[10]}">10 Bậc thầy (danh hiệu)</b>. Tỉ lệ đúng tính trên 30 câu gần nhất; mức 9–10 cần hạ Hộ vệ chương và chơi nhiều ngày.${save.acct ? '' : ' <b>Đang chơi tự do — điểm không gửi cho thầy/cô.</b>'}</p>
+    <table><tr><th>Chương</th><th>Điểm</th><th>Tiến độ</th></tr>${rows}</table><p style="opacity:.75;font-size:13px">⭐ Cấp ${save.lv} · 🧠 ${save.stars} câu đúng · 👾 ${save.kills} quái đã hạ</p><button class="ibtn" onclick="document.getElementById('book').classList.add('hidden')">Đóng</button>`;
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 applyTier();
 showMenu();
 </script>
