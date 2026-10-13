@@ -179,7 +179,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính</h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 13/10 · đọc phiếu v3</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -416,6 +416,52 @@ function omrLocateSheet(gray, w, h){
   if(!best || best.score < 40) return null;
   return best;
 }
+/* V3 (13/10/2026): BÁM VÒNG IN — sau khi định vị bằng 4 góc, từng khối ô (SBD, mã đề, mỗi cột phần I, mỗi câu phần II, mỗi cột phần III)
+   được xê dịch thêm tối đa ±1,4 mm sao cho điểm đo nằm đúng trên các vòng tròn in sẵn. Bù cho phiếu cong / góc bắt lệch vài điểm ảnh. */
+function omrSnapLayout(L, gray, w, h, map){
+  const px = (X, Y)=>{ const [x, y] = map(X, Y), xi = Math.round(x), yi = Math.round(y); return (xi < 0 || yi < 0 || xi >= w || yi >= h) ? 255 : gray[yi*w + xi]; };
+  const K = 12, ring = [], out = [];
+  for(let k=0;k<K;k++){ const a = k*2*Math.PI/K; ring.push([1.05*Math.cos(a), 1.05*Math.sin(a)]); out.push([1.55*Math.cos(a + Math.PI/K), 1.55*Math.sin(a + Math.PI/K)]); }
+  const fit = (bs, dx, dy)=>{ let r = 0, o = 0; bs.forEach(b=>{ ring.forEach(([u,v])=> r += px(b.x+dx+u, b.y+dy+v)); out.forEach(([u,v])=> o += px(b.x+dx+u, b.y+dy+v)); }); return (r - o)/(bs.length*K); };   // càng âm: vòng in càng trùng điểm đo
+  const regions = [L.sbd.flat(), L.made.flat()];
+  for(let c=0;c<3;c++) regions.push(L.p1.slice(c*6, c*6+6).flat());
+  L.p2.forEach(q=> regions.push(q.flat()));
+  L.p3.forEach(q=> regions.push(q.flat()));
+  // 1) mỗi khối tự tìm độ dời tốt nhất
+  const R = regions.filter(bs=> bs.length).map(bs=>{
+    const cx = bs.reduce((t,b)=> t+b.x, 0)/bs.length, cy = bs.reduce((t,b)=> t+b.y, 0)/bs.length, base = fit(bs, 0, 0);
+    let best = {dx:0, dy:0, v:base};
+    for(let dy=-1.4; dy<=1.401; dy+=0.35) for(let dx=-1.4; dx<=1.401; dx+=0.35){ const v = fit(bs, dx, dy); if(v < best.v) best = {dx, dy, v}; }
+    return {bs, cx, cy, base, dx:best.dx, dy:best.dy, gain: base - best.v};
+  });
+  // 2) độ dời của các khối biến đổi trơn trên mặt phiếu (phiếu cong, góc bắt lệch) → khớp mặt phẳng dx, dy = a + b·X + c·Y,
+  //    bỏ dần khối lệch hẳn (bị chữ viết / ô đen kéo sai)
+  let use = R.filter(r=> r.gain > 4), model = null;
+  const solve = (rs, key)=>{ let S = [[0,0,0],[0,0,0],[0,0,0]], v = [0,0,0];
+    rs.forEach(r=>{ const f = [1, r.cx/100, r.cy/100]; for(let a=0;a<3;a++){ v[a] += f[a]*r[key]; for(let b=0;b<3;b++) S[a][b] += f[a]*f[b]; } });
+    for(let a=0;a<3;a++) S[a][a] += 1e-3;
+    const det = m=> m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1]) - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0]) + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+    const D = det(S); if(Math.abs(D) < 1e-12) return null;
+    return [0,1,2].map(k=>{ const m = S.map((row,ri)=> row.map((x,ci)=> ci===k ? v[ri] : x)); return det(m)/D; }); };
+  for(let it=0; it<3 && use.length >= 4; it++){
+    const ax = solve(use, 'dx'), ay = solve(use, 'dy'); if(!ax || !ay) break; model = {ax, ay};
+    const pred = r=> [ax[0] + ax[1]*r.cx/100 + ax[2]*r.cy/100, ay[0] + ay[1]*r.cx/100 + ay[2]*r.cy/100];
+    const keep = use.filter(r=>{ const [px, py] = pred(r); return Math.hypot(r.dx-px, r.dy-py) < 0.6; });
+    if(keep.length === use.length || keep.length < 4) break; use = keep;
+  }
+  // 3) mỗi khối: dùng độ dời riêng nếu khớp mô hình, không thì tìm lại quanh giá trị mô hình dự đoán (±0,35 mm)
+  const shifts = [];
+  R.forEach(r=>{
+    let dx = r.dx, dy = r.dy;
+    if(model){ const px = model.ax[0] + model.ax[1]*r.cx/100 + model.ax[2]*r.cy/100, py = model.ay[0] + model.ay[1]*r.cx/100 + model.ay[2]*r.cy/100;
+      if(Math.hypot(dx-px, dy-py) >= 0.6 || r.gain <= 4){ let best = {dx:px, dy:py, v:fit(r.bs, px, py)};
+        for(let ey=-0.35; ey<=0.351; ey+=0.175) for(let ex=-0.35; ex<=0.351; ex+=0.175){ const v = fit(r.bs, px+ex, py+ey); if(v < best.v) best = {dx:px+ex, dy:py+ey, v}; }
+        dx = best.dx; dy = best.dy; } }
+    else if(r.gain <= 4){ dx = 0; dy = 0; }
+    r.bs.forEach(b=>{ b.x += dx; b.y += dy; }); shifts.push([+dx.toFixed(2), +dy.toFixed(2)]);
+  });
+  return shifts;
+}
 function omrReadImageData(img, counts){
   counts = counts || {};
   const nTN = counts.nTN ?? 12, nDS = counts.nDS ?? 0, nTLN = counts.nTLN ?? 0;
@@ -427,18 +473,23 @@ function omrReadImageData(img, counts){
   const M = OMR_MARKERS;
   const ink = [M.TL,M.TR,M.BL,M.BR].reduce((t,[X,Y])=> t + omrMeanGray(gray,w,h,map,X,Y,1.2), 0)/4;
   const L = omrLayout();
+  let shifts = []; try{ shifts = omrSnapLayout(L, gray, w, h, map); }catch(e){}
   const measure = g=> g.map(b=> omrMeanGray(gray,w,h,map,b.x,b.y,0.62));
   // Mức giấy trắng: lấy phân vị 70% độ sáng của tất cả ô tròn (đa số ô không tô)
-  const allMeans = omrAllBubbles().map(b=> omrMeanGray(gray,w,h,map,b.x,b.y,0.62)).sort((a,b)=>a-b);
+  const allMeans = [...L.sbd.flat(), ...L.made.flat(), ...L.p1.flat(), ...L.p2.flat(2), ...L.p3.flat(2)].map(b=> omrMeanGray(gray,w,h,map,b.x,b.y,0.62)).sort((a,b)=>a-b);
   const paper = allMeans[Math.floor(allMeans.length*0.7)];
   const span = Math.max(30, paper - ink);
   const score = m=> Math.max(0, Math.min(1, (paper - m)/span));
   const marks = [];   // để vẽ ảnh xem lại
   const warnings = [];
   // nền giấy tại chỗ: nhóm từ 4 ô trở lên lấy trung vị của chính nhóm (ảnh chụp sáng tối không đều); nhóm 2 ô dùng nền chung
-  const groupScores = g=>{ const ms = measure(g); let ref = paper; if(ms.length >= 4){ const so = ms.slice().sort((a,b)=> b-a); ref = Math.min(paper + 25, Math.max(paper - 40, so[Math.floor(so.length/2) - (so.length >= 10 ? 1 : 0)])); }
-    return ms.map(m=> Math.max(0, Math.min(1, (ref - m)/span))); };
-  const T = omrAdaptiveT(allMeans.map(score));
+  // V3: tương phản TẠI CHỖ — so tâm ô với vòng giấy trắng ngay quanh ô (bán kính 1,55 mm, giữa các ô) → bóng đổ, ánh sáng không đều tự triệt tiêu
+  const SUR = []; for(let k=0;k<12;k++){ const a = (k + 0.5)*Math.PI/6; SUR.push([1.55*Math.cos(a), 1.55*Math.sin(a)]); }
+  const pxg = (X, Y)=>{ const [x, y] = map(X, Y), xi = Math.round(x), yi = Math.round(y); return (xi < 0 || yi < 0 || xi >= w || yi >= h) ? 255 : gray[yi*w + xi]; };
+  const surround = b=>{ const v = SUR.map(([u,q])=> pxg(b.x+u, b.y+q)).sort((p,q)=> q-p); return (v[2] + v[3] + v[4] + v[5])/4; };   // bỏ 2 điểm sáng nhất, lấy nhóm sáng kế tiếp (tránh rơi vào vạch kẻ / chữ)
+  const bScore = b=> Math.max(0, Math.min(1, (surround(b) - omrMeanGray(gray,w,h,map,b.x,b.y,0.62))/span));
+  const groupScores = g=> g.map(bScore);
+  const T = omrAdaptiveT([...L.sbd.flat(), ...L.made.flat(), ...L.p1.flat(), ...L.p2.flat(2), ...L.p3.flat(2)].map(bScore));
   const pick = (g, label)=>{
     const sc = groupScores(g);
     const r = omrPickGroupT(g, sc, T);
@@ -463,7 +514,7 @@ function omrReadImageData(img, counts){
     L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; });
     tln.push(s);
   }
-  return {ok:true, source:'offline', sbd, made, tn, ds, tln, warnings, marks, corners:loc.corners, map, ink, paper};
+  return {ok:true, source:'offline', sbd, made, tn, ds, tln, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts};
 }
 const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12};
 function wakGeom(n){
@@ -615,7 +666,7 @@ function gradeExam(ex, res){
 function examAnnotate(canvas, res, ex, g){   // xanh = đúng, đỏ ✕ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống; dải trên cùng ghi SBD, tên, mã đề, điểm
   const k = Math.min(1, 1700/canvas.width); let c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
   let ctx = c.getContext('2d'); ctx.drawImage(canvas, 0, 0, c.width, c.height);
-  const P = (x, y)=>{ const [px,py] = res.map(x, y); return [px*k, py*k]; }, [ox, oy] = P(0, 0), [ux, uy] = P(1, 0), u = Math.hypot(ux-ox, uy-oy), L = omrLayout();
+  const P = (x, y)=>{ const [px,py] = res.map(x, y); return [px*k, py*k]; }, [ox, oy] = P(0, 0), [ux, uy] = P(1, 0), u = Math.hypot(ux-ox, uy-oy), L = res.L || omrLayout();
   const GREEN = '#12a150', RED = '#d0302b', ORG = '#e08a00';
   const ring = (b, col, fill, cross)=>{ const [px,py] = P(b.x, b.y); ctx.beginPath(); ctx.arc(px, py, 1.55*u, 0, Math.PI*2); if(fill){ ctx.fillStyle = fill; ctx.fill(); } ctx.lineWidth = Math.max(2, 0.34*u); ctx.strokeStyle = col; ctx.stroke();
     if(cross){ const d = 1.4*u; ctx.beginPath(); ctx.moveTo(px-d,py-d); ctx.lineTo(px+d,py+d); ctx.moveTo(px+d,py-d); ctx.lineTo(px-d,py+d); ctx.stroke(); } };
