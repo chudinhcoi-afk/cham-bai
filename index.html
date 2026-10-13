@@ -179,7 +179,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 13/10 · đọc phiếu v3</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 13/10b · đọc phiếu v3</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -504,17 +504,18 @@ function omrReadImageData(img, counts){
   };
   const sbd = digitsOf(L.sbd, 'Số báo danh');
   const made = digitsOf(L.made, 'Mã đề');
+  const unsure = [];   // các ô máy chưa chắc (tô mờ / tô nhiều ô) — giáo viên chấm tay trên điện thoại
   let tn = '';
-  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`); tn += r.v || '?'; }
+  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`); tn += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'tn', q, why:r.state}); }
   let ds = '';
-  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`); ds += r.v || '?'; }
-  const tln = [];
+  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`); ds += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'ds', q, j, why:r.state}); }
+  const tln = [], tlnSel = [];
   for(let q=0;q<Math.min(nTLN,6);q++){
-    let s = '';
-    L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; });
-    tln.push(s);
+    let s = '', bad = null; const sel = [];
+    L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; sel.push(r.state==='ok' ? r.i : -1); if(r.state==='weak' || r.state==='multi') bad = r.state; });
+    tln.push(s); tlnSel.push(sel); if(bad) unsure.push({k:'tln', q, why:bad});
   }
-  return {ok:true, source:'offline', sbd, made, tn, ds, tln, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts};
+  return {ok:true, source:'offline', sbd, made, tn, ds, tln, tlnSel, unsure, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts};
 }
 const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12};
 function wakGeom(n){
@@ -674,7 +675,13 @@ function examAnnotate(canvas, res, ex, g){   // xanh = đúng, đỏ ✕ = tô s
     if(ok) ring(grp[ki], GREEN, 'rgba(18,161,80,.22)'); else if(bi >= 0){ ring(grp[bi], RED, 'rgba(208,48,43,.22)', true); if(ki >= 0) ring(grp[ki], GREEN); } else if(ki >= 0) ring(grp[ki], ORG); };
   [...g.v.tn].forEach((key,i)=>{ if(L.p1[i]) mark(L.p1[i], res.tn[i], key, g.tn[i]); });
   [...g.v.ds].forEach((key,i)=>{ const q = Math.floor(i/4), j = i % 4; if(L.p2[q]) mark(L.p2[q][j], res.ds[i], key, g.ds[i]); });
-  g.v.tln.forEach((key,i)=>{ if(!L.p3[i]) return; const b = L.p3[i][0][0], [px,py] = P(b.x + 6.2, b.y - 3.4), ok = g.tl[i]; ctx.font = `bold ${Math.max(12, 3.2*u)}px Arial`; ctx.textAlign = 'center';
+  g.v.tln.forEach((key,i)=>{ if(!L.p3[i]) return; const cols = L.p3[i], sel = (res.tlnSel||[])[i] || [], ks = String(key||'').replace('.', ',').split('');
+    if(!res.manualTln || !res.manualTln[i]){
+      cols.forEach((grp, ci)=>{ const si = sel[ci] != null ? sel[ci] : -1, kv = ks[ci], ki = kv != null ? grp.findIndex(b=> b.v===kv) : -1;
+        if(g.tl[i]){ if(si >= 0) ring(grp[si], GREEN, 'rgba(18,161,80,.22)'); }
+        else { if(si >= 0 && si !== ki) ring(grp[si], RED, 'rgba(208,48,43,.22)', true); if(ki >= 0) ring(grp[ki], GREEN, si===ki ? 'rgba(18,161,80,.22)' : null); } });
+    }
+    const b = cols[0][0], [px,py] = P(b.x + 6.2, b.y - 3.4), ok = g.tl[i]; ctx.font = `bold ${Math.max(12, 3.2*u)}px Arial`; ctx.textAlign = 'center';
     const t = ok ? '✓' : '✕ ' + key; const w = ctx.measureText(t).width; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillRect(px - w/2 - 3, py - 3.1*u, w + 6, 3.9*u); ctx.fillStyle = ok ? GREEN : RED; ctx.fillText(t, px, py); });
   ctx.textAlign = 'left';
   const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
@@ -772,7 +779,7 @@ function makeRecord(canvas, f){
 function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 let pendSrc = null;   // ảnh gốc + kết quả đọc của bài đang xem, để chấm tay lại các câu máy chưa chắc
 function showShot(canvas, f){
-  pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> p.pk.state!=='ok' || p.pk.faint).map(p=> p.k) : []};
+  pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> p.pk.state!=='ok' || p.pk.faint).map(p=> p.k) : [], xfix: f.kind==='exam' ? (f.r.unsure||[]).map(u=> ({...u})) : []};
   pending = makeRecord(canvas, f); frozen = true; loopOn = false; drawQuad(null);
   drawShot(); $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
 }
@@ -782,20 +789,43 @@ function drawShot(){
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
   $('shotWarn').textContent = pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '';
   const fx = $('shotFix'), S = pendSrc;
-  if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId);
+  if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId), parts = [];
     // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
     if(ex && (!pending.sbd || !ex.students[pending.sbd] || S.sbdManual)){ const done = new Set((xres[ex.id]||[]).map(r=> r.sbd));
-      fx.style.display = ''; fx.innerHTML = '<div class="fxh">' + (S.sbdManual ? '✔ Đã gán học sinh — có thể chọn lại' : (pending.sbd ? '⚠ SBD ' + esc(pending.sbd) + ' không có trong danh sách' : '⚠ Phiếu không tô số báo danh') + ' — chọn học sinh của bài này') + '</div>'
+      parts.push('<div class="fxh">' + (S.sbdManual ? '✔ Đã gán học sinh — có thể chọn lại' : (pending.sbd ? '⚠ SBD ' + esc(pending.sbd) + ' không có trong danh sách' : '⚠ Phiếu không tô số báo danh') + ' — chọn học sinh của bài này') + '</div>'
         + '<select id="sbdPick" style="width:100%;min-height:44px;font-size:1rem;border-radius:10px;padding:0 8px"><option value="">— Chọn học sinh —</option>'
-        + ex.order.map(sb=> '<option value="' + esc(sb) + '"' + (sb===pending.sbd ? ' selected' : '') + '>' + (done.has(sb) ? '✓ ' : '') + esc(sb) + ' · ' + esc(ex.students[sb].name) + (ex.students[sb].lop ? ' (' + esc(ex.students[sb].lop) + ')' : '') + '</option>').join('') + '</select>';
-      $('sbdPick').onchange = e=>{ const v = e.target.value; if(!v) return; S.f.r.sbd = v; S.sbdManual = true; const at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.sbdManual = true; drawShot(); };
-      return; }
+        + ex.order.map(sb=> '<option value="' + esc(sb) + '"' + (sb===pending.sbd ? ' selected' : '') + '>' + (done.has(sb) ? '✓ ' : '') + esc(sb) + ' · ' + esc(ex.students[sb].name) + (ex.students[sb].lop ? ' (' + esc(ex.students[sb].lop) + ')' : '') + '</option>').join('') + '</select>'); }
+    // các câu tô mờ / tô nhiều ô: chạm để chấm tay
+    const X = S && S.xfix || [], r = S && S.f.r, lab = u=> u.k==='tn' ? 'Câu ' + (u.q+1) : u.k==='ds' ? 'Câu ' + (u.q+1) + 'abcd'[u.j] : 'Câu ' + (u.q+1) + ' (III)';
+    const whyT = u=> u.manual ? 'đã chấm tay' : u.why==='multi' ? 'tô nhiều ô' : 'tô mờ';
+    if(X.length){ parts.push('<div class="fxh" style="margin-top:6px">✍ Chấm tay ' + X.length + ' ô máy chưa chắc — chạm ô học sinh đã tô</div>' + X.map((u,ui)=>{
+        if(u.k==='tln') return '<div class="fxr"><span class="fxl">' + lab(u) + '<small>' + whyT(u) + '</small></span><input class="fxt" data-u="' + ui + '" inputmode="decimal" value="' + esc(r.tln[u.q]||'') + '" placeholder="đáp số" style="flex:1;min-height:42px;border:2px solid #c9ced9;border-radius:10px;padding:0 10px;font-size:1.05rem;font-weight:700"><button class="fxb no on" data-u="' + ui + '" data-t="1">Lưu</button></div>';
+        const opts = u.k==='ds' ? ['Đ','S'] : ['A','B','C','D'], cur = u.k==='ds' ? r.ds[u.q*4+u.j] : r.tn[u.q];
+        return '<div class="fxr"><span class="fxl">' + lab(u) + '<small>' + whyT(u) + '</small></span>' + opts.map(o=> '<button class="fxb' + (u.manual && cur===o ? ' on' : '') + '" data-u="' + ui + '" data-v="' + o + '">' + o + '</button>').join('') + '<button class="fxb no' + (u.manual && cur==='?' ? ' on' : '') + '" data-u="' + ui + '" data-v="?">Trống</button></div>'; }).join('')); }
+    if(parts.length){ fx.style.display = ''; fx.innerHTML = parts.join('');
+      const sp = $('sbdPick'); if(sp) sp.onchange = e=>{ const v = e.target.value; if(!v) return; S.f.r.sbd = v; S.sbdManual = true; const at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.sbdManual = true; drawShot(); };
+      fx.querySelectorAll('.fxb').forEach(b=> b.onclick = ()=>{ const u = X[+b.dataset.u]; if(!u) return; if(b.dataset.t){ const inp = fx.querySelector('.fxt[data-u="' + b.dataset.u + '"]'); examManual(u, inp ? inp.value : ''); } else examManual(u, b.dataset.v); });
+      fx.querySelectorAll('.fxt').forEach(inp=> inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); examManual(X[+inp.dataset.u], inp.value); } });
+    } else { fx.style.display = 'none'; fx.innerHTML = ''; }
+    return;
   }
   if(!S || !S.fix || !S.fix.length){ fx.style.display = 'none'; fx.innerHTML = ''; return; }
   const r = S.f.r, why = p=> p.pk.manual ? 'đã chấm tay' : p.pk.state==='multi' ? 'tô nhiều ô' : p.pk.state==='weak' ? 'tô mờ' : p.pk.state==='blank' ? 'để trống' : 'tô nhạt';
   fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Chấm tay ' + S.fix.length + ' câu máy chưa chắc — chạm ô học sinh đã tô</div>' + S.fix.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = row.n===2 ? ['Đ','S'] : ['A','B','C','D'], cur = p.pk.state==='ok' ? p.pk.i : -1;
     return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('');
   fx.querySelectorAll('.fxb').forEach(b=> b.onclick = ()=> manualPick(+b.dataset.k, +b.dataset.i));
+}
+function examManual(u, v){
+  // giáo viên chấm tay một ô của phiếu đề thi → sửa bài làm, bỏ cảnh báo ô đó, chấm lại và vẽ lại ảnh
+  const S = pendSrc; if(!S || !u) return; const r = S.f.r, L = r.L;
+  const dropMarks = grp=>{ const set = new Set(grp); r.marks = (r.marks||[]).filter(m=> !set.has(m.b)); };
+  let label;
+  if(u.k==='tn'){ r.tn = r.tn.slice(0,u.q) + v + r.tn.slice(u.q+1); label = 'Phần I câu ' + (u.q+1); if(L){ dropMarks(L.p1[u.q]); const b = L.p1[u.q].find(x=> x.v===v); if(b) r.marks.push({b, c:'ok'}); } }
+  else if(u.k==='ds'){ const i = u.q*4 + u.j; r.ds = r.ds.slice(0,i) + v + r.ds.slice(i+1); label = 'Phần II câu ' + (u.q+1) + 'abcd'[u.j]; if(L){ dropMarks(L.p2[u.q][u.j]); const b = L.p2[u.q][u.j].find(x=> x.v===v); if(b) r.marks.push({b, c:'ok'}); } }
+  else { const t = String(v||'').trim().replace(/\s+/g,'').replace('.', ','); r.tln[u.q] = t; label = 'Phần III câu ' + (u.q+1); if(L) L.p3[u.q].forEach(dropMarks); if(!r.manualTln) r.manualTln = {}; r.manualTln[u.q] = true; }
+  r.warnings = (r.warnings||[]).filter(w=> !(w===label + ': tô mờ, chưa chắc' || w===label + ': tô nhiều hơn 1 ô' || w.indexOf(label + ' cột') === 0));
+  u.manual = true;
+  const at = pending.at, sm = pending.sbdManual; pending = makeRecord(S.canvas, S.f); pending.at = at; if(sm) pending.sbdManual = sm; pending.manual = (S.xfix||[]).filter(x=> x.manual).length; drawShot();
 }
 function manualPick(k, i){
   const S = pendSrc; if(!S) return; const r = S.f.r, p = r.picks[k], row = r.test.rows[k], opts = row.n===2 ? ['Đ','S'] : ['A','B','C','D'];
