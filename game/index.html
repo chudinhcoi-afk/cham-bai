@@ -150,6 +150,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
 <script type="module">
 import * as THREE from 'three';
 import {createHero} from './hero.js';
+import {createBoss, BOSS_PALETTES} from './boss.js';
 const $ = id=> document.getElementById(id);
 
 /* ======================= DỮ LIỆU & LƯU TIẾN ĐỘ ======================= */
@@ -216,6 +217,8 @@ const SFX = {
   lvl(){ [523, 659, 784].forEach((f, i)=> tone(f, 0.18, {type:'square', v:0.07, filt:2400, t:i*0.11})); tone(1047, 0.7, {type:'square', v:0.08, filt:2400, t:0.33}); tone(1568, 0.7, {type:'triangle', v:0.06, t:0.33}); },
   die(){ tone(420, 1.1, {type:'triangle', f2:70, v:0.2}); },
   tick(){ tone(1000, 0.04, {type:'square', v:0.035}); },
+  thud(){ tone(70, 0.3, {f2:32, v:0.35}); noise(0.2, {type:'lowpass', f:300, v:0.2}); },
+  warn(){ tone(520, 0.22, {type:'square', f2:760, v:0.04}); },
   heal(){ tone(880, 0.3, {type:'sine', v:0.08}); tone(1320, 0.4, {type:'sine', v:0.06, t:0.08}); }
 };
 const sfx = k=>{ try{ if(AU.ctx && save.opt.sfx) SFX[k](); }catch(e){} };
@@ -273,7 +276,7 @@ async function showMenu(){
   $('worlds').innerHTML = Object.keys(WORLDS).map(g=>{ const W = WORLDS[g], st = save.stat[g] || {}, ch = meta[g].filter(c=> c.n > 0).length;
     const done = Object.values(st).filter(v=> v[0] >= 3).length;
     return `<div class="world" data-g="${g}" style="background:linear-gradient(160deg, ${css(W.ground[0])} 0%, ${css(W.sky)} 55%, ${css(W.fog)} 100%);color:${g>=11?'#fff':'#1a1a1a'}">
-      <span class="lv">${W.mood} Lớp ${g}</span><b>${W.name}</b><i>${ch} khu vực (chương) · ${meta[g].reduce((s,c)=> s + c.n, 0)} câu đố</i>
+      <span class="lv">${W.mood} Lớp ${g}</span>${save.badges && save.badges[g] ? ' <span class="lv" title="Đã hạ Ma Vương Vô Cực thức tỉnh">👑 Kẻ Diệt Vô Cực</span>' : ''}<b>${W.name}</b><i>${ch} khu vực (chương) · ${meta[g].reduce((s,c)=> s + c.n, 0)} câu đố</i>
       <div class="bar"><div style="width:${Math.round(100*done/Math.max(1,ch))}%"></div></div><i>Đã chinh phục ${done}/${ch} khu vực</i></div>`; }).join('');
   document.querySelectorAll('.world').forEach(el=> el.onclick = ()=>{ const nm = $('pname').value.trim(); if(!nm){ $('pname').focus(); $('pname').placeholder = 'Nhập tên trước đã!'; return; } save.name = nm; persist(); auInit(); sfx('click'); enterWorld(+el.dataset.g); });
 }
@@ -561,7 +564,70 @@ function monsterModel(type, color){
   return {g, mat, det, body, wings};
 }
 const STAR_MAT = new THREE.SpriteMaterial({map:canvasTex(64, 64, (x)=>{ x.fillStyle = '#ffe14a'; x.strokeStyle = '#7a5200'; x.lineWidth = 4; x.beginPath(); for(let i = 0; i < 10; i++){ const a = -Math.PI/2 + i*Math.PI/5, r = i % 2 ? 12 : 28; x.lineTo(32 + Math.cos(a)*r, 32 + Math.sin(a)*r); } x.closePath(); x.fill(); x.stroke(); }), transparent:true, depthTest:false, fog:false}); STAR_MAT.userData.keep = true;
+function spawnBoss(Z){
+  const lvl = Z.lvl + 5, g = new THREE.Group(), boss = createBoss(THREE, {merge, toon, outline:(m, t)=> outline(m, t, true), palette:BOSS_PALETTES[grade], fxParent:world, groundAt:height});
+  g.add(boss.object); const x = Z.x, z = Z.z; g.position.set(x, height(x, z), z); g.scale.setScalar(0.001); world.add(g);
+  const hpMax = Math.round((40 + lvl*22)*4);
+  const M = {g, boss, mat:null, det:null, body:null, wings:[], type:'boss', kind:'boss', Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*1.6, state:'idle', t:0, baseScale:2.2, color:0xff3040,
+    name:'Trùm Ma Vương Vô Cực', answered:null, cd:1.5, dead:false, spawnT:0, baseEm:0, kb:new THREE.Vector3(), wind:0};
+  M.label = textSprite(`👑 ${M.name} · Lv${lvl}`, {screen:0.034, color:'#ffd76a'}); world.add(M.label);
+  M.hpBar = makeBar(); M.hpBar.scale.set(2.2, 1.6, 1); world.add(M.hpBar);
+  M.shadow = blob(6); world.add(M.shadow);
+  boss.on('telegraph', d=> telegraph(d)); boss.on('hit', d=> bossHit(M, d));
+  boss.on('step', ()=>{ if(M.g.position.distanceTo(player.position) < 30){ shake = Math.max(shake, 0.18); sfx('thud'); } });
+  boss.on('shatter', ()=>{ bossAwaken(M); flashScreen('radial-gradient(circle,#fff 0%,#ff2040 55%,#300 100%)', 0.9); shake = 1.4; hitStop = 0.15; sfx('roar'); sfx('thud'); toast('☠ MA VƯƠNG VÔ CỰC THỨC TỈNH!', 2200, true); shockwave(M.g.position, 0xff3040, 14); });
+  boss.on('roar', ()=>{ sfx('roar'); shake = 1.0; flashScreen('rgba(255,40,60,.55)', 0.5); shockwave(M.g.position, 0xff6080, 18); });
+  boss.on('explode', e=>{ flashScreen('radial-gradient(circle,#fff 0%,#ffd0a0 50%,#f40 100%)', 0.9); shake = 1.3; sfx('roar'); shockwave(M.g.position, 0xffd0a0, 16); });
+  monsters.push(M); return M;
+}
+// trả lời sai: trùm thức tỉnh — máu ×4, sát thương ×4
+function bossAwaken(M){ M.hpMax = Math.round(M.hpMax*4); M.hp = M.hpMax; M.atk *= 4; M.morph = 1; M.name = 'Ma Vương Vô Cực (thức tỉnh)';
+  world.remove(M.label); disposeObj(M.label); M.label = textSprite(`☠ ${M.name} · Lv${M.lvl + 12}`, {screen:0.036, color:'#ff6a7a'}); world.add(M.label); M.shadow.scale.set(9, 1, 9); }
+// vùng cảnh báo đỏ trên mặt đất trước mỗi đòn của trùm
+function telegraph(d){
+  let geo; if(d.shape === 'circle') geo = new THREE.CircleGeometry(d.radius, 40); else if(d.shape === 'cone') geo = new THREE.CircleGeometry(d.radius, 40, 0, d.angle); else geo = new THREE.PlaneGeometry(d.width, d.length).translate(0, d.length/2, 0);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color:0xff2030, transparent:true, opacity:0.1, side:THREE.DoubleSide, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2}));
+  m.rotation.x = -Math.PI/2; if(d.shape === 'cone') m.rotation.z = d.yaw - d.angle/2 - Math.PI/2; if(d.shape === 'line') m.rotation.z = Math.PI + d.yaw;
+  m.position.copy(d.center); m.position.y = height(d.center.x, d.center.z) + 0.3; m.renderOrder = 3; sfx('warn');
+  const ring = d.shape === 'circle' ? new THREE.Mesh(new THREE.RingGeometry(d.radius - 0.15, d.radius, 48), new THREE.MeshBasicMaterial({color:0xff4050, transparent:true, side:THREE.DoubleSide, depthWrite:false})) : null; if(ring){ ring.rotation.x = -Math.PI/2; ring.position.copy(m.position); ring.position.y += 0.02; world.add(ring); }
+  addFx(m, d.duration + 0.25, (f)=>{ const k = 1 - f.life/f.max, on = f.life < 0.25; m.material.opacity = on ? 0.75*f.life/0.25 : 0.12 + 0.38*k*(0.75 + 0.25*Math.sin(k*40)); if(on) m.material.color.setHex(0xffffff); if(ring){ ring.material.opacity = on ? 0 : 1; if(f.life <= 0.02){ world.remove(ring); disposeObj(ring); } } }, world);
+}
+function inShape(d, p){ const dx = p.x - d.center.x, dz = p.z - d.center.z, R = 0.45;
+  if(d.shape === 'circle') return Math.hypot(dx, dz) <= d.radius + R;
+  if(d.shape === 'cone'){ if(Math.hypot(dx, dz) > d.radius + R) return false; let a = Math.atan2(dx, dz) - d.yaw; a = Math.atan2(Math.sin(a), Math.cos(a)); return Math.abs(a) <= d.angle/2 + 0.1; }
+  const al = dx*Math.sin(d.yaw) + dz*Math.cos(d.yaw), pe = dx*Math.cos(d.yaw) - dz*Math.sin(d.yaw); return al >= -R && al <= d.length + R && Math.abs(pe) <= d.width/2 + R; }
+function bossHit(M, d){
+  shake = Math.max(shake, d.shape === 'line' ? 0.35 : 0.55); if(d.shape !== 'line' || d.attack === 'charge') sfx('thud');
+  if(d.shape === 'circle' && d.attack !== 'shardRain') shockwave(d.center, 0xff5060, d.radius*0.9);
+  if(deadT > 0 || M.dead || !inShape(d, player.position)) return;
+  const dmg = Math.round(M.atk*d.dmgScale*(0.85 + Math.random()*0.3)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b', dmg > pMaxHp()*0.3); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die();
+}
+// trùm: tiến lại gần, quay mặt, ra đòn (máu, vị trí, nhãn, bóng)
+function updBoss(M, d, dt, isC){
+  const B = M.boss;
+  if(M.spawnT < 1) M.spawnT = Math.min(1, M.spawnT + dt*1.5); M.g.scale.setScalar(Math.max(0.001, easeBack(M.spawnT)));
+  if(!isC && M.state === 'fight' && deadT <= 0){
+    if(M.stun > 0){ M.stun -= dt; B.setMove(0); if(!M.stars){ M.stars = new THREE.Group(); for(let i = 0; i < 4; i++){ const s = new THREE.Sprite(STAR_MAT); s.scale.setScalar(0.7); M.stars.add(s); } world.add(M.stars); } M.stars.visible = true; M.stars.children.forEach((s, i)=>{ const a = M.t*5 + i*1.57; s.position.set(Math.cos(a)*1.6, 0, Math.sin(a)*1.6); }); M.stars.position.set(M.g.position.x, M.g.position.y + B.height + 0.3, M.g.position.z); }
+    else { if(M.stars) M.stars.visible = false;
+      if(!B.busy){ const ty = Math.atan2(player.position.x - M.g.position.x, player.position.z - M.g.position.z); let df = ty - M.g.rotation.y; df = Math.atan2(Math.sin(df), Math.cos(df)); M.g.rotation.y += df*Math.min(1, dt*(B.phase === 1 ? 3 : 5));
+        const reach = B.phase === 1 ? 5.5 : 7;
+        if(d > reach){ tmp.set(Math.sin(M.g.rotation.y), 0, Math.cos(M.g.rotation.y)).multiplyScalar((B.phase === 1 ? 3.2 : 6)*dt); M.g.position.add(tmp); B.setMove(1); } else B.setMove(0);
+        M.cd -= dt; if(M.cd <= 0 && d < (B.phase === 1 ? 7.5 : 17) && Math.abs(df) < 0.5){ if(B.attack()) M.cd = B.phase === 1 ? 1.6 : 0.9; } }
+      else B.setMove(0);
+      if(B.motion > 0){ M.g.position.x += Math.sin(M.g.rotation.y)*B.motion; M.g.position.z += Math.cos(M.g.rotation.y)*B.motion; }
+      M.g.position.x = Math.max(-PLAY, Math.min(PLAY, M.g.position.x)); M.g.position.z = Math.max(-PLAY, Math.min(PLAY, M.g.position.z)); }
+    if(d > 40){ M.state = 'idle'; M.hp = M.hpMax; target = target === M ? null : target; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
+  } else B.setMove(0);
+  if(M.state !== 'fight' && M.stars) M.stars.visible = false;
+  const gy = height(M.g.position.x, M.g.position.z); M.g.position.y = gy;
+  B.update(dt, player.position);
+  M.shadow.position.set(M.g.position.x, gy + 0.07, M.g.position.z);
+  const top = gy + B.height + 0.8;
+  M.label.position.set(M.g.position.x, top + 0.9, M.g.position.z); M.label.visible = (d < 40 || M.state === 'fight') && M.spawnT >= 1 && !isC;
+  M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
+}
 function spawnMonster(Z, kind){
+  if(kind === 'boss') return spawnBoss(Z);
   const type = kind === 'boss' ? 'golem' : MTYPES[Math.floor(Math.random()*MTYPES.length)], color = kind === 'boss' ? 0x9b5de5 : MCOL[Math.floor(Math.random()*MCOL.length)];
   const {g, mat, det, body, wings} = monsterModel(type, color), lvl = kind === 'boss' ? Z.lvl + 5 : Z.lvl + (kind === 'elite' ? 2 : Math.floor(Math.random()*2));
   const scale = kind === 'boss' ? 2.6 : kind === 'elite' ? 1.4 : 1;
@@ -586,7 +652,7 @@ function transform(M){
   M.shadow.scale.set(2.4*M.baseScale, 1, 2.4*M.baseScale);
   burst(M.g.position, 0xff2a2a, 1.8, 26); shockwave(M.g.position, 0xff3a3a, 9*M.baseScale/1.45);
 }
-function weaken(M){ M.hp = Math.round(M.hpMax*0.55); M.atk *= 0.5; M.stun = 3.5; M.baseEm = 0x183050; M.mat.emissive.setHex(M.baseEm); burst(M.g.position, 0x4aa3ff, 1.3, 20); }
+function weaken(M){ M.hp = Math.round(M.hpMax*0.55); M.atk *= 0.5; M.stun = 3.5; M.baseEm = 0x183050; if(M.mat) M.mat.emissive.setHex(M.baseEm); burst(M.g.position, 0x4aa3ff, 1.3, 20); }
 
 /* ======================= NGƯỜI CHƠI ======================= */
 const player = new THREE.Group(); scene.add(player);
@@ -695,16 +761,17 @@ async function challenge(M){
 
 /* ---------- cảnh quay ngắn: quái biến hình / bị sét đánh choáng ---------- */
 let cine = null, camW = 0; const cineCam = new THREE.Vector3(), cineLook = new THREE.Vector3();
-function startCine(M, kind){ cine = {M, kind, t:0, dur:kind === 'morph' ? 2.5 : 1.4, fired:false}; if(kind === 'morph') sfx('rumble'); }
+function startCine(M, kind){ cine = {M, kind, t:0, dur:kind === 'morph' ? 2.5 : 1.4, fired:false}; if(kind === 'morph'){ sfx('rumble'); if(M.boss){ cine.dur = M.boss.transform() + 0.5; cine.fired = true; setTimeout(()=> sfx('rumble'), 700); } } }
 function updCine(dt){
   const C = cine, M = C.M; C.t += dt; const t = C.t;
-  if(C.kind === 'morph'){
+  if(C.kind === 'morph' && M.boss){ dim(t < 1.6 ? Math.min(1, t/1.6)*0.9 : Math.max(0, 0.9 - (t - 1.6)*0.5)); }
+  else if(C.kind === 'morph'){
     const pre = 1.25;
     if(t < pre){ const k = t/pre; M.g.position.x = M.home2x + (Math.random() - 0.5)*0.25*k; M.g.position.z = M.home2z + (Math.random() - 0.5)*0.25*k; if(Math.random() < 0.9) spiralIn(M); if(Math.random() < 0.6) spiralIn(M); M.mat.emissive.setRGB(0.5*k, 0, 0.02); dim(k*0.8); M.g.scale.setScalar(M.baseScale*(1 + 0.12*k + Math.sin(t*40)*0.03*k)); }
     else if(!C.fired){ C.fired = true; M.g.position.x = M.home2x; M.g.position.z = M.home2z; transform(M); sfx('roar'); flashScreen('radial-gradient(circle,#fff 0%,#ff3030 60%,#600 100%)', 0.85); shake = 1.1; hitStop = 0.12; toast('☠ BIẾN HÌNH!', 1600, true); M.popT = 0; }
     else { dim(Math.max(0, 0.8 - (t - pre)*1.2)); }
   } else {
-    if(t > 0.15 && !C.fired){ C.fired = true; bolt(M.g.position); sfx('zap'); weaken(M); flashScreen('rgba(190,230,255,.9)', 0.6); shake = 0.5; hitStop = 0.08; toast('⚡ Quái vật choáng váng — yếu đi một nửa!', 1800); M.squash = 0.4; }
+    if(t > 0.15 && !C.fired){ C.fired = true; bolt(M.g.position); sfx('zap'); weaken(M); if(M.boss) M.boss.hurt(); flashScreen('rgba(190,230,255,.9)', 0.6); shake = 0.5; hitStop = 0.08; toast('⚡ Quái vật choáng váng — yếu đi một nửa!', 1800); M.squash = 0.4; }
   }
   if(t >= C.dur){ dim(0); M.state = 'fight'; mus.mode = 'battle'; cine = null; if(tut) tutEvent('quiz'); }
 }
@@ -765,16 +832,16 @@ hero.on('impact', ()=>{
 function faceTo(p){ player.rotation.y = Math.atan2(p.x - player.position.x, p.z - player.position.z); }
 function hit(M, dmg, crit, isSkill){
   dmg = Math.round(dmg); M.hp -= dmg; floatText(M.g.position, (crit && !isSkill ? 'Chí mạng! ' : '') + '-' + dmg, crit ? '#ffd76a' : '#ffffff', crit); M.flash = 0.12; target = M; M.state = 'fight'; if(mus.mode !== 'battle' && !inQuiz) mus.mode = 'battle';
-  _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v);
+  if(M.boss){ M.boss.flash(); if(isSkill) M.boss.hurt(); } else { _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v); }
   hitStop = Math.max(hitStop, crit ? 0.09 : 0.05); shake = Math.max(shake, crit ? 0.45 : 0.2); if(crit && !isSkill) sfx('crit'); else if(!isSkill) sfx('hit');
   if(M.hp <= 0) killMonster(M);
 }
 function killMonster(M){
-  M.dead = true; M.dying = 0.4; M.hpBar.visible = false; burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
-  const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? 6 : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
+  M.dead = true; M.dying = M.boss ? 0 : 0.4; M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
+  const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? (M.morph ? 24 : 6) : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
   save.kills++; floatText(M.g.position, `+${xp} KN`, '#7fd1ff'); gainXp(xp);
-  if(M.kind === 'boss'){ toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200); hero.victory(); }
-  target = null; M.respawn = M.kind === 'boss' ? 120 : 35; M.label.visible = false; if(M.stars){ M.stars.visible = false; }
+  if(M.kind === 'boss'){ hero.victory(); if(M.morph){ save.badges = save.badges || {}; save.badges[grade] = 1; persist(); toast(`👑 HUYỀN THOẠI! Bạn đã hạ Ma Vương Vô Cực thức tỉnh<br><span style="font-size:.6em">Danh hiệu: Kẻ Diệt Vô Cực — Lớp ${grade}</span>`, 4500); } else toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200); }
+  target = null; M.respawn = M.kind === 'boss' ? 120 : 35; M.label.visible = false; if(M.boss) M.shadow.visible = false; if(M.stars){ M.stars.visible = false; }
   if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore';
   if(tut) tutEvent('kill');
 }
@@ -829,11 +896,13 @@ function loop(t){
   // quái vật
   near = null; let nd = 6;
   for(const M of monsters.slice()){
+    if(M.dead && M.boss){ M.boss.update(dt, player.position); M.respawn -= dt; if(M.respawn <= 0) respawn(M); continue; }
     if(M.dead){ if(M.dying > 0){ M.dying -= dt; const k = Math.max(0, M.dying/0.4); M.g.scale.setScalar(M.baseScale*k); M.g.rotation.y += dt*14; M.shadow.scale.setScalar(2.4*M.baseScale*k); if(M.dying <= 0){ M.g.visible = false; M.shadow.visible = false; } }
       M.respawn -= dt; if(M.respawn <= 0) respawn(M); continue; }
     const isC = cine && cine.M === M; if(cine && !isC){ M.label.visible = false; continue; }
     M.t += dt; const d = M.g.position.distanceTo(player.position), vis = d < 95; M.g.visible = vis; M.shadow.visible = vis;
-    if(M.answered === null && d < nd){ nd = d; near = M; }
+    if(M.answered === null && d < nd + (M.boss ? 3 : 0)){ nd = d; near = M; }
+    if(M.boss){ updBoss(M, d, dt, isC); continue; }
     // xuất hiện, nhún nhảy, chớp trắng khi trúng đòn
     if(M.spawnT < 1){ M.spawnT = Math.min(1, M.spawnT + dt*2); }
     let sc = M.baseScale*easeBack(M.spawnT);
@@ -891,11 +960,12 @@ function loop(t){
   if(gT){ const a = Math.atan2(gT.x - player.position.x, gT.z - player.position.z); guide.position.set(player.position.x + Math.sin(a)*2.2, player.position.y + 0.6 + Math.sin(t*0.006)*0.15, player.position.z + Math.cos(a)*2.2); guide.rotation.y = a; }
   // camera bám theo người chơi; trong cảnh quay thì lia tới quái
   camTarget.lerp(tmp.set(player.position.x, player.position.y + 1.6, player.position.z), 0.18);
-  fpos.set(camTarget.x - Math.sin(yaw)*Math.cos(pitch)*dist, camTarget.y + Math.sin(pitch)*dist, camTarget.z - Math.cos(yaw)*Math.cos(pitch)*dist);
+  const bf = monsters.find(o=> o.boss && !o.dead && o.state === 'fight'); camExtra += ((bf ? (bf.boss.phase === 2 ? 9 : 5) : 0) - camExtra)*Math.min(1, rdt*2); const dd = dist + camExtra;
+  fpos.set(camTarget.x - Math.sin(yaw)*Math.cos(pitch)*dd, camTarget.y + Math.sin(pitch)*dd, camTarget.z - Math.cos(yaw)*Math.cos(pitch)*dd);
   camW = cine ? Math.min(1, camW + rdt*2.5) : Math.max(0, camW - rdt*2);
-  if(camW > 0 && (cine || lastCineM)){ const M = cine ? cine.M : lastCineM; if(cine) lastCineM = M; const s = M.baseScale, c = M.g.position;
+  if(camW > 0 && (cine || lastCineM)){ const M = cine ? cine.M : lastCineM; if(cine) lastCineM = M; const s = M.boss ? (M.boss.phase === 2 ? 4.2 : 3.2) : M.baseScale, c = M.g.position;
     tmp.set(player.position.x - c.x, 0, player.position.z - c.z); if(tmp.lengthSq() < 0.01) tmp.set(0, 0, 1); tmp.normalize();
-    cineCam.set(c.x + tmp.x*(4 + 3.2*s) + tmp.z*2.5, c.y + 1.4 + 1.3*s, c.z + tmp.z*(4 + 3.2*s) - tmp.x*2.5); cineLook.set(c.x, c.y + 1.2*s, c.z);
+    const side = M.boss ? 8 : 2.5; cineCam.set(c.x + tmp.x*(4 + 3.2*s) + tmp.z*side, c.y + 1.4 + 1.3*s, c.z + tmp.z*(4 + 3.2*s) - tmp.x*side); cineLook.set(c.x, c.y + (M.boss ? M.boss.height*0.55 : 1.2*s), c.z);
     const e = camW*camW*(3 - 2*camW); camera.position.copy(fpos).lerp(cineCam, e); tmp.copy(camTarget).lerp(cineLook, e); }
   else { camera.position.copy(fpos); tmp.copy(camTarget); if(!cine) lastCineM = null; }
   const gh = height(camera.position.x, camera.position.z) + 1; if(camera.position.y < gh) camera.position.y = gh;
@@ -907,10 +977,10 @@ function loop(t){
   if(inQuiz && (perfM.n & 1)) return;   // đang trả lời câu đố: vẽ cách khung để đỡ tốn pin
   renderer.render(scene, camera);
 }
-let lastCineM = null;
+let lastCineM = null, camExtra = 0;
 const easeBack = k=>{ const c = 1.7; return k >= 1 ? 1 : 1 + (c + 1)*Math.pow(k - 1, 3) + c*Math.pow(k - 1, 2); };
 function disposeFx(o){ o.traverse(n=>{ if(n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); if(n.material && !n.material.userData.keep){ if(n.material.map && n.material.map !== DOT_TEX) n.material.map.dispose(); n.material.dispose(); } }); }
-function respawn(M){ [M.g, M.label, M.hpBar, M.shadow, M.stars].forEach(o=>{ if(o){ world.remove(o); disposeObj(o); } }); monsters.splice(monsters.indexOf(M), 1); spawnMonster(M.Z, M.kind); }
+function respawn(M){ if(M.boss) M.boss.dispose(); [M.g, M.label, M.hpBar, M.shadow, M.stars].forEach(o=>{ if(o){ world.remove(o); disposeObj(o); } }); monsters.splice(monsters.indexOf(M), 1); spawnMonster(M.Z, M.kind); }
 function die(){ deadT = 3.2; target = null; sfx('die'); hero.die(); $('over').classList.remove('hidden'); const lost = Math.round(save.xp*0.2); save.xp -= lost; persist(); updHud(); mus.mode = 'explore'; monsters.forEach(M=>{ if(M.state === 'fight'){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; } }); }
 
 /* ======================= BẢN ĐỒ NHỎ & SỔ TAY ======================= */
@@ -933,7 +1003,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 applyTier();
 showMenu();
 </script>
