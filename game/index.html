@@ -149,6 +149,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 <script type="module">
 import * as THREE from 'three';
+import {createHero} from './hero.js';
 const $ = id=> document.getElementById(id);
 
 /* ======================= DỮ LIỆU & LƯU TIẾN ĐỘ ======================= */
@@ -589,22 +590,11 @@ function weaken(M){ M.hp = Math.round(M.hpMax*0.55); M.atk *= 0.5; M.stun = 3.5;
 
 /* ======================= NGƯỜI CHƠI ======================= */
 const player = new THREE.Group(); scene.add(player);
-const pMat = toon({color:0x2f6fe0}), pDark = toon({color:0x22305a}), skin = toon({color:0xffd2a6}), gold = toon({color:0xf2c14e});
-const part = (geo, mat, x, y, z, ol = 0.04)=>{ const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if(ol) outline(m, ol); return m; };
-const legs = [-1, 1].map(d=>{ const piv = new THREE.Group(); piv.position.set(d*0.2, 0.85, 0); piv.add(part(new THREE.CapsuleGeometry(0.15, 0.45, 3, 8), pDark, 0, -0.4, 0)); player.add(piv); return piv; });
-const body = part(new THREE.CapsuleGeometry(0.42, 0.5, 4, 12), pMat, 0, 1.35, 0); player.add(body);
-const belt = part(new THREE.CylinderGeometry(0.44, 0.44, 0.12, 14), gold, 0, 1.1, 0, 0); player.add(belt);
-const arms = [-1, 1].map(d=>{ const piv = new THREE.Group(); piv.position.set(d*0.55, 1.68, 0); piv.add(part(new THREE.CapsuleGeometry(0.12, 0.42, 3, 8), pMat, 0, -0.32, 0)); piv.add(part(new THREE.SphereGeometry(0.13, 8, 6), skin, 0, -0.62, 0, 0.03)); player.add(piv); return piv; });
-const head = part(new THREE.SphereGeometry(0.4, 16, 12), skin, 0, 2.2, 0); player.add(head);
-[-1, 1].forEach(d=>{ const e = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({color:0x1a1a1a})); e.position.set(d*0.14, 2.25, 0.35); player.add(e); });
-const brim = part(new THREE.CylinderGeometry(0.62, 0.62, 0.06, 18), gold, 0, 2.5, 0, 0.03); player.add(brim);
-const hat = part(new THREE.ConeGeometry(0.42, 0.75, 14), gold, 0, 2.88, 0); hat.rotation.z = 0.12; player.add(hat);
-const swordPivot = new THREE.Group(); arms[1].add(swordPivot); swordPivot.position.set(0, -0.62, 0.05);
-const sword = part(new THREE.BoxGeometry(0.1, 1.3, 0.24), toon({color:0xdfe7ef, emissive:0x223344}), 0, 0.72, 0.1, 0.03); swordPivot.add(sword);
-const guard = part(new THREE.BoxGeometry(0.42, 0.08, 0.12), gold, 0, 0.08, 0.1, 0.02); swordPivot.add(guard);
-const cape = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.2), toon({color:0xd94f3a, side:THREE.DoubleSide})); cape.position.set(0, 1.25, -0.42); player.add(cape);
+// nhân vật chính có khung xương và bộ động tác (hero.js)
+const hero = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:0x1a6a80}), outline:(m, t)=> outline(m, t, true)});
+player.add(hero.object);
 const pShadow = blob(1.8); scene.add(pShadow);
-let pHp = pMaxHp(), yaw = Math.PI, pitch = 0.42, dist = 11, swing = 0, skillCd = 0, atkCd = 0, target = null, running = false, deadT = 0, inZone = null, walkPh = 0;
+let pHp = pMaxHp(), yaw = Math.PI, pitch = 0.42, dist = 11, skillCd = 0, skillTarget = null, moveAmt = 0, atkCd = 0, target = null, running = false, deadT = 0, inZone = null, walkPh = 0;
 const nameTag = textSprite('', {scale:0.75}); scene.add(nameTag);
 const guide = new THREE.Mesh(new THREE.ConeGeometry(0.38, 1.0, 10).rotateX(Math.PI/2), toon({color:0xffd23a, emissive:0x6a4a00})); outline(guide, 0.05); guide.visible = false; scene.add(guide);
 
@@ -619,9 +609,9 @@ function floatText(at, text, color, big){ const s = textSprite(text, {scale:big 
   addFx(s, 1, (f, dt)=>{ const k = 1 - f.life/f.max; s.position.y += dt*1.6; s.material.opacity = Math.min(1, f.life*2); const pop = k < 0.15 ? 0.6 + k/0.15*0.7 : 1.3 - Math.min(0.3, (k - 0.15)*1.5); s.scale.copy(base).multiplyScalar(pop); }); }
 function shockwave(at, color, R = 6){ const m = new THREE.Mesh(new THREE.RingGeometry(0.7, 1, 40), new THREE.MeshBasicMaterial({color, transparent:true, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending})); m.rotation.x = -Math.PI/2; m.position.copy(at); m.position.y = height(at.x, at.z) + 0.3;
   addFx(m, 0.55, (f)=>{ const k = 1 - f.life/f.max; m.scale.setScalar(1 + k*R); m.material.opacity = 1 - k; }); }
-function slashFx(){ const m = new THREE.Mesh(new THREE.RingGeometry(1.1, 2.1, 20, 1, -Math.PI*0.15, Math.PI*1.1), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending}));
-  m.rotation.set(-Math.PI/2, 0, 0); const holder = new THREE.Group(); holder.position.copy(player.position).add(_v.set(0, 1.3, 0)); holder.rotation.y = player.rotation.y; m.position.z = 0.4; m.rotation.z = Math.PI*1.1 + 0.8; holder.add(m);
-  addFx(holder, 0.22, (f)=>{ const k = 1 - f.life/f.max; m.rotation.z = Math.PI*1.1 + 0.8 - k*1.6; m.material.opacity = (1 - k)*0.9; m.scale.setScalar(1 + k*0.25); }); }
+function slashFx(combo){ const m = new THREE.Mesh(new THREE.RingGeometry(1.1, 2.1, 20, 1, -Math.PI*0.15, Math.PI*1.1), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending}));
+  if(combo === 2) m.rotation.set(0, Math.PI/2, 0); else m.rotation.set(-Math.PI/2, 0, 0); const holder = new THREE.Group(); holder.position.copy(player.position).add(_v.set(0, 1.3, 0)); holder.rotation.y = player.rotation.y; m.position.z = 0.4; m.rotation.z = Math.PI*1.1 + 0.8; holder.add(m);
+  addFx(holder, 0.22, (f)=>{ const k = 1 - f.life/f.max; m.rotation.z = combo === 2 ? Math.PI*0.6 - k*1.8 : Math.PI*1.1 + 0.8 - k*1.6; m.material.opacity = (1 - k)*0.9; m.scale.setScalar(1 + k*0.25); }); }
 function pillar(at, color){ const m = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 30, 12, 1, true), new THREE.MeshBasicMaterial({color, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide})); m.position.copy(at); m.position.y += 15;
   addFx(m, 0.45, (f)=>{ const k = 1 - f.life/f.max; m.scale.set(1 - k*0.8, 1, 1 - k*0.8); m.material.opacity = (1 - k)*(0.6 + Math.random()*0.4); }); }
 function bolt(at){ const pts = []; let x = at.x, z = at.z; for(let y = 32; y >= 0; y -= 2.5){ pts.push(new THREE.Vector3(x, at.y + y, z)); x += (Math.random() - 0.5)*1.6; z += (Math.random() - 0.5)*1.6; } pts.push(new THREE.Vector3(at.x, at.y + 1, at.z));
@@ -654,7 +644,7 @@ function updHud(){
   $('hpBar').style.width = Math.max(0, 100*pHp/pMaxHp()) + '%'; $('hpTxt').textContent = `${Math.max(0, Math.ceil(pHp))}/${pMaxHp()}`;
   const need = xpNeed(save.lv); $('xpBar').style.width = Math.min(100, 100*save.xp/need) + '%'; $('xpTxt').textContent = `KN ${save.xp}/${need}`;
 }
-function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.lv)){ save.xp -= xpNeed(save.lv); save.lv++; up = true; } if(up){ pHp = pMaxHp(); toast(`🎉 LÊN CẤP ${save.lv}!`, 2200); burst(player.position, 0xf2c14e, 1.5, 24); pillar(player.position, 0xf2c14e); sfx('lvl'); } persist(); updHud(); }
+function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.lv)){ save.xp -= xpNeed(save.lv); save.lv++; up = true; } if(up){ pHp = pMaxHp(); toast(`🎉 LÊN CẤP ${save.lv}!`, 2200); burst(player.position, 0xf2c14e, 1.5, 24); pillar(player.position, 0xf2c14e); sfx('lvl'); hero.victory(); } persist(); updHud(); }
 
 /* ======================= CÂU ĐỐ ======================= */
 const used = new Set();
@@ -699,7 +689,7 @@ function askQuiz(M){
 let inQuiz = false;
 async function challenge(M){
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
-  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); const ok = await askQuiz(M); inQuiz = false;
+  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const ok = await askQuiz(M); inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
@@ -752,17 +742,26 @@ $('oTut').onclick = ()=>{ $('opts').classList.add('hidden'); save.tut = 0; persi
 function setTier(name, rebuild){ const old = tierName; tierName = name; applyTier(); if(rebuild && running && old !== name && !inQuiz && !cine){ const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); } }
 
 function nearestEnemy(range){ let best = null, bd = range; monsters.forEach(M=>{ if(M.dead) return; const d = M.g.position.distanceTo(player.position); if(d < bd){ bd = d; best = M; } }); return best; }
+const pickTarget = range=> target && !target.dead && target.g.position.distanceTo(player.position) < range + target.baseScale*0.5 ? target : nearestEnemy(range);
 function attack(){
-  if(!running || atkCd > 0 || deadT > 0 || cine || inQuiz) return; atkCd = 0.5; swing = 1; sfx('swing'); slashFx();
-  const M = target && !target.dead && target.g.position.distanceTo(player.position) < 4.2 + target.baseScale*0.5 ? target : nearestEnemy(4.2);
-  if(!M) return; if(M.answered === null){ challenge(M); return; }
-  faceTo(M.g.position); const crit = Math.random() < 0.15; hit(M, pAtk()*(0.85 + Math.random()*0.3)*(crit ? 2 : 1), crit);
+  if(!running || atkCd > 0 || deadT > 0 || cine || inQuiz) return; atkCd = 0.12;
+  const M = pickTarget(4.2); if(M && M.answered === null){ challenge(M); return; }
+  const n = hero.attack(); if(!n) return; sfx('swing'); if(M) faceTo(M.g.position);
 }
+hero.on('hit', d=>{
+  slashFx(d.combo); const M = pickTarget(4.8); if(!M || M.answered === null) return; faceTo(M.g.position);
+  const crit = Math.random() < (d.combo === 3 ? 0.45 : 0.12); hit(M, pAtk()*d.dmgScale*(0.85 + Math.random()*0.3)*(crit ? 2 : 1), crit);
+});
 function skill(){
-  if(!running || skillCd > 0 || deadT > 0 || cine || inQuiz) return; const M = target && !target.dead && target.g.position.distanceTo(player.position) < 6 + target.baseScale*0.5 ? target : nearestEnemy(6);
+  if(!running || skillCd > 0 || deadT > 0 || cine || inQuiz) return; const M = pickTarget(6);
   if(!M || M.answered === null){ toast('Cần đứng gần quái đang giao chiến'); return; }
-  skillCd = 7; swing = 1.4; faceTo(M.g.position); sfx('skill'); burst(M.g.position, 0x8b7bff, 1.3, 18); pillar(M.g.position, 0x8b7bff); shockwave(player.position, 0xa99bff, 7); shake = 0.6; hit(M, pAtk()*3.2, true, true);
+  if(!hero.skill()) return; skillCd = 7; skillTarget = M; faceTo(M.g.position); sfx('skill');
 }
+hero.on('impact', ()=>{
+  shockwave(player.position, 0xa99bff, 8); burst(player.position, 0x8b7bff, 1.2, 16); shake = 0.75; hitStop = 0.1; sfx('hit');
+  const M = skillTarget && !skillTarget.dead ? skillTarget : pickTarget(6); skillTarget = null;
+  if(M && M.answered !== null && M.g.position.distanceTo(player.position) < 7.5){ pillar(M.g.position, 0x8b7bff); burst(M.g.position, 0x8b7bff, 1.3, 18); hit(M, pAtk()*3.2, true, true); }
+});
 function faceTo(p){ player.rotation.y = Math.atan2(p.x - player.position.x, p.z - player.position.z); }
 function hit(M, dmg, crit, isSkill){
   dmg = Math.round(dmg); M.hp -= dmg; floatText(M.g.position, (crit && !isSkill ? 'Chí mạng! ' : '') + '-' + dmg, crit ? '#ffd76a' : '#ffffff', crit); M.flash = 0.12; target = M; M.state = 'fight'; if(mus.mode !== 'battle' && !inQuiz) mus.mode = 'battle';
@@ -774,7 +773,7 @@ function killMonster(M){
   M.dead = true; M.dying = 0.4; M.hpBar.visible = false; burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
   const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? 6 : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
   save.kills++; floatText(M.g.position, `+${xp} KN`, '#7fd1ff'); gainXp(xp);
-  if(M.kind === 'boss') toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200);
+  if(M.kind === 'boss'){ toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200); hero.victory(); }
   target = null; M.respawn = M.kind === 'boss' ? 120 : 35; M.label.visible = false; if(M.stars){ M.stars.visible = false; }
   if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore';
   if(tut) tutEvent('kill');
@@ -805,23 +804,21 @@ function loop(t){
   perfM.t += rdt; perfM.n++; if(perfM.t >= 3){ const fps = perfM.n/perfM.t; perfM.t = 0; perfM.n = 0; if(perfM.skip > 0) perfM.skip--; else { lastFps = fps; if(save.opt.q === 'auto' && !cine && !inQuiz && fps < 30 && tierName !== 'low'){ const nt = ORDER[ORDER.indexOf(tierName) - 1]; save.opt.auto = nt; persist(); setTier(nt, false); toast('⚙ Đã giảm chất lượng hình để chơi mượt hơn', 2200); perfM.skip = 1; } } }
   if(hitStop > 0){ hitStop -= rdt; dt *= 0.08; }
   atkCd = Math.max(0, atkCd - dt); skillCd = Math.max(0, skillCd - dt); $('skCd').style.transform = `scaleY(${skillCd/7})`;
-  if(deadT > 0){ deadT -= dt; if(deadT <= 0){ $('over').classList.add('hidden'); player.position.copy(campPos); pHp = pMaxHp(); updHud(); } }
+  if(deadT > 0){ deadT -= dt; if(deadT <= 0){ $('over').classList.add('hidden'); player.position.copy(campPos); pHp = pMaxHp(); updHud(); hero.revive(); } }
   else if(!inQuiz && !cine){
     let mx = 0, mz = 0; if(keys['w'] || keys['arrowup']) mz += 1; if(keys['s'] || keys['arrowdown']) mz -= 1; if(keys['a'] || keys['arrowleft']) mx += 1; if(keys['d'] || keys['arrowright']) mx -= 1;
     mx -= joyV.x; mz -= joyV.y;
-    const L = Math.hypot(mx, mz), wet = player.position.y < W.wl - 0.2;
-    if(L > 0.05){ const sp = 9*(wet ? 0.6 : 1)*Math.min(1, L)*dt, sx = Math.sin(yaw), cz = Math.cos(yaw); const vx = (mx*cz + mz*sx)/Math.max(1, L), vz = (-mx*sx + mz*cz)/Math.max(1, L);
+    const L = Math.hypot(mx, mz), wet = player.position.y < W.wl - 0.2, act = hero.action, slow = act && /attack|skill|victory|revive/.test(act) ? 0.25 : 1; moveAmt = L > 0.05 ? Math.min(1, L) : 0;
+    if(L > 0.05){ const sp = 9*(wet ? 0.6 : 1)*slow*Math.min(1, L)*dt, sx = Math.sin(yaw), cz = Math.cos(yaw); const vx = (mx*cz + mz*sx)/Math.max(1, L), vz = (-mx*sx + mz*cz)/Math.max(1, L);
       const ox = player.position.x, oz = player.position.z;
       player.position.x = Math.max(-PLAY, Math.min(PLAY, player.position.x + vx*sp)); player.position.z = Math.max(-PLAY, Math.min(PLAY, player.position.z + vz*sp));
       moveAcc += Math.hypot(player.position.x - ox, player.position.z - oz);
       const ty = Math.atan2(vx, vz); let d = ty - player.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d)); player.rotation.y += d*Math.min(1, dt*14);
-      walkPh += dt*11*Math.min(1, L); }
-    else walkPh *= 0.85;
+    }
     player.position.y = height(player.position.x, player.position.z);
   }
-  // hoạt cảnh người chơi: bước chân, vung tay, áo choàng
-  const wk = Math.sin(walkPh); legs[0].rotation.x = wk*0.7; legs[1].rotation.x = -wk*0.7; arms[0].rotation.x = -wk*0.6; body.position.y = 1.35 + Math.abs(Math.cos(walkPh))*0.08*(Math.abs(wk) > 0.05 ? 1 : 0);
-  swing = Math.max(0, swing - dt*3.5); arms[1].rotation.x = swing > 0 ? -2.4*swing + 0.6 : wk*0.6; swordPivot.rotation.x = swing*0.6; cape.rotation.x = 0.12 + Math.abs(wk)*0.35 + Math.sin(t*0.004)*0.05;
+  if(inQuiz || cine || deadT > 0) moveAmt = 0;
+  hero.setMove(moveAmt); hero.update(dt);
   pShadow.position.set(player.position.x, player.position.y + 0.06, player.position.z);
   // vùng an toàn: hồi máu
   const dCamp = player.position.distanceTo(campPos); if(dCamp < 7 && deadT <= 0 && pHp < pMaxHp()){ if(pHp < pMaxHp()*0.98 && !W._healing){ W._healing = true; sfx('heal'); } pHp = Math.min(pMaxHp(), pHp + pMaxHp()*0.25*dt); updHud(); }
@@ -857,7 +854,7 @@ function loop(t){
       if(M.stun > 0){ M.stun -= dt; if(!M.stars){ M.stars = new THREE.Group(); for(let i = 0; i < 3; i++){ const s = new THREE.Sprite(STAR_MAT); s.scale.setScalar(0.45); M.stars.add(s); } world.add(M.stars); } M.stars.visible = true; M.stars.children.forEach((s, i)=>{ const a = M.t*5 + i*2.09; s.position.set(Math.cos(a)*0.8*M.baseScale, 0, Math.sin(a)*0.8*M.baseScale); }); M.stars.position.set(M.g.position.x, M.g.position.y + MTOP[M.type]*M.baseScale + 0.1, M.g.position.z); }
       else { if(M.stars) M.stars.visible = false;
         const reach = 2.4*M.baseScale/1.2 + 0.6;
-        if(M.wind > 0){ M.wind -= dt; M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
+        if(M.wind > 0){ M.wind -= dt; M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
         else { M.g.rotation.x *= 0.85;
           if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); }
           else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'boss' ? 1.3 : 1.6; M.wind = 0.4; } } } }
@@ -914,7 +911,7 @@ let lastCineM = null;
 const easeBack = k=>{ const c = 1.7; return k >= 1 ? 1 : 1 + (c + 1)*Math.pow(k - 1, 3) + c*Math.pow(k - 1, 2); };
 function disposeFx(o){ o.traverse(n=>{ if(n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); if(n.material && !n.material.userData.keep){ if(n.material.map && n.material.map !== DOT_TEX) n.material.map.dispose(); n.material.dispose(); } }); }
 function respawn(M){ [M.g, M.label, M.hpBar, M.shadow, M.stars].forEach(o=>{ if(o){ world.remove(o); disposeObj(o); } }); monsters.splice(monsters.indexOf(M), 1); spawnMonster(M.Z, M.kind); }
-function die(){ deadT = 3; target = null; sfx('die'); $('over').classList.remove('hidden'); const lost = Math.round(save.xp*0.2); save.xp -= lost; persist(); updHud(); mus.mode = 'explore'; monsters.forEach(M=>{ if(M.state === 'fight'){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; } }); }
+function die(){ deadT = 3.2; target = null; sfx('die'); hero.die(); $('over').classList.remove('hidden'); const lost = Math.round(save.xp*0.2); save.xp -= lost; persist(); updHud(); mus.mode = 'explore'; monsters.forEach(M=>{ if(M.state === 'fight'){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; } }); }
 
 /* ======================= BẢN ĐỒ NHỎ & SỔ TAY ======================= */
 const mini = $('mini'), mx = mini.getContext('2d');
@@ -936,7 +933,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 applyTier();
 showMenu();
 </script>
