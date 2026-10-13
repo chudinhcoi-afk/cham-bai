@@ -162,18 +162,19 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
 import * as THREE from 'three';
 import {createHero} from './hero.js';
 import {createBoss, BOSS_PALETTES} from './boss.js';
+import {createMonster} from './monsters.js';
 const $ = id=> document.getElementById(id);
 
 /* ======================= DỮ LIỆU & LƯU TIẾN ĐỘ ======================= */
 // sky = màu đỉnh trời, fog = màu chân trời (sương), ground = [đồi cao, chỗ trũng], wl = mực nước
 const WORLDS = {
-  6:{name:'Thảo Nguyên Số Học', mood:'🌿', sky:0x3d9df0, fog:0xd4f0ff, sunC:0xfff2d0, ground:[0x8ad46a,0x5aae55], patch:0xa6e07a, path:0xd9c08a, shore:0xe8dca0, rock:0x9aa2a8, peak:0x7f9a70, wl:-2.6, water:0x3fa9e0, ol:0x1d2a1a, amp:1, fq:1, fogR:[70,240], hemi:0.95, sun:1.4},
-  7:{name:'Rừng Thu Đại Số', mood:'🍂', sky:0x6d9fd6, fog:0xffe0b5, sunC:0xffe0b0, ground:[0xd6a457,0xa97c3c], patch:0xe0753a, path:0x8a6a45, shore:0xc8b080, rock:0x8c7a66, peak:0x7a6050, wl:-2.8, water:0x4f8fb8, ol:0x2a1a10, amp:1, fq:1, fogR:[70,240], hemi:0.95, sun:1.35},
-  8:{name:'Sa Mạc Hằng Đẳng Thức', mood:'🏜', sky:0x4d9de0, fog:0xfff2cf, sunC:0xfff0c0, ground:[0xf0cf8a,0xd8ab62], patch:0xe6bd72, path:0xc49a5a, shore:0xd8c48a, rock:0xb7894f, peak:0xa06a3a, wl:-3.7, water:0x2fb5c0, ol:0x3a2410, amp:1.25, fq:0.7, fogR:[80,250], hemi:1.0, sun:1.5},
-  9:{name:'Đầm Lầy Căn Thức', mood:'🐸', sky:0x4f7f78, fog:0xb5d6c8, sunC:0xe8ffe0, ground:[0x5a9a72,0x3f7a5d], patch:0x6f8f3a, path:0x6b5a3a, shore:0x4a5a3a, rock:0x6f7f74, peak:0x4f5f54, wl:-1.0, water:0x4a7a5a, ol:0x101a14, amp:0.9, fq:1.1, fogR:[35,170], hemi:0.9, sun:1.1},
-  10:{name:'Cao Nguyên Tuyết Véc-tơ', mood:'❄️', sky:0x7fb0ea, fog:0xf4f8ff, sunC:0xffffff, ground:[0xf4f8fd,0xd8e4f0], patch:0xc8d8e8, path:0xaab8c8, shore:0xbfe3f2, rock:0x8d9bb0, peak:0xffffff, wl:-2.0, water:0xa8dcf0, ice:true, ol:0x1a2230, amp:1.3, fq:1, fogR:[60,210], hemi:0.85, sun:1.25},
-  11:{name:'Núi Lửa Lượng Giác', mood:'🌋', sky:0x1a0808, fog:0x8a3a22, sunC:0xff9a6a, ground:[0x4a3330,0x2e2220], patch:0x5a2a1e, path:0x6b4a3a, shore:0x1e1412, rock:0x3a2a28, peak:0x2a1a18, wl:-2.0, water:0xff5a1a, lava:true, ol:0x050202, amp:1.15, fq:1.1, fogR:[50,200], hemi:0.8, sun:1.05},
-  12:{name:'Thung Lũng Pha Lê Giải Tích', mood:'💎', sky:0x0a0620, fog:0x3e2f80, sunC:0xb0a0ff, ground:[0x6656b0,0x3c3480], patch:0x7462c4, path:0x7a6ac0, shore:0x2a2050, rock:0x5a4ab0, peak:0x8a7ae0, wl:-2.4, water:0x7a5cff, glow:true, stars:true, ol:0x05030f, amp:1, fq:1, fogR:[55,210], hemi:1.25, sun:1.0}};
+  6:{name:'Thảo Nguyên Số Học', mood:'🌿', sky:0x2a98ff, fog:0xc6efff, sunC:0xfff4d8, ground:[0x8ee85e, 0x52c848], patch:0xc4f56a, path:0xf3d690, shore:0xfff0a8, rock:0xb6bec6, peak:0x8fc070, wl:-2.6, water:0x2ec0ff, ol:0x1d3a1a, amp:1, fq:1, fogR:[80, 260], hemi:1.15, sun:1.55},
+  7:{name:'Rừng Thu Đại Số', mood:'🍂', sky:0x3ea2ff, fog:0xffe8b8, sunC:0xffe6b8, ground:[0xf2cf72, 0xdca456], patch:0xf2935a, path:0xb8875a, shore:0xf6deaa, rock:0xb09276, peak:0xa07a5a, wl:-2.8, water:0x35b8f0, ol:0x3a1e0e, amp:1, fq:1, fogR:[80, 260], hemi:1.15, sun:1.5},
+  8:{name:'Sa Mạc Hằng Đẳng Thức', mood:'🏜', sky:0x1fa6ff, fog:0xfff6d2, sunC:0xfff2c8, ground:[0xffde8a, 0xf6b85a], patch:0xffcf70, path:0xe0a85e, shore:0xffe9a6, rock:0xe0a464, peak:0xc8844a, wl:-3.7, water:0x18e0d0, ol:0x4a2a10, amp:1.25, fq:0.7, fogR:[90, 270], hemi:1.2, sun:1.6},
+  9:{name:'Đầm Lầy Căn Thức', mood:'🐸', sky:0x2fc6c0, fog:0xcff6e6, sunC:0xf4fff0, ground:[0x7ee08e, 0x46b878], patch:0xb6ea5a, path:0x9a7a52, shore:0x8acf7a, rock:0x86a092, peak:0x6a8a78, wl:-1.0, water:0x2ec8b0, ol:0x10301e, amp:0.9, fq:1.1, fogR:[55, 200], hemi:1.15, sun:1.35},
+  10:{name:'Cao Nguyên Tuyết Véc-tơ', mood:'❄️', sky:0x3aa8ff, fog:0xeef8ff, sunC:0xffffff, ground:[0xffffff, 0xd8ecff], patch:0xbfe4ff, path:0x9fc4e8, shore:0xaee8ff, rock:0x8fa6c8, peak:0xffffff, wl:-2.0, water:0x7fe2ff, ice:true, ol:0x1a2a44, amp:1.3, fq:1, fogR:[70, 240], hemi:1.05, sun:1.4},
+  11:{name:'Núi Lửa Lượng Giác', mood:'🌋', sky:0xff6a3a, fog:0xffc38a, sunC:0xffd8a0, ground:[0xa85a3c, 0x6e3428], patch:0xd8623a, path:0xe0a070, shore:0x4a2420, rock:0x7a4434, peak:0x4a2a24, wl:-2.0, water:0xff6a1a, lava:true, ol:0x2a0806, amp:1.15, fq:1.1, fogR:[70, 240], hemi:1.15, sun:1.45},
+  12:{name:'Thung Lũng Pha Lê Giải Tích', mood:'💎', sky:0x5a3cff, fog:0xffb4ec, sunC:0xfff0ff, ground:[0x9a86f2, 0x6a58d0], patch:0xc0a8ff, path:0xffd0f4, shore:0x5a48b8, rock:0x8a7ae8, peak:0xd8ccff, wl:-2.4, water:0x9a7cff, glow:true, stars:true, ol:0x1a0a3a, amp:1, fq:1, fogR:[70, 240], hemi:1.3, sun:1.25}};
 const SAVE_KEY = 'mbp_game_v1';
 const loadSave = key=>{ try{ return JSON.parse(localStorage.getItem(key)) || null; }catch(e){ return null; } };
 const LAST_KEY = 'mbp_game_last';
@@ -408,7 +409,7 @@ function applyTier(){
 addEventListener('resize', resize);
 
 // vật liệu kiểu hoạt hình (3 nấc sáng) + viền đen
-const GRAD = (()=>{ const t = new THREE.DataTexture(new Uint8Array([95, 175, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const GRAD = (()=>{ const t = new THREE.DataTexture(new Uint8Array([140, 205, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const toon = o=> new THREE.MeshToonMaterial(Object.assign({gradientMap:GRAD}, o));
 const OL = {};
 function olMat(thick, dir){
@@ -494,8 +495,8 @@ const FLORA = {
   mushroom:()=> merge([{g:Cy(0.12, 0.16, 0.5, 6), m:M4(0, 0.25, 0), c:0xf2ead8}, {g:new THREE.SphereGeometry(0.42, 10, 6, 0, Math.PI*2, 0, Math.PI/2), m:M4(0, 0.48, 0), c:0xffffff}]),
   pine:()=> merge([{g:Cy(0.2, 0.3, 1.2), m:M4(0, 0.6, 0), c:TRUNK_D}, {g:Co(1.5, 1.8), m:M4(0, 1.9, 0), c:0x2d5a4a}, {g:Co(1.15, 1.6), m:M4(0, 2.9, 0), c:0x2f6350}, {g:Co(0.8, 1.4), m:M4(0, 3.8, 0), c:0x336b57}, {g:Co(0.55, 0.5), m:M4(0, 4.35, 0), c:0xffffff}, {g:Co(1.0, 0.45), m:M4(0, 3.25, 0), c:0xf4f8ff}, {g:Co(1.35, 0.45), m:M4(0, 2.25, 0), c:0xf4f8ff}]),
   iceCrystal:()=> merge([{g:Oc(0.6), m:M4(0, 0.9, 0, 0.7, 2, 0.7), c:0xbfeaff}, {g:Oc(0.4), m:M4(0.5, 0.5, 0.1, 0.6, 1.5, 0.6, 0, 0, -0.5), c:0xd8f4ff}]),
-  deadTree:()=> merge([{g:Cy(0.18, 0.35, 3.2, 5), m:M4(0, 1.6, 0), c:0x2a1a14}, {g:Cy(0.07, 0.12, 1.4, 4), m:M4(0.55, 2.6, 0, 1, 1, 1, 0, 0, -0.9), c:0x2a1a14}, {g:Cy(0.06, 0.1, 1.2, 4), m:M4(-0.45, 2.2, 0.1, 1, 1, 1, 0.2, 0, 0.9), c:0x2a1a14}, {g:Cy(0.05, 0.08, 0.9, 4), m:M4(0.1, 3.3, 0.3, 1, 1, 1, 0.6, 0, 0.2), c:0x2a1a14}]),
-  spike:()=> merge([{g:Co(0.5, 2.6, 5), m:M4(0, 1.2, 0), c:0x1a1220}, {g:Co(0.3, 1.5, 5), m:M4(0.5, 0.7, 0.2, 1, 1, 1, 0, 0, -0.3), c:0x221828}]),
+  deadTree:()=> merge([{g:Cy(0.18, 0.35, 3.2, 5), m:M4(0, 1.6, 0), c:0x6a4030}, {g:Cy(0.07, 0.12, 1.4, 4), m:M4(0.55, 2.6, 0, 1, 1, 1, 0, 0, -0.9), c:0x6a4030}, {g:Cy(0.06, 0.1, 1.2, 4), m:M4(-0.45, 2.2, 0.1, 1, 1, 1, 0.2, 0, 0.9), c:0x6a4030}, {g:Cy(0.05, 0.08, 0.9, 4), m:M4(0.1, 3.3, 0.3, 1, 1, 1, 0.6, 0, 0.2), c:0x6a4030}]),
+  spike:()=> merge([{g:Co(0.5, 2.6, 5), m:M4(0, 1.2, 0), c:0x6a3a4a}, {g:Co(0.3, 1.5, 5), m:M4(0.5, 0.7, 0.2, 1, 1, 1, 0, 0, -0.3), c:0x7a4458}]),
   crystal:()=> merge([{g:Oc(0.6), m:M4(0, 1.4, 0, 0.7, 2.6, 0.7)}, {g:Oc(0.45), m:M4(0.6, 0.9, 0.2, 0.6, 2, 0.6, 0, 0, -0.45), c:0xe8e0ff}, {g:Oc(0.4), m:M4(-0.5, 0.8, -0.2, 0.6, 1.8, 0.6, 0.2, 0, 0.5), c:0xf0eaff}]),
   rock:()=> merge([{g:Do(1), m:M4(0, 0.3, 0)}]),
   log:()=> merge([{g:Cy(0.3, 0.3, 2.2, 7), m:M4(0, 0.3, 0, 1, 1, 1, 0, 0, Math.PI/2), c:TRUNK}])
@@ -557,7 +558,7 @@ function buildWorld(g){
   // màu trời, sương, ánh sáng
   skyMat.uniforms.top.value.set(W.sky); skyMat.uniforms.hor.value.set(W.fog); skyMat.uniforms.bot.value.set(W.ground[1]).lerp(new THREE.Color(W.fog), 0.5); skyMat.uniforms.sunCol.value.set(W.sunC); skyMat.uniforms.dim.value = 0;
   scene.fog = new THREE.Fog(W.fog, W.fogR[0], W.fogR[1]); W._fog = new THREE.Color(W.fog);
-  hemi.color.set(g >= 11 ? 0xd9b8ff : 0xffffff); hemi.groundColor.set(W.ground[1]); hemi.intensity = W.hemi; sun.intensity = W.sun; sun.color.set(W.sunC);
+  hemi.color.set(g === 11 ? 0xffe2c8 : g === 12 ? 0xf2e2ff : 0xffffff); hemi.groundColor.set(W.ground[1]); hemi.intensity = W.hemi; sun.intensity = W.sun; sun.color.set(W.sunC);
   Object.values(OL).forEach(m=> m.color.set(W.ol));
   if(W.stars){ const n = 500, p = new Float32Array(n*3); for(let i = 0; i < n; i++){ const a = Math.random()*Math.PI*2, y = 0.08 + Math.random()*0.92, r = Math.sqrt(1 - y*y); p.set([Math.cos(a)*r*450, y*450, Math.sin(a)*r*450], i*3); }
     const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(p, 3)); stars = new THREE.Points(sg, new THREE.PointsMaterial({size:2.2, sizeAttenuation:false, color:0xffffff, fog:false, transparent:true, opacity:0.85})); stars.frustumCulled = false; scene.add(stars); }
@@ -591,7 +592,7 @@ function buildWorld(g){
   if(g === 11){ const vg = merge([{g:Co(48, 62, 12), m:M4(0, 31, 0), c:0x2e2220}, {g:Co(16, 8, 12), m:M4(0, 60, 0), c:0x3a2622}]); const v = new THREE.Mesh(vg, toon({vertexColors:true, flatShading:true})); v.position.set(30, baseH(30, -200) - 6, -200); world.add(v);
     const lava = new THREE.Mesh(new THREE.CylinderGeometry(9, 12, 2, 12), new THREE.MeshBasicMaterial({color:0xff5a1a})); lava.position.set(30, v.position.y + 61.5, -200); world.add(lava); }
   // mây trôi
-  const cloudMat = toon({color:g === 11 ? 0x3a2a2a : g === 12 ? 0x6a5ab0 : 0xffffff, fog:false, transparent:g === 11, opacity:0.85});
+  const cloudMat = toon({color:g === 11 ? 0xffd2b0 : g === 12 ? 0xffd6f6 : 0xffffff, fog:false});
   for(let i = 0; i < 12; i++){ const cg = new THREE.Group(); const k = 3 + Math.floor(Math.random()*3); for(let j = 0; j < k; j++){ const s = new THREE.Mesh(geo('cloudBall', ()=>{ const q = Ic(1, 1); q.userData.keep = true; return q; }), cloudMat); s.position.set((j - k/2)*3.2 + Math.random(), Math.random()*1.2, Math.random()*2); s.scale.set(3 + Math.random()*2, 2 + Math.random()*1.2, 2.5 + Math.random()*1.5); cg.add(s); }
     cg.position.set((Math.random() - 0.5)*300, 55 + Math.random()*25, (Math.random() - 0.5)*300); world.add(cg); clouds.push(cg); }
   // trại xuất phát (vùng an toàn)
@@ -664,13 +665,10 @@ const DET_RED = new THREE.MeshBasicMaterial({vertexColors:true, color:0xff3030})
 const SPIKE_MAT = toon({color:0x151015, flatShading:true}); SPIKE_MAT.userData.keep = true;
 const spikeGeo = type=> geo('spk_' + type, ()=> merge(Array.from({length:8}, (_, i)=>{ const a = i/8*Math.PI*2, y = MSPIKE[type]; return {g:Co(0.2, 1.0, 5), m:M4(Math.cos(a)*0.65, y + (i % 2)*0.35, Math.sin(a)*0.65, 1, 1, 1, Math.sin(a)*0.9, 0, -Math.cos(a)*0.9)}; })));
 const wingGeo = ()=> geo('wing', ()=> merge([{g:Co(0.95, 1.9, 3)}]));
+// quái có khung xương + bộ động tác (monsters.js)
 function monsterModel(type, color){
-  const g = new THREE.Group(), mat = toon({color, vertexColors:true, transparent:type === 'spirit', opacity:type === 'spirit' ? 0.92 : 1});
-  const body = new THREE.Mesh(geo('mb_' + type, MBODY[type]), mat); g.add(body); outline(body, 0.06, true);
-  const det = new THREE.Mesh(geo('md_' + type, MDET[type]), DET_MAT); g.add(det);
-  const wings = [];
-  if(type === 'bat') [-1, 1].forEach(d=>{ const piv = new THREE.Group(); piv.position.set(d*0.55, 1.9, 0); const w = new THREE.Mesh(wingGeo(), mat); w.rotation.z = d*Math.PI/2; w.position.x = d*0.85; w.scale.set(1, 1, 0.35); piv.add(w); outline(w, 0.05, true); g.add(piv); wings.push(piv); piv.userData.d = d; });
-  return {g, mat, det, body, wings};
+  const model = createMonster(THREE, type, color, {merge, toon, outline:(m, t)=> outline(m, t, true), detMat:DET_MAT, spikeMat:SPIKE_MAT});
+  const g = new THREE.Group(); g.add(model.object); return {g, mat:model.mat, det:null, body:null, wings:[], model};
 }
 const STAR_MAT = new THREE.SpriteMaterial({map:canvasTex(64, 64, (x)=>{ x.fillStyle = '#ffe14a'; x.strokeStyle = '#7a5200'; x.lineWidth = 4; x.beginPath(); for(let i = 0; i < 10; i++){ const a = -Math.PI/2 + i*Math.PI/5, r = i % 2 ? 12 : 28; x.lineTo(32 + Math.cos(a)*r, 32 + Math.sin(a)*r); } x.closePath(); x.fill(); x.stroke(); }), transparent:true, depthTest:false, fog:false}); STAR_MAT.userData.keep = true;
 function spawnBoss(Z){
@@ -739,12 +737,12 @@ function spawnMonster(Z, kind){
   if(kind === 'boss') return spawnBoss(Z);
   const guard = kind === 'guard';
   const type = kind === 'boss' || guard ? 'golem' : MTYPES[Math.floor(Math.random()*MTYPES.length)], color = guard ? [0x3a86ff, 0x2ec4b6, 0xff9f1c, 0x8338ec][Z.idx % 4] : kind === 'boss' ? 0x9b5de5 : MCOL[Math.floor(Math.random()*MCOL.length)];
-  const {g, mat, det, body, wings} = monsterModel(type, color), lvl = guard ? Z.lvl + 3 : kind === 'boss' ? Z.lvl + 5 : Z.lvl + (kind === 'elite' ? 2 : Math.floor(Math.random()*2));
+  const {g, mat, det, body, wings, model} = monsterModel(type, color), lvl = guard ? Z.lvl + 3 : kind === 'boss' ? Z.lvl + 5 : Z.lvl + (kind === 'elite' ? 2 : Math.floor(Math.random()*2));
   const scale = guard ? 2.2 : kind === 'boss' ? 2.6 : kind === 'elite' ? 1.4 : 1;
   const a = Math.random()*Math.PI*2, r = kind === 'boss' || guard ? 0 : 3 + Math.random()*(Z.r - 4), x = Z.x + Math.cos(a)*r, z = Z.z + Math.sin(a)*r;
   g.position.set(x, height(x, z), z); g.scale.setScalar(0.001); world.add(g);
   const hpMax = Math.round((40 + lvl*22)*(guard ? 3 : kind === 'boss' ? 4 : kind === 'elite' ? 1.6 : 1));
-  const M = {g, mat, det, body, wings, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*(guard ? 1.4 : kind === 'boss' ? 1.6 : kind === 'elite' ? 1.25 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
+  const M = {g, mat, det, body, wings, model, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*(guard ? 1.4 : kind === 'boss' ? 1.6 : kind === 'elite' ? 1.25 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
     name:guard ? 'Hộ vệ chương' : (kind === 'boss' ? 'Trùm ' : kind === 'elite' ? 'Tinh anh ' : '') + MNAMES[type], answered:null, cd:1, dead:false, spawnT:0, baseEm:0x000000, kb:new THREE.Vector3(), wind:0};
   if(kind === 'boss') M.baseEm = 0x1a0830;
   if(guard){ const cr = new THREE.Mesh(merge([{g:Cy(0.42, 0.36, 0.22, 10), m:M4(0, 3.12, 0), c:0xf2c14e}, ...[0, 1, 2, 3, 4].map(i=>{ const a = i/5*Math.PI*2; return {g:Co(0.09, 0.28, 4), m:M4(Math.cos(a)*0.38, 3.33, Math.sin(a)*0.38), c:0xf2c14e}; })]), toon({vertexColors:true, emissive:0x553300})); g.add(cr); outline(cr, 0.04, true); }
@@ -756,8 +754,8 @@ function spawnMonster(Z, kind){
 function makeBar(){ const g = new THREE.Group(); const bg = new THREE.Sprite(new THREE.SpriteMaterial({color:0x000000, transparent:true, opacity:.55, fog:false})); bg.scale.set(2.2, 0.22, 1); const fg = new THREE.Sprite(new THREE.SpriteMaterial({color:0xe5484d, fog:false})); fg.scale.set(2.1, 0.15, 1); fg.center.set(0, 0.5); fg.position.x = -1.05; g.add(bg, fg); g.userData.fg = fg; g.visible = false; return g; }
 function transform(M){
   // trả lời sai: quái biến hình — to hơn, đỏ sẫm, mọc gai, mắt đỏ, mạnh hơn rất nhiều
-  M.mat.color.set(0x7a1218); M.baseEm = 0x5a0008; M.mat.emissive.setHex(M.baseEm); M.det.material = DET_RED;
-  const sp = new THREE.Mesh(spikeGeo(M.type), SPIKE_MAT); M.g.add(sp); outline(sp, 0.05, true); M.spikes = sp;
+  M.mat.color.set(0x7a1218); M.baseEm = 0x5a0008; M.mat.emissive.setHex(M.baseEm);
+  if(M.model) M.model.morph(DET_RED); else { M.det.material = DET_RED; const sp = new THREE.Mesh(spikeGeo(M.type), SPIKE_MAT); M.g.add(sp); outline(sp, 0.05, true); M.spikes = sp; }
   M.baseScale *= 1.45; M.hpMax = Math.round(M.hpMax*1.6); M.hp = M.hpMax; M.atk *= 1.75; M.morph = 1; M.name = M.name + ' (biến hình)';
   world.remove(M.label); disposeObj(M.label); M.label = textSprite(`☠ ${M.name} · Lv${M.lvl + 3}`, {screen:0.03, color:'#ff8a8a'}); world.add(M.label);
   M.shadow.scale.set(2.4*M.baseScale, 1, 2.4*M.baseScale);
@@ -944,12 +942,12 @@ hero.on('impact', ()=>{
 function faceTo(p){ player.rotation.y = Math.atan2(p.x - player.position.x, p.z - player.position.z); }
 function hit(M, dmg, crit, isSkill){
   dmg = Math.round(dmg); M.hp -= dmg; floatText(M.g.position, (crit && !isSkill ? 'Chí mạng! ' : '') + '-' + dmg, crit ? '#ffd76a' : '#ffffff', crit); M.flash = 0.12; target = M; M.state = 'fight'; if(mus.mode !== 'battle' && !inQuiz) mus.mode = 'battle';
-  if(M.boss){ M.boss.flash(); if(isSkill) M.boss.hurt(); } else { _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v); }
+  if(M.boss){ M.boss.flash(); if(isSkill) M.boss.hurt(); } else { if(M.model) M.model.hurt(); _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v); }
   hitStop = Math.max(hitStop, crit ? 0.09 : 0.05); shake = Math.max(shake, crit ? 0.45 : 0.2); if(crit && !isSkill) sfx('crit'); else if(!isSkill) sfx('hit');
   if(M.hp <= 0) killMonster(M);
 }
 function killMonster(M){
-  M.dead = true; M.dying = M.boss ? 0 : 0.4; M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
+  M.dead = true; M.dying = M.boss ? 0 : M.model ? 1.0 : 0.4; if(M.model) M.model.die(); M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
   if((M.kind === 'guard' || M.kind === 'boss') && M.answered !== null){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === 3 ? 2 : 1); toast(M.right === 3 ? '🛡 Hạ Hộ vệ với 3/3 câu đúng!' : '🛡 Đã hạ Hộ vệ chương', 2200); checkLevel(M.Z.ci); syncSoon(800); }
   const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? (M.morph ? 24 : 6) : M.kind === 'guard' ? 4 : M.kind === 'elite' ? 2 : 1)*(M.answered ? 1.5 : 1));
   save.kills++; floatText(M.g.position, `+${xp} KN`, '#7fd1ff'); gainXp(xp);
@@ -1010,7 +1008,7 @@ function loop(t){
   near = null; let nd = 6;
   for(const M of monsters.slice()){
     if(M.dead && M.boss){ M.boss.update(dt, player.position); M.respawn -= dt; if(M.respawn <= 0) respawn(M); continue; }
-    if(M.dead){ if(M.dying > 0){ M.dying -= dt; const k = Math.max(0, M.dying/0.4); M.g.scale.setScalar(M.baseScale*k); M.g.rotation.y += dt*14; M.shadow.scale.setScalar(2.4*M.baseScale*k); if(M.dying <= 0){ M.g.visible = false; M.shadow.visible = false; } }
+    if(M.dead){ if(M.dying > 0){ M.dying -= dt; if(M.model) M.model.update(dt); const k = M.model ? Math.max(0, Math.min(1, M.dying/0.25)) : Math.max(0, M.dying/0.4); M.g.scale.setScalar(M.baseScale*k); if(!M.model) M.g.rotation.y += dt*14; M.shadow.scale.setScalar(2.4*M.baseScale*k); if(M.dying <= 0){ M.g.visible = false; M.shadow.visible = false; } }
       M.respawn -= dt; if(M.respawn <= 0) respawn(M); continue; }
     const isC = cine && cine.M === M; if(cine && !isC){ M.label.visible = false; continue; }
     M.t += dt; const d = M.g.position.distanceTo(player.position), vis = d < 95; M.g.visible = vis; M.shadow.visible = vis;
@@ -1021,14 +1019,14 @@ function loop(t){
     let sc = M.baseScale*easeBack(M.spawnT);
     if(M.popT != null){ M.popT += dt; const k = Math.min(1, M.popT/0.5); sc *= 1 + Math.sin(k*Math.PI)*0.25; if(k >= 1) M.popT = null; }
     if(M.squash > 0){ M.squash = Math.max(0, M.squash - dt); }
-    const bob = M.type === 'slime' ? Math.sin(M.t*4)*0.08 : Math.sin(M.t*3)*0.03, sq = (M.squash || 0)*0.8;
+    const bob = M.model ? 0 : M.type === 'slime' ? Math.sin(M.t*4)*0.08 : Math.sin(M.t*3)*0.03, sq = (M.squash || 0)*0.8; let mv = 0;
     if(!(isC && cine.kind === 'morph' && !cine.fired)) M.g.scale.set(sc*(1 - bob*0.5 + sq*0.5), sc*(1 + bob - sq), sc*(1 - bob*0.5 + sq*0.5));
     M.flash = Math.max(0, (M.flash || 0) - dt);
     if(!(isC && cine.kind === 'morph' && !cine.fired)){ if(M.flash > 0) M.mat.emissive.setHex(0xaaaaaa); else if(M.wind > 0) M.mat.emissive.setRGB(0.6*(1 - M.wind/0.4), 0.05, 0.05); else M.mat.emissive.setHex(M.baseEm); }
     M.wings.forEach(w=> w.rotation.z = w.userData.d*Math.sin(M.t*(M.state === 'fight' ? 18 : 12))*0.55);
-    if(M.type === 'spider') M.body.rotation.y = Math.sin(M.t*10)*(M.state === 'fight' ? 0.06 : 0.02);
-    if(M.type === 'golem') M.body.rotation.z = Math.sin(M.t*2)*0.04;
-    const fly = M.type === 'bat' || M.type === 'spirit' ? Math.sin(M.t*2)*0.3 + 0.2 : 0;
+    if(M.body && M.type === 'spider') M.body.rotation.y = Math.sin(M.t*10)*(M.state === 'fight' ? 0.06 : 0.02);
+    if(M.body && M.type === 'golem') M.body.rotation.z = Math.sin(M.t*2)*0.04;
+    const fly = !M.model && (M.type === 'bat' || M.type === 'spirit') ? Math.sin(M.t*2)*0.3 + 0.2 : 0;
     // đẩy lùi khi trúng đòn
     if(M.kb.lengthSq() > 0.01){ M.g.position.addScaledVector(M.kb, dt); M.kb.multiplyScalar(Math.exp(-dt*10)); }
     if(isC){ /* đứng yên trong cảnh quay */ }
@@ -1036,18 +1034,19 @@ function loop(t){
       if(M.stun > 0){ M.stun -= dt; if(!M.stars){ M.stars = new THREE.Group(); for(let i = 0; i < 3; i++){ const s = new THREE.Sprite(STAR_MAT); s.scale.setScalar(0.45); M.stars.add(s); } world.add(M.stars); } M.stars.visible = true; M.stars.children.forEach((s, i)=>{ const a = M.t*5 + i*2.09; s.position.set(Math.cos(a)*0.8*M.baseScale, 0, Math.sin(a)*0.8*M.baseScale); }); M.stars.position.set(M.g.position.x, M.g.position.y + MTOP[M.type]*M.baseScale + 0.1, M.g.position.z); }
       else { if(M.stars) M.stars.visible = false;
         const reach = 2.4*M.baseScale/1.2 + 0.6;
-        if(M.wind > 0){ M.wind -= dt; M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
+        if(M.wind > 0){ M.wind -= dt; if(!M.model) M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ if(!M.model) M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
         else { M.g.rotation.x *= 0.85;
-          if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); }
-          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.4 : 1.6; M.wind = 0.4; } } } }
+          if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); mv = 1; }
+          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.4 : 1.6; M.wind = 0.4; if(M.model) M.model.attack(); } } } }
       M.g.rotation.y = Math.atan2(player.position.x - M.g.position.x, player.position.z - M.g.position.z);
       if(d > 30){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; target = target === M ? null : target; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
     } else if(M.state !== 'fight'){
       if(M.stars) M.stars.visible = false;
       if(!M.wander || M.t > M.wander.until){ const a = Math.random()*Math.PI*2, r = Math.random()*(M.Z.r - 3); M.wander = {x:M.Z.x + Math.cos(a)*r, z:M.Z.z + Math.sin(a)*r, until:M.t + 4 + Math.random()*5}; }
-      if(M.kind !== 'boss' && M.kind !== 'guard'){ tmp.set(M.wander.x - M.g.position.x, 0, M.wander.z - M.g.position.z); if(tmp.length() > 0.5){ M.g.rotation.y = Math.atan2(tmp.x, tmp.z); tmp.normalize().multiplyScalar(1.4*dt); M.g.position.add(tmp); } }
+      if(M.kind !== 'boss' && M.kind !== 'guard'){ tmp.set(M.wander.x - M.g.position.x, 0, M.wander.z - M.g.position.z); if(tmp.length() > 0.5){ M.g.rotation.y = Math.atan2(tmp.x, tmp.z); tmp.normalize().multiplyScalar(1.4*dt); M.g.position.add(tmp); mv = 0.4; } }
     }
     const gy = height(M.g.position.x, M.g.position.z); M.g.position.y = gy + fly*M.baseScale;
+    if(M.model){ M.model.stun(M.stun > 0); M.model.setMove(isC ? 0 : mv); M.lod = (M.lod || 0) + 1; if(d < 60) M.model.update(dt); else if(vis && M.lod % 4 === 0) M.model.update(dt*4); M.model.setDetail(d < 42); }
     if(!isC){ M.home2x = M.g.position.x; M.home2z = M.g.position.z; }
     M.shadow.position.set(M.g.position.x, gy + 0.07, M.g.position.z);
     const top = M.g.position.y + MTOP[M.type]*M.baseScale + 0.35;
