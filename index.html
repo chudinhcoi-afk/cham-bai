@@ -221,7 +221,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 </nav>
 <div id="sheet"></div>
 <div id="toast"></div>
-<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Gửi (Zalo…)</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
+<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Gửi (Zalo…)</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zSbd" style="display:none">👤 Gán HS</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
 
 <script>
 "use strict";
@@ -691,7 +691,7 @@ function capture(){
   showShot(full, f);
 }
 function makeRecord(canvas, f){
-  if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).slice(); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
+  if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).filter(w=> !(pendSrc && pendSrc.sbdManual && /^Số báo danh/.test(w))); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
     return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
   const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
 }
@@ -708,7 +708,16 @@ function drawShot(){
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
   $('shotWarn').textContent = pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '';
   const fx = $('shotFix'), S = pendSrc;
-  if(!S || !S.fix.length){ fx.style.display = 'none'; fx.innerHTML = ''; return; }
+  if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId);
+    // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
+    if(ex && (!pending.sbd || !ex.students[pending.sbd] || S.sbdManual)){ const done = new Set((xres[ex.id]||[]).map(r=> r.sbd));
+      fx.style.display = ''; fx.innerHTML = '<div class="fxh">' + (S.sbdManual ? '✔ Đã gán học sinh — có thể chọn lại' : (pending.sbd ? '⚠ SBD ' + esc(pending.sbd) + ' không có trong danh sách' : '⚠ Phiếu không tô số báo danh') + ' — chọn học sinh của bài này') + '</div>'
+        + '<select id="sbdPick" style="width:100%;min-height:44px;font-size:1rem;border-radius:10px;padding:0 8px"><option value="">— Chọn học sinh —</option>'
+        + ex.order.map(sb=> '<option value="' + esc(sb) + '"' + (sb===pending.sbd ? ' selected' : '') + '>' + (done.has(sb) ? '✓ ' : '') + esc(sb) + ' · ' + esc(ex.students[sb].name) + (ex.students[sb].lop ? ' (' + esc(ex.students[sb].lop) + ')' : '') + '</option>').join('') + '</select>';
+      $('sbdPick').onchange = e=>{ const v = e.target.value; if(!v) return; S.f.r.sbd = v; S.sbdManual = true; const at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.sbdManual = true; drawShot(); };
+      return; }
+  }
+  if(!S || !S.fix || !S.fix.length){ fx.style.display = 'none'; fx.innerHTML = ''; return; }
   const r = S.f.r, why = p=> p.pk.manual ? 'đã chấm tay' : p.pk.state==='multi' ? 'tô nhiều ô' : p.pk.state==='weak' ? 'tô mờ' : p.pk.state==='blank' ? 'để trống' : 'tô nhạt';
   fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Chấm tay ' + S.fix.length + ' câu máy chưa chắc — chạm ô học sinh đã tô</div>' + S.fix.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = row.n===2 ? ['Đ','S'] : ['A','B','C','D'], cur = p.pk.state==='ok' ? p.pk.i : -1;
     return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('');
@@ -918,7 +927,14 @@ async function sendToPc(ex){ const list = xres[ex.id] || [];
   try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
   try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } }
 let zi = -1;
-function zoom(i){ zi = i; $('zoomImg').src = curList()[i].url; $('zoom').classList.add('on'); }
+function zoom(i){ zi = i; $('zoomImg').src = curList()[i].url; $('zSbd').style.display = rv && rv.kind==='x' ? '' : 'none'; $('zoom').classList.add('on'); }
+$('zSbd').onclick = ()=>{ const ex = rvExam(), r = curList()[zi]; if(!ex || !r) return;
+  const v = prompt('Nhập số báo danh của bài này' + (r.sbd ? ' (máy đọc: ' + r.sbd + ')' : ' (phiếu không tô SBD)') + ':', r.sbd || ''); if(v === null) return;
+  const sb = v.trim(); if(!sb) return; if(!ex.students[sb] && !confirm('SBD ' + sb + ' không có trong danh sách. Vẫn gán?')) return;
+  const a = xres[ex.id], j = a.findIndex(x=> x!==r && x.sbd===sb);
+  if(j >= 0){ if(!confirm('SBD ' + sb + ' đã có một bài khác. Thay bài cũ bằng bài này?')) return; a.splice(j, 1); }
+  r.sbd = sb; r.name = ex.students[sb] ? ex.students[sb].name : ''; r.warn = (r.warn||[]).filter(w=> !/^SBD .*không có trong danh sách|^Số báo danh/.test(w)); r.sbdManual = true;
+  saveX(); $('zoom').classList.remove('on'); drawResults(); toast('Đã gán bài cho ' + (r.name || 'SBD ' + sb) + '.', 2400); };
 $('zClose').onclick = ()=> $('zoom').classList.remove('on');
 $('zSave').onclick = ()=> download(curList()[zi], zi);
 $('zShare').onclick = ()=> share([[curList()[zi], zi]]);
