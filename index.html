@@ -322,6 +322,25 @@ function omrMeanGray(gray, w, h, map, X, Y, rUnits){
   }
   return n ? s/n : 255;
 }
+/* V2 (13/10/2026): ngưỡng TỰ THÍCH NGHI theo từng phiếu — vết bút chì xám (đậm 0,15–0,4 so với mực in) vẫn nhận;
+   ô được coi là tô khi vượt ngưỡng T của phiếu, hoặc vừa phải nhưng đậm vượt hẳn các ô còn lại cùng câu / cùng cột. */
+function omrAdaptiveT(all){
+  const s = all.filter(v=> isFinite(v)).sort((a,b)=> a-b); if(s.length < 8) return OMR_FILL;
+  let best = OMR_FILL, bv = -1;
+  for(let t = 0.10; t <= 0.40; t += 0.01){ const lo = s.filter(v=> v < t), hi = s.filter(v=> v >= t); if(!lo.length || !hi.length) continue;
+    const m0 = lo.reduce((a,b)=> a+b, 0)/lo.length, m1 = hi.reduce((a,b)=> a+b, 0)/hi.length, v = lo.length*hi.length*(m1-m0)*(m1-m0); if(v > bv){ bv = v; best = t; } }
+  return Math.max(0.14, Math.min(OMR_FILL, best));
+}
+function omrPickGroupT(opts, scores, T){
+  const idx = scores.map((s,i)=>i).sort((a,b)=> scores[b]-scores[a]);
+  const s1 = scores[idx[0]], s2 = idx.length>1 ? scores[idx[1]] : 0, s2e = Math.max(s2, 0.03);
+  const strong = s1 >= T, clear = s1 >= Math.max(0.12, 0.55*T) && s1 >= 3*s2e;
+  if(strong || clear){
+    if(s2 >= T && s2 >= 0.6*s1) return {v:'?', state:'multi', i:idx[0], i2:idx[1]};
+    return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint: !strong};
+  }
+  return {v:'', state: s1 >= Math.max(0.10, 0.5*T) && s1 >= 2*s2e ? 'weak' : 'blank', i:idx[0]};   // chỉ báo tô mờ khi có một ô nổi hẳn lên
+}
 function omrPickGroup(opts, scores){
   const idx = scores.map((s,i)=>i).sort((a,b)=> scores[b]-scores[a]);
   const s1 = scores[idx[0]], s2 = idx.length>1 ? scores[idx[1]] : 0;
@@ -416,9 +435,13 @@ function omrReadImageData(img, counts){
   const score = m=> Math.max(0, Math.min(1, (paper - m)/span));
   const marks = [];   // để vẽ ảnh xem lại
   const warnings = [];
+  // nền giấy tại chỗ: nhóm từ 4 ô trở lên lấy trung vị của chính nhóm (ảnh chụp sáng tối không đều); nhóm 2 ô dùng nền chung
+  const groupScores = g=>{ const ms = measure(g); let ref = paper; if(ms.length >= 4){ const so = ms.slice().sort((a,b)=> b-a); ref = Math.min(paper + 25, Math.max(paper - 40, so[Math.floor(so.length/2) - (so.length >= 10 ? 1 : 0)])); }
+    return ms.map(m=> Math.max(0, Math.min(1, (ref - m)/span))); };
+  const T = omrAdaptiveT(allMeans.map(score));
   const pick = (g, label)=>{
-    const sc = measure(g).map(score);
-    const r = omrPickGroup(g, sc);
+    const sc = groupScores(g);
+    const r = omrPickGroupT(g, sc, T);
     if(r.state==='ok') marks.push({b:g[r.i], c:'ok'});
     else if(r.state==='multi'){ marks.push({b:g[r.i], c:'bad'}); marks.push({b:g[r.i2], c:'bad'}); warnings.push(`${label}: tô nhiều hơn 1 ô`); }
     else if(r.state==='weak'){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: tô mờ, chưa chắc`); }
