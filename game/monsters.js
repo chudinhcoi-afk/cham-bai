@@ -12,15 +12,16 @@ export function createMonster(THREE, type, color, opts = {}){
   const W = 0xffffff, DK = 0x15151c, SH = 0xc8c8c8;
   // mắt to dễ thương (dùng chung): lòng trắng, con ngươi, điểm sáng
   const eyes = (y, z, s = 0.14, gap = 0.26, sq = 1.25)=> [-1, 1].flatMap(d=> [{g:Sp(s, 12, 10), m:M4(d*gap, y, z, 1, sq, 0.7), c:W}, {g:Sp(s*0.6, 10, 8), m:M4(d*gap, y - s*0.08, z + s*0.42, 1, sq, 0.6), c:DK}, {g:Sp(s*0.2, 6, 4), m:M4(d*gap + s*0.18, y + s*0.25, z + s*0.66), c:W}]);
-  const T = CACHE[type] || (CACHE[type] = build());
+  const GUARD = type === 'golem' && !!opts.guard, KEY = type + (GUARD ? ':guard' : ''), T = CACHE[KEY] || (CACHE[KEY] = build());
 
   /* ---------- dựng một con ---------- */
-  const object = new THREE.Group(), B = {}, mat = toon({color, vertexColors:true}), outs = [];
+  const object = new THREE.Group(), B = {}, mat = toon({color, vertexColors:true, flatShading:type === 'golem'}), outs = [];
   const detMat = opts.detMat || toon({vertexColors:true});
   T.bones.forEach(([n, p, x, y, z])=>{ const b = new THREE.Group(); b.name = 'mo_' + n; b.position.set(x, y, z); (p ? B[p] : object).add(b); B[n] = b; });
   const meshes = [];
   T.parts.forEach(([bn, geo, tinted, ol])=>{
-    if(tinted === 'decal' || tinted === 'gloss' || tinted === 'crack'){ const m = new THREE.Mesh(geo, tinted === 'decal' ? T.dm[0] : tinted === 'gloss' ? T.gloss : T.crack[0]); m.renderOrder = tinted === 'decal' ? 3 : 2; m.userData.kind = tinted; B[bn].add(m); meshes.push(m); return; }
+    if(tinted === 'fixed'){ const m = new THREE.Mesh(geo, T.fixed); B[bn].add(m); meshes.push(m); const o = addOutline(m, ol || 0.03); if(o) outs.push(o); return; }
+    if(tinted === 'decal' || tinted === 'gloss' || tinted === 'crack' || tinted === 'glow'){ const m = new THREE.Mesh(geo, tinted === 'decal' ? T.dm[0] : tinted === 'gloss' ? T.gloss : tinted === 'glow' ? T.glow : T.crack[0]); m.renderOrder = tinted === 'decal' ? 3 : 2; m.userData.kind = tinted; B[bn].add(m); meshes.push(m); return; }
     const m = new THREE.Mesh(geo, tinted ? mat : detMat); B[bn].add(m); meshes.push(m); if(ol){ const o = addOutline(m, ol); if(o) outs.push(o); } if(!tinted) m.userData.det = true; });
   if(type === 'spirit'){ mat.transparent = true; mat.opacity = 0.9; }
   const mixer = new THREE.AnimationMixer(object), A = {};
@@ -112,7 +113,7 @@ export function createMonster(THREE, type, color, opts = {}){
     const crackTex = ()=> canvasT(256, 256, (x)=>{ let sd = 7; const rnd = ()=> (sd = (sd*16807) % 2147483647)/2147483647; x.fillStyle = '#000'; x.fillRect(0, 0, 256, 256);
       const crack = (px, py, a, L, w)=>{ for(let k = 0; k < L; k++){ const nx = px + Math.cos(a)*14, ny = py + Math.sin(a)*14; x.lineWidth = w; x.strokeStyle = '#7fe9ff'; x.shadowColor = '#bff6ff'; x.shadowBlur = 8; x.beginPath(); x.moveTo(px, py); x.lineTo(nx, ny); x.stroke(); px = nx; py = ny; a += (rnd() - 0.5)*1.1; if(rnd() < 0.12 && w > 2.5) crack(px, py, a + (rnd() < 0.5 ? 1 : -1)*0.9, Math.floor(L*0.4), w*0.6); } };
       crack(0, 90, 0.35, 13, 4); crack(150, 0, 1.6, 10, 3.5); crack(256, 200, Math.PI + 0.3, 9, 3); });
-    const crackMats = ()=>{ const t = crackTex(); return [0x9ff2ff, 0xff4040].map(c=> keep(new THREE.MeshBasicMaterial({color:c, map:t, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}))); };
+    const crackMats = ()=>{ const t = crackTex(); t.wrapS = t.wrapT = THREE.RepeatWrapping; return [0x9ff2ff, 0xff4040].map(c=> keep(new THREE.MeshBasicMaterial({color:c, map:t, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}))); };
     const GLOSS = keep(new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.85, depthWrite:false}));
     const sparkle = (pts)=> merge(pts.map(([x, y, z, s])=> ({g:new THREE.OctahedronGeometry(s, 0), m:M4(x, y, z, 1, 1.8, 0.4)})));
     const spikeRing = (y, r, n = 8, h = 0.7, tilt = 0.9)=> merge(Array.from({length:n}, (_, i)=>{ const a = i/n*Math.PI*2; return {g:Co(0.14, h, 5), m:M4(Math.cos(a)*r, y + (i % 2)*0.25, Math.sin(a)*r, 1, 1, 1, Math.sin(a)*tilt, 0, -Math.cos(a)*tilt), c:0x2a0a10}; }));
@@ -138,23 +139,44 @@ export function createMonster(THREE, type, color, opts = {}){
           die:bake('die', 0.8, [[0, {}], [0.2, {'body.s':[1.2, 0.85, 1.2], 'face.s':[1, 0.1, 1]}, 'out'], [0.8, {'body.s':[1.9, 0.08, 1.9], sprout:[80, 0, 0]}, 'in']])}};
     }
     if(type === 'golem'){
-      // người đá pha lê: khối vuông vức có vết nứt phát sáng, gai pha lê trên vai, ngọc ngực, mắt sáng xếch
+      // người đá pha lê: khối vát cạnh, vết nứt phát sáng, gai pha lê trên vai; Hộ vệ chương có thêm giáp đá, nắm đấm khớp, vương miện gắn trên đầu
       REST = {'hips.p':[0, 1.0, 0], hips:[0, 0, 0], torso:[0, 0, 0], head:[0, 0, 0], armL:[0, 0, 18], foreL:[-15, 0, 0], fistL:[0, 0, 0], armR:[0, 0, -18], foreR:[-15, 0, 0], fistR:[0, 0, 0], legL:[0, 0, 0], footL:[0, 0, 0], legR:[0, 0, 0], footR:[0, 0, 0]};
-      const CR = 0xd8f8ff, GL = 0x8ff0ff, cm = crackMats();
+      const CR = 0xd8f8ff, GL = 0x8ff0ff, cm = crackMats(), DARK = 0xb8c4d0;
+      const CB = (w, h, d, b = Math.min(w, h, d)*0.14)=>{ const sh = new THREE.Shape(), x = w/2 - b, y = h/2 - b, c = Math.min(x, y)*0.35;
+        sh.moveTo(-x + c, -y); sh.lineTo(x - c, -y); sh.lineTo(x, -y + c); sh.lineTo(x, y - c); sh.lineTo(x - c, y); sh.lineTo(-x + c, y); sh.lineTo(-x, y - c); sh.lineTo(-x, -y + c); sh.closePath();
+        const g = new THREE.ExtrudeGeometry(sh, {depth:Math.max(0.01, d - 2*b), bevelEnabled:true, bevelThickness:b, bevelSize:b, bevelSegments:1, curveSegments:1}); g.translate(0, 0, -Math.max(0.01, d - 2*b)/2); return g; };
+      const K = (x, y, z, w, h, d, rx = 0, ry = 0, rz = 0, c)=> ({g:CB(w, h, d), m:M4(x, y, z, 1, 1, 1, rx, ry, rz), c});
       const blk = (bone, arr, ol = 0.05)=>{ const g = mergeU(arr); return [[bone, g, true, ol], [bone, g, 'crack']]; };
-      const B3 = (x, y, z, w, h, d, rx = 0, ry = 0, rz = 0, c)=> ({g:Bx(w, h, d), m:M4(x, y, z, 1, 1, 1, rx, ry, rz), c});
-      const shard = (x, y, z, h, rx, rz, r = 0.13)=> ({g:new THREE.ConeGeometry(r, h, 4), m:M4(x, y + h/2, z, 1, 1, 1, rx, 0.6, rz), c:CR});
-      return {height:3.2, hitAt:0.45, spikeBone:'torso', spikes:spikeRing(1.0, 0.7, 7, 0.9, 1.0), crack:cm, gloss:GLOSS,
+      const shard = (x, y, z, h, rx, rz, r = 0.13, ry = 0.6)=> ({g:new THREE.ConeGeometry(r, h, 5), m:M4(x, y + h/2*Math.cos(rz)*Math.cos(rx), z, 1, 1, 1, rx, ry, rz), c:CR});
+      const cluster = (x, y, z, d, k = 1)=> [shard(x, y, z, 0.75*k, 0.15, -d*0.3, 0.15*k), shard(x + d*0.2*k, y - 0.05, z - 0.18*k, 0.55*k, -0.25, -d*0.75, 0.12*k), shard(x - d*0.15*k, y, z - 0.22*k, 0.5*k, -0.4, d*0.05, 0.11*k), shard(x + d*0.05, y - 0.05, z + 0.2*k, 0.42*k, 0.5, -d*0.4, 0.1*k)];
+      const G = GUARD;
+      const torso = [K(0, 0.5, 0, 1.6, 1.2, 1.05), K(0, 1.02, 0, 1.92, 0.58, 1.18, 0.05, 0, 0), K(0, -0.02, 0.06, 1.2, 0.5, 0.9), K(0.98, 1.0, 0, 0.74, 0.64, 0.74, 0.1, 0.2, 0.15), K(-0.98, 1.0, 0, 0.74, 0.64, 0.74, 0.1, -0.2, -0.15)];
+      if(G) torso.push(K(0.42, 0.62, 0.5, 0.6, 0.55, 0.22, 0.05, 0.25, 0.1, DARK), K(-0.42, 0.62, 0.5, 0.6, 0.55, 0.22, 0.05, -0.25, -0.1, DARK), K(0.36, 0.14, 0.46, 0.5, 0.3, 0.18, 0, 0.2, 0, DARK), K(-0.36, 0.14, 0.46, 0.5, 0.3, 0.18, 0, -0.2, 0, DARK),
+        K(0, 0.85, -0.55, 1.2, 0.8, 0.4, -0.2, 0, 0), K(1.0, 1.3, 0.0, 0.8, 0.36, 0.84, 0, 0.2, 0.22, DARK), K(-1.0, 1.3, 0.0, 0.8, 0.36, 0.84, 0, -0.2, -0.22, DARK), K(0, -0.3, 0.02, 1.36, 0.2, 1.0, 0, 0, 0, DARK));
+      const head = [K(0, 0.3, 0.02, 0.86, 0.74, 0.8), K(0, 0.53, 0.38, 0.98, 0.18, 0.28, 0.3, 0, 0), K(0, 0.03, 0.34, 0.64, 0.22, 0.28)];
+      if(G) head.push(K(0.24, 0.0, 0.36, 0.22, 0.2, 0.2, 0.2, 0, 0.3, DARK), K(-0.24, 0.0, 0.36, 0.22, 0.2, 0.2, 0.2, 0, -0.3, DARK), K(0, -0.08, 0.38, 0.3, 0.22, 0.2, 0.25, 0, 0, DARK), K(0.47, 0.3, 0, 0.14, 0.4, 0.5), K(-0.47, 0.3, 0, 0.14, 0.4, 0.5));
+      const crys = [...cluster(0.95, 1.32, 0.0, 1, G ? 1.25 : 1), ...cluster(-0.95, 1.32, 0.0, -1, G ? 1.25 : 1), {g:new THREE.OctahedronGeometry(0.22, 0), m:M4(0, 0.62, 0.56, 1, 1.45, 0.55), c:GL}];
+      if(G) crys.push(...cluster(0, 1.1, -0.72, 1, 0.9), shard(0.35, 1.2, -0.62, 0.5, -0.7, -0.2, 0.1), shard(-0.35, 1.2, -0.62, 0.5, -0.7, 0.2, 0.1));
+      const parts = [...blk('hips', [K(0, 0, 0, 1.25, 0.56, 0.86, 0, 0.05, 0), ...(G ? [K(0, -0.05, 0.42, 0.5, 0.4, 0.16, -0.1, 0, 0, DARK)] : [])]), ...blk('torso', torso),
+        part('torso', crys, false, 0.03),
+        ['torso', merge([{g:new THREE.SphereGeometry(0.42, 16, 12), m:M4(0, 0.62, 0.52, 1, 1.3, 0.35)}]), 'glow'],
+        ...blk('head', head),
+        ['head', merge([K(0.2, 0.36, 0.43, 0.22, 0.09, 0.05, 0, 0, 0.32), K(-0.2, 0.36, 0.43, 0.22, 0.09, 0.05, 0, 0, -0.32)]), 'gloss'], part('head', [K(0, 0.13, 0.48, 0.3, 0.05, 0.04, 0, 0, 0, 0x0a2030)], false, 0),
+        ...['L', 'R'].flatMap(sd=>{ const d = sd === 'L' ? 1 : -1;
+          const arm = [K(0, -0.05, 0, 0.64, 0.64, 0.64, 0, 0, d*0.1), K(0, -0.46, 0, 0.5, 0.56, 0.5)], fore = [K(0, -0.3, 0, 0.56, 0.66, 0.56, 0, 0.2, 0)], fist = [K(0, -0.22, 0.05, 0.86, 0.74, 0.84, 0, 0.15, 0)], leg = [K(0, -0.25, 0, 0.64, 0.74, 0.64)], foot = [K(0, -0.27, 0.1, 0.74, 0.36, 0.9)];
+          if(G){ arm.push(K(d*0.12, -0.72, 0.1, 0.42, 0.26, 0.42, 0.3, 0, 0, DARK)); fore.push(K(d*0.3, -0.3, 0, 0.16, 0.5, 0.44, 0, 0, 0, DARK)); for(let k = 0; k < 4; k++) fist.push(K(-0.29 + k*0.19, -0.5, 0.3, 0.17, 0.18, 0.2, 0.2, 0, 0, DARK));
+            leg.push(K(0, -0.42, 0.3, 0.44, 0.34, 0.16, -0.15, 0, 0, DARK)); for(let k = 0; k < 3; k++) foot.push(K(-0.22 + k*0.22, -0.36, 0.58, 0.18, 0.18, 0.2, 0, 0, 0, DARK)); }
+          const out = [...blk('arm' + sd, arm), ...blk('fore' + sd, fore), ...blk('fist' + sd, fist), ...blk('leg' + sd, leg), ...blk('foot' + sd, foot)];
+          if(G) out.push(part('fore' + sd, [shard(d*0.38, -0.5, -0.05, 0.42, 0.2, -d*1.2, 0.09), shard(d*0.38, -0.25, 0.05, 0.36, -0.2, -d*1.3, 0.08), shard(d*0.36, -0.05, -0.02, 0.3, 0.1, -d*1.25, 0.07)], false, 0.03));
+          return out; })];
+      // vương miện vàng gắn vào xương đầu: đai, 5 chóp nhọn có ngọc, đỉnh cầu
+      if(G){ const cp = [{g:new THREE.CylinderGeometry(0.5, 0.46, 0.18, 10), m:M4(0, 0.76, 0.02), c:0xf2c14e}, {g:new THREE.TorusGeometry(0.49, 0.035, 6, 20), m:M4(0, 0.68, 0.02, 1, 1, 1, Math.PI/2, 0, 0), c:0xd99a1e}];
+        for(let i = 0; i < 5; i++){ const a = i/5*Math.PI*2 + Math.PI/2, x = Math.cos(a)*0.44, z = Math.sin(a)*0.44 + 0.02; cp.push({g:new THREE.ConeGeometry(0.11, 0.38, 4), m:M4(x, 1.03, z, 1, 1, 1, 0, -a, 0), c:0xf2c14e}, {g:new THREE.SphereGeometry(0.045, 8, 6), m:M4(x, 1.24, z), c:0xfff0a0}, {g:new THREE.OctahedronGeometry(0.06, 0), m:M4(Math.cos(a)*0.5, 0.76, Math.sin(a)*0.5 + 0.02, 1, 1.3, 0.6, 0, -a + Math.PI/2, 0), c:i % 2 ? 0x4ad8ff : 0xff4f7a}); }
+        parts.push(['head', merge(cp), 'fixed', 0.035]); }
+      return {height:3.2, hitAt:0.45, spikeBone:'torso', spikes:spikeRing(1.0, 0.7, 7, 0.9, 1.0), crack:cm, gloss:GLOSS, fixed:keep(toon({vertexColors:true, emissive:0x3a2200})), glow:keep(new THREE.MeshBasicMaterial({color:0x7fe9ff, transparent:true, opacity:0.35, blending:THREE.AdditiveBlending, depthWrite:false})),
         bones:[['hips', null, 0, 1.0, 0], ['torso', 'hips', 0, 0.3, 0], ['head', 'torso', 0, 1.15, 0], ['armL', 'torso', 0.98, 0.85, 0], ['foreL', 'armL', 0, -0.72, 0], ['fistL', 'foreL', 0, -0.6, 0], ['armR', 'torso', -0.98, 0.85, 0], ['foreR', 'armR', 0, -0.72, 0], ['fistR', 'foreR', 0, -0.6, 0],
           ['legL', 'hips', 0.4, -0.1, 0], ['footL', 'legL', 0, -0.55, 0], ['legR', 'hips', -0.4, -0.1, 0], ['footR', 'legR', 0, -0.55, 0]],
-        parts:[...blk('hips', [B3(0, 0, 0, 1.25, 0.55, 0.85, 0, 0.05, 0)]),
-          ...blk('torso', [B3(0, 0.5, 0, 1.6, 1.2, 1.05), B3(0, 1.02, 0, 1.9, 0.56, 1.15, 0.05, 0, 0), B3(0, -0.02, 0.06, 1.2, 0.5, 0.9), B3(0.98, 1.0, 0, 0.72, 0.62, 0.72, 0.1, 0.2, 0.15), B3(-0.98, 1.0, 0, 0.72, 0.62, 0.72, 0.1, -0.2, -0.15)]),
-          part('torso', [shard(0.95, 1.28, 0.05, 0.7, 0.2, -0.35), shard(1.15, 1.22, -0.15, 0.55, -0.2, -0.7), shard(0.75, 1.3, -0.2, 0.5, -0.3, -0.1), shard(-0.95, 1.28, 0.05, 0.7, 0.2, 0.35), shard(-1.15, 1.22, -0.15, 0.55, -0.2, 0.7), shard(-0.75, 1.3, -0.2, 0.5, -0.3, 0.1),
-            {g:new THREE.OctahedronGeometry(0.22, 0), m:M4(0, 0.62, 0.55, 1, 1.45, 0.55), c:GL}], false, 0.03),
-          ...blk('head', [B3(0, 0.3, 0.02, 0.86, 0.74, 0.8), B3(0, 0.52, 0.38, 0.96, 0.17, 0.26, 0.28, 0, 0), B3(0, 0.03, 0.34, 0.62, 0.2, 0.26)]),
-          ['head', merge([B3(0.2, 0.36, 0.43, 0.22, 0.09, 0.04, 0, 0, 0.32), B3(-0.2, 0.36, 0.43, 0.22, 0.09, 0.04, 0, 0, -0.32)]), 'gloss'], part('head', [ B3(0, 0.12, 0.475, 0.26, 0.04, 0.03, 0, 0, 0, 0x0a2030)], false, 0),
-          ...['L', 'R'].flatMap(sd=>{ const d = sd === 'L' ? 1 : -1; return [...blk('arm' + sd, [B3(0, -0.05, 0, 0.62, 0.62, 0.62, 0, 0, d*0.1), B3(0, -0.45, 0, 0.5, 0.55, 0.5)]), ...blk('fore' + sd, [B3(0, -0.3, 0, 0.56, 0.64, 0.56, 0, 0.2, 0)]),
-            ...blk('fist' + sd, [B3(0, -0.22, 0.05, 0.84, 0.74, 0.82, 0, 0.15, 0)]), ...blk('leg' + sd, [B3(0, -0.25, 0, 0.62, 0.72, 0.62)]), ...blk('foot' + sd, [B3(0, -0.27, 0.1, 0.72, 0.36, 0.88)])]; })],
+        parts,
         clips:{
           idle:bake('idle', 2.4, [[0, {}], [1.2, {'hips.p':[0, 0.96, 0], torso:[5, 0, 0], head:[-4, 0, 3], armL:[3, 0, 22], armR:[3, 0, -22]}, 'sm']], true),
           move:bake('move', 1.2, [[0, {'hips.p':[0, 0.95, 0], hips:[0, 8, 4], torso:[10, -6, 0], legL:[-28, 0, 0], footL:[15, 0, 0], legR:[22, 0, 0], footR:[-5, 0, 0], armL:[25, 0, 18], armR:[-25, 0, -18]}],
