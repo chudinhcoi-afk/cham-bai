@@ -517,11 +517,29 @@ function omrReadImageData(img, counts){
   }
   return {ok:true, source:'offline', sbd, made, tn, ds, tln, tlnSel, unsure, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts};
 }
-const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12};
-function wakGeom(n){
-  const ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = Math.ceil(n/ncol), H = Math.round((WAK.y0 + (R-1)*WAK.pitchY + 8.5)*10)/10;
-  const pos = (k, j)=>{ const c = Math.floor(k/R), r = k % R; return {x: WAK.x0 + c*WAK.colW + WAK.bx + j*WAK.bp, y: WAK.y0 + r*WAK.pitchY}; };
-  return {ncol, R, H, pos};
+const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12, tColW:86, tBlk:26.8};
+// Trả lời ngắn trong khung: mỗi câu 4 hàng = 4 kí tự (ghi từ trái sang); hàng 1 có dấu −, hàng 2–3 có dấu phẩy, hàng 4 chỉ chữ số
+const WAK_TO = ['-0123456789', ',0123456789', ',0123456789', '0123456789'];
+const wakOpts = r=> r.o ? r.o.split('') : r.n===2 ? ['Đ','S'] : ['A','B','C','D'];
+function wakTlnKey(ans){ const s = String(ans==null ? '' : ans).trim().replace(/\s+/g, '').replace('.', ',');   // đáp án → chuỗi ≤ 4 kí tự tô được, hoặc null
+  if(!/^-?[0-9]*(,[0-9]+)?$/.test(s) || !/[0-9]/.test(s) || s.length > 4) return null; const c = s.indexOf(','); if(c === 0 || c === 3) return null; return s; }
+function wakTlnRows(g, key, pt){ return WAK_TO.map((o, r)=> ({lab:g + '.' + (r + 1), g:String(g), t:1, o, n:o.length, key:key[r] || '', pt:r ? 0 : pt})); }
+// chấm: câu trắc nghiệm / đúng – sai theo từng hàng; câu trả lời ngắn đúng khi cả 4 hàng khớp (hàng thừa phải để trống)
+function wakGrade(test, picks){ let pts = 0, max = 0, right = 0, total = 0; const grp = {};
+  picks.forEach(p=>{ const r = test.rows[p.k];
+    if(r.t){ p.rok = r.key ? (p.pk.state==='ok' && p.pk.v===r.key) : p.pk.state==='blank'; (grp[r.g] = grp[r.g] || []).push(p); }
+    else { p.ok = p.rok = p.pk.state==='ok' && p.pk.v===r.key; max += r.pt; total++; if(p.ok){ pts += r.pt; right++; } } });
+  Object.values(grp).forEach(ps=>{ const ok = ps.every(p=> p.rok), pt = ps.reduce((s, p)=> s + test.rows[p.k].pt, 0); ps.forEach(p=> p.ok = ok); max += pt; total++; if(ok){ pts += pt; right++; } });
+  const r2 = x=> Math.round(x*100)/100; return {pts:r2(pts), max:r2(max), right, total}; }
+function wakGeom(rs){
+  const rows = typeof rs === 'number' ? Array.from({length:rs}, ()=> ({})) : rs, nI = [], tI = []; rows.forEach((r, k)=> (r.t ? tI : nI).push(k));
+  const n = nI.length, ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = n ? Math.ceil(n/ncol) : 0, P = {};
+  nI.forEach((k, i)=>{ const c = Math.floor(i/R), r = i % R; P[k] = {x:WAK.x0 + c*WAK.colW + WAK.bx, y:WAK.y0 + r*WAK.pitchY}; });
+  let yEnd = n ? WAK.y0 + (R - 1)*WAK.pitchY : WAK.y0, tY = null;
+  if(tI.length){ tY = n ? yEnd + 10 : WAK.y0 + 3; const G = []; tI.forEach(k=>{ let g = G.find(x=> x.g===rows[k].g); if(!g) G.push(g = {g:rows[k].g, ks:[]}); g.ks.push(k); });
+    G.forEach((g, b)=>{ const c = b % 2, L = Math.floor(b/2); g.ks.forEach((k, r)=>{ P[k] = {x:WAK.x0 + 4 + c*WAK.tColW + WAK.bx, y:tY + L*WAK.tBlk + r*WAK.pitchY}; }); yEnd = Math.max(yEnd, tY + L*WAK.tBlk + (g.ks.length - 1)*WAK.pitchY); }); }
+  const H = Math.round((yEnd + 8.5)*10)/10;
+  return {ncol, R, H, tY, pos:(k, j)=> ({x:P[k].x + j*WAK.bp, y:P[k].y})};
 }
 function wakLocate(gray, w, h, pickTest){
   const {cands} = omrFindMarkerCandidates(gray, w, h); if(cands.length < 4) return null;
@@ -548,7 +566,7 @@ function wakLocate(gray, w, h, pickTest){
       // Kiểm chứng bằng chính bố cục khung: tại vị trí mỗi ô phải có VÒNG TRÒN in sẵn (tối hơn giấy ở giữa các ô).
       // Bộ bốn điểm ghép nhầm từ các ô học sinh tô đậm sẽ không khớp bố cục này.
       let score = paper - botM[0]; const test = pickTest ? pickTest(id) : null;
-      if(test){ const G = wakGeom(test.rows.length), vs = G.H - 4, mp = (x, y)=> map((x-2)/span, (y-2)/vs); let hit = 0, tot = 0;
+      if(test){ const G = wakGeom(test.rows), vs = G.H - 4, mp = (x, y)=> map((x-2)/span, (y-2)/vs); let hit = 0, tot = 0;
         const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
         for(let k = 0; k < test.rows.length; k++) for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j); let ring = 0; for(let t = 0; t < 12; t++){ const an = t*Math.PI/6; ring += px(p.x + 1.65*Math.cos(an), p.y + 1.65*Math.sin(an)); } ring /= 12;
           const bg = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]].map(([dx,dy])=> px(p.x+dx, p.y+dy)).sort((x,y)=> y-x)[1]; tot++; if(bg - ring > 0.12*(paper - ink)) hit++; }
@@ -599,16 +617,15 @@ function wakRead(img, pickTest){
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
   const test = pickTest(loc.id);
   if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
-  const G = wakGeom(test.rows.length), span = WAK.W - 4, vs = G.H - 4, opts2 = ['Đ','S'], opts4 = ['A','B','C','D'];
+  const G = wakGeom(test.rows), span = WAK.W - 4, vs = G.H - 4;
   const mapMm = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
   const sc = wakScores(gray, w, h, loc, test, G), T = wakThreshold(sc), thr = T.thr;
-  let pts = 0, max = 0, right = 0; const warn = [];
-  const picks = test.rows.map((r,k)=>{ const o = (r.n===2 ? opts2 : opts4).map(v=> ({v})), pk = wakPick2(o, sc[k], T);
-    const ok = pk.state==='ok' && pk.v===r.key; max += r.pt; if(ok){ pts += r.pt; right++; }
+  const warn = [];
+  const picks = test.rows.map((r,k)=>{ const O = wakOpts(r), pk = wakPick2(O.map(v=> ({v})), sc[k], T);
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
-    return {k, pk, ok, keyIdx:(r.n===2 ? opts2 : opts4).indexOf(r.key)}; });
-  const r2 = x=> Math.round(x*100)/100;
-  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:r2(pts), max:r2(max), right, total:test.rows.length, warn, corners:loc.corners, thr};
+    return {k, pk, keyIdx:O.indexOf(r.key)}; });
+  const gr = wakGrade(test, picks);
+  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr};
 }
 function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô đúng, đỏ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống / tô mờ / tô nhiều ô; ghi điểm cạnh khung
   const k = Math.min(1, 1700/canvas.width), c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
@@ -617,12 +634,12 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
   const mm = res.pxPerMm*k, P = (x, y)=>{ const [px,py] = res.mapMm(x, y); return [px*k, py*k]; };
   const ring = (x, y, col, fill)=>{ const [px,py] = P(x, y); ctx.beginPath(); ctx.arc(px, py, 2.3*mm, 0, Math.PI*2); if(fill){ ctx.fillStyle = fill; ctx.fill(); } ctx.lineWidth = Math.max(2, 0.45*mm); ctx.strokeStyle = col; ctx.stroke(); };
   const GREEN = '#12a150', RED = '#d0302b', ORG = '#e08a00';
-  res.picks.forEach(p=>{ const key = res.G.pos(p.k, p.keyIdx);
-    if(p.ok) ring(key.x, key.y, GREEN, 'rgba(18,161,80,.22)');
-    else if(p.pk.state==='ok'){ const ch = res.G.pos(p.k, p.pk.i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); const [px,py] = P(ch.x, ch.y), d = 2.1*mm; ctx.beginPath(); ctx.moveTo(px-d,py-d); ctx.lineTo(px+d,py+d); ctx.moveTo(px+d,py-d); ctx.lineTo(px-d,py+d); ctx.stroke(); ring(key.x, key.y, GREEN); }
-    else { if(p.pk.state==='multi'){ [p.pk.i, p.pk.i2].forEach(i=>{ const ch = res.G.pos(p.k, i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); }); } ring(key.x, key.y, ORG); } });
+  res.picks.forEach(p=>{ const key = p.keyIdx >= 0 ? res.G.pos(p.k, p.keyIdx) : null, rok = p.rok != null ? p.rok : p.ok;
+    if(rok){ if(key) ring(key.x, key.y, GREEN, 'rgba(18,161,80,.22)'); }
+    else if(p.pk.state==='ok'){ const ch = res.G.pos(p.k, p.pk.i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); const [px,py] = P(ch.x, ch.y), d = 2.1*mm; ctx.beginPath(); ctx.moveTo(px-d,py-d); ctx.lineTo(px+d,py+d); ctx.moveTo(px+d,py-d); ctx.lineTo(px-d,py+d); ctx.stroke(); if(key) ring(key.x, key.y, GREEN); }
+    else { if(p.pk.state==='multi'){ [p.pk.i, p.pk.i2].forEach(i=>{ const ch = res.G.pos(p.k, i); ring(ch.x, ch.y, RED, 'rgba(208,48,43,.22)'); }); } if(key) ring(key.x, key.y, ORG); } });
   // điểm: ghi ở dải đáy của khung, bên phải (chỗ trống cạnh mã bài)
-  const txt = `Điểm TN: ${fmtVN(res.pts)}/${fmtVN(res.max)}  (đúng ${res.right}/${res.total})`, fs = Math.max(13, 3.7*mm);
+  const txt = `Điểm: ${fmtVN(res.pts)}/${fmtVN(res.max)}  (đúng ${res.right}/${res.total})`, fs = Math.max(13, 3.7*mm);
   ctx.font = `bold ${fs}px Arial`; const tw = ctx.measureText(txt).width, [tx, ty] = P(WAK.W - 6, res.G.H - 0.7);
   const [ax, ay] = P(WAK.W - 6 - 10, res.G.H - 0.7), ang = Math.atan2(ty-ay, tx-ax);
   ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(-tw - 10, -fs*1.05, tw + 14, fs*1.35); ctx.fillStyle = RED; ctx.fillText(txt, -tw - 3, 0); ctx.restore();
@@ -636,7 +653,9 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
 function parsePayload(s){
   const m = String(s||'').trim().match(/^MBP1;(\d+);([^;]*);(.+)$/s); if(!m) return null;
   const rows = [];
-  for(const tok of m[3].split(',')){ const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z])$/); if(!t) return null;
+  for(const tok of m[3].split(',')){ const u = tok.trim().match(/^([0-9]+)=(-?[0-9.]{1,4})\/([0-9a-z])$/);
+    if(u){ const key = wakTlnKey(u[2]); if(!key) return null; wakTlnRows(u[1], key, parseInt(u[3], 36)/4).forEach(r=> rows.push(r)); continue; }   // trả lời ngắn
+    const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z])$/); if(!t) return null;
     const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:parseInt(t[3], 36)/4}); }
   return rows.length ? {id:+m[1], name:m[2], rows, at:Date.now()} : null;
 }
@@ -779,7 +798,7 @@ function makeRecord(canvas, f){
 function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 let pendSrc = null;   // ảnh gốc + kết quả đọc của bài đang xem, để chấm tay lại các câu máy chưa chắc
 function showShot(canvas, f){
-  pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> p.pk.state!=='ok' || p.pk.faint).map(p=> p.k) : [], xfix: f.kind==='exam' ? (f.r.unsure||[]).map(u=> ({...u})) : []};
+  pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> f.r.test.rows[p.k].t ? (p.pk.state==='weak' || p.pk.state==='multi' || p.pk.faint) : (p.pk.state!=='ok' || p.pk.faint)).map(p=> p.k) : [], xfix: f.kind==='exam' ? (f.r.unsure||[]).map(u=> ({...u})) : []};
   pending = makeRecord(canvas, f); frozen = true; loopOn = false; drawQuad(null);
   drawShot(); $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
 }
@@ -811,7 +830,7 @@ function drawShot(){
   }
   if(!S || !S.fix || !S.fix.length){ fx.style.display = 'none'; fx.innerHTML = ''; return; }
   const r = S.f.r, why = p=> p.pk.manual ? 'đã chấm tay' : p.pk.state==='multi' ? 'tô nhiều ô' : p.pk.state==='weak' ? 'tô mờ' : p.pk.state==='blank' ? 'để trống' : 'tô nhạt';
-  fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Chấm tay ' + S.fix.length + ' câu máy chưa chắc — chạm ô học sinh đã tô</div>' + S.fix.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = row.n===2 ? ['Đ','S'] : ['A','B','C','D'], cur = p.pk.state==='ok' ? p.pk.i : -1;
+  fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Chấm tay ' + S.fix.length + ' câu máy chưa chắc — chạm ô học sinh đã tô</div>' + S.fix.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row), cur = p.pk.state==='ok' ? p.pk.i : -1;
     return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('');
   fx.querySelectorAll('.fxb').forEach(b=> b.onclick = ()=> manualPick(+b.dataset.k, +b.dataset.i));
 }
@@ -828,12 +847,12 @@ function examManual(u, v){
   const at = pending.at, sm = pending.sbdManual; pending = makeRecord(S.canvas, S.f); pending.at = at; if(sm) pending.sbdManual = sm; pending.manual = (S.xfix||[]).filter(x=> x.manual).length; drawShot();
 }
 function manualPick(k, i){
-  const S = pendSrc; if(!S) return; const r = S.f.r, p = r.picks[k], row = r.test.rows[k], opts = row.n===2 ? ['Đ','S'] : ['A','B','C','D'];
-  p.pk = i < 0 ? {v:'', state:'blank', i:p.pk.i, manual:true} : {v:opts[i], state:'ok', i, manual:true}; p.ok = i >= 0 && i===p.keyIdx;
-  let pts = 0, right = 0; const warn = [];
-  r.picks.forEach(q=>{ const rw = r.test.rows[q.k]; if(q.ok){ pts += rw.pt; right++; } if(q.pk.manual) return;
+  const S = pendSrc; if(!S) return; const r = S.f.r, p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row);
+  p.pk = i < 0 ? {v:'', state:'blank', i:p.pk.i, manual:true} : {v:opts[i], state:'ok', i, manual:true};
+  const gr = wakGrade(r.test, r.picks); const warn = [];
+  r.picks.forEach(q=>{ const rw = r.test.rows[q.k]; if(q.pk.manual) return;
     if(q.pk.state==='multi') warn.push('câu ' + rw.lab + ': tô nhiều ô'); else if(q.pk.state==='weak') warn.push('câu ' + rw.lab + ': tô mờ'); else if(q.pk.faint) warn.push('câu ' + rw.lab + ': tô nhạt (nhận ' + q.pk.v + ')'); });
-  r.pts = Math.round(pts*100)/100; r.right = right; r.warn = warn;
+  r.pts = gr.pts; r.max = gr.max; r.right = gr.right; r.total = gr.total; r.warn = warn;
   const at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.manual = r.picks.filter(q=> q.pk.manual).length; drawShot();
 }
 function closeShot(ok){ if(ok && pending) keep(pending); pending = null; pendSrc = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
@@ -887,11 +906,14 @@ function delKey(k, id){
 const keyGrid = cells=> '<div class="ag">' + cells.map(([l, v])=> '<span><i>' + esc(l) + '</i><b>' + esc(v) + '</b></span>').join('') + '</div>';
 const keyDs = groups=> '<div class="ads">' + groups.map(([l, its])=> '<div><i>' + esc(l) + '</i>' + its.map(([a, v])=> '<span>' + (a ? '<u>' + esc(a) + '</u>' : '') + '<b class="' + (v==='Đ' ? 'd' : 's') + '">' + v + '</b></span>').join('') + '</div>').join('') + '</div>';
 function wsKeyHtml(T){
-  const tn = T.rows.filter(r=> r.n===4), ds = T.rows.filter(r=> r.n===2), g = {}; ds.forEach(r=>{ const m = String(r.lab).match(/^(\d+)([a-d]?)$/) || [0, r.lab, '']; (g[m[1]] = g[m[1]] || []).push([m[2], r.key]); });
+  const tn = T.rows.filter(r=> !r.t && r.n===4), ds = T.rows.filter(r=> !r.t && r.n===2), g = {}; ds.forEach(r=>{ const m = String(r.lab).match(/^(\d+)([a-d]?)$/) || [0, r.lab, '']; (g[m[1]] = g[m[1]] || []).push([m[2], r.key]); });
   const same = a=> a.length && a.every(r=> r.pt===a[0].pt) ? fmtVN(a[0].pt) : null, pT = same(tn), pD = same(ds);
   return (tn.length ? '<div class="ah">Trắc nghiệm' + (pT ? ' <small>mỗi câu ' + pT + ' đ</small>' : '') + '</div>' + keyGrid(tn.map(r=> [r.lab, r.key])) : '') +
-    (ds.length ? '<div class="ah">Đúng – sai' + (pD ? ' <small>mỗi ý ' + pD + ' đ</small>' : '') + '</div>' + keyDs(Object.keys(g).map(k=> [k, g[k]])) : '');
+    (ds.length ? '<div class="ah">Đúng – sai' + (pD ? ' <small>mỗi ý ' + pD + ' đ</small>' : '') + '</div>' + keyDs(Object.keys(g).map(k=> [k, g[k]])) : '') +
+    (tlG(T).length ? '<div class="ah">Trả lời ngắn</div>' + keyGrid(tlG(T).map(x=> [x.g, x.key])) : '');
 }
+// các câu trả lời ngắn của bài kiểm tra: [{g, key, pt, idx:[chỉ số hàng]}]
+function tlG(T){ const o = []; T.rows.forEach((r, i)=>{ if(!r.t) return; let x = o.find(y=> y.g===r.g); if(!x) o.push(x = {g:r.g, key:'', pt:0, idx:[]}); x.key += r.key; x.pt += r.pt; x.idx.push(i); }); return o; }
 function exKeyHtml(T, c){ const v = T.variants[c], dsG = []; for(let i = 0; i < v.ds.length; i += 4) dsG.push([String(i/4 + 1), [...v.ds.slice(i, i + 4)].map((x, j)=> ['abcd'[j], x])]);
   return '<div class="vbox"><div class="vt">Mã đề ' + esc(c) + '</div>' + (v.tn.length ? '<div class="ah">Phần I</div>' + keyGrid([...v.tn].map((x, i)=> [String(i + 1), x])) : '') + (dsG.length ? '<div class="ah">Phần II</div>' + keyDs(dsG) : '') + (v.tln.length ? '<div class="ah">Phần III</div>' + keyGrid(v.tln.map((x, i)=> [String(i + 1), x])) : '') + '</div>'; }
 function sheetClose(){ $('sheet').classList.remove('on'); }
@@ -903,7 +925,8 @@ function sheetKey(k, id, edit){
     const sel = (r, i)=> edit ? '<select data-i="' + i + '" class="kSel">' + (r.n===2 ? ['Đ','S'] : ['A','B','C','D']).map(o=> '<option' + (o===r.key ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' : '<b class="kv">' + r.key + '</b>';
     const pt = (r, i)=> edit ? '<input class="kPt" data-i="' + i + '" inputmode="decimal" value="' + fmtVN(r.pt) + '">' : '<span class="mut">' + fmtVN(r.pt) + ' đ</span>';
     body = !edit ? wsKeyHtml(T) + '<p class="mut" style="margin:10px 0 0;text-align:right">Tổng ' + fmtVN(testMax(T)) + ' điểm</p>' : (edit ? '<label class="mut">Tên bài kiểm tra</label><input id="shName" value="' + esc(T.name||'') + '" style="margin-bottom:10px">' : '') +
-      '<div class="kgrid">' + T.rows.map((r,i)=> '<div class="kc"><span class="kl">' + esc(r.lab) + '</span>' + sel(r, i) + pt(r, i) + '</div>').join('') + '</div>' +
+      '<div class="kgrid">' + T.rows.map((r,i)=> r.t ? '' : '<div class="kc"><span class="kl">' + esc(r.lab) + '</span>' + sel(r, i) + pt(r, i) + '</div>').join('') +
+      tlG(T).map(x=> '<div class="kc"><span class="kl">' + esc(x.g) + '</span><input class="kTl" data-g="' + esc(x.g) + '" inputmode="decimal" value="' + esc(x.key) + '" style="width:4.5em"><input class="kTlPt" data-g="' + esc(x.g) + '" inputmode="decimal" value="' + fmtVN(x.pt) + '"></div>').join('') + '</div>' +
       '<p class="mut" style="margin:10px 0 0">' + (edit ? 'Sửa đáp án hoặc điểm từng ô. Bài đã chấm trước đó không tự chấm lại — hãy chụp lại nếu cần.' : 'Tổng ' + fmtVN(testMax(T)) + ' điểm · ' + T.rows.length + ' ô chấm.') + '</p>';
   } else {
     const codes = Object.keys(T.variants);
@@ -920,7 +943,11 @@ function sheetKey(k, id, edit){
   $('shSave').onclick = ()=>{
     if(k==='ws'){ const pts = [...sh.querySelectorAll('.kPt')].map(i=> parseFloat(i.value.replace(',', '.')));
       if(pts.some(x=> !(x >= 0 && x <= 10))){ toast('Điểm mỗi ô phải là số từ 0 đến 10.', 2800); return; }
-      sh.querySelectorAll('.kSel').forEach(e=>{ T.rows[+e.dataset.i].key = e.value; }); pts.forEach((x,i)=>{ T.rows[i].pt = Math.round(x*100)/100; }); T.name = $('shName').value.trim(); saveTests(); }
+      const tl = tlG(T), tk = {}; for(const e of sh.querySelectorAll('.kTl')){ const k2 = wakTlnKey(e.value); if(!k2){ toast('Đáp án trả lời ngắn câu ' + e.dataset.g + ' phải là số tối đa 4 kí tự (vd −1,5).', 3200); return; } tk[e.dataset.g] = k2; }
+      const tp = {}; for(const e of sh.querySelectorAll('.kTlPt')){ const x = parseFloat(e.value.replace(',', '.')); if(!(x >= 0 && x <= 10)){ toast('Điểm mỗi ô phải là số từ 0 đến 10.', 2800); return; } tp[e.dataset.g] = x; }
+      sh.querySelectorAll('.kSel').forEach(e=>{ T.rows[+e.dataset.i].key = e.value; }); sh.querySelectorAll('.kPt').forEach((e, j)=>{ T.rows[+e.dataset.i].pt = Math.round(pts[j]*100)/100; });
+      tl.forEach(x=> x.idx.forEach((ri, r)=>{ T.rows[ri].key = (tk[x.g] || '')[r] || ''; T.rows[ri].pt = r ? 0 : Math.round(tp[x.g]*100)/100; }));
+      T.name = $('shName').value.trim(); saveTests(); }
     else { const up = {}; let err = '';
       Object.keys(T.variants).forEach(c=>{ const v = T.variants[c], q = cls=> [...sh.querySelectorAll(cls)].find(e=> e.dataset.c===c).value;
         const tn = q('.vTn').toUpperCase().replace(/[^ABCD]/g, ''), ds = q('.vDs').toUpperCase().replace(/D/g, 'Đ').replace(/[^ĐS]/g, ''), tl = v.tln.length ? q('.vTl').split('|').map(x=> x.trim()) : [];
