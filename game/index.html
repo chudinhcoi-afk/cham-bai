@@ -43,6 +43,15 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
 #quiz .go:disabled{background:#3a4470;color:#c8d0f0;cursor:default}
 #quiz .lockbar{height:5px;border-radius:5px;background:rgba(255,255,255,.12);margin-top:8px;overflow:hidden}#quiz .lockbar>div{height:100%;background:linear-gradient(90deg,#7fd1ff,#c77dff);transition:width 1s linear}
 #quiz .tag{display:inline-block;font-size:12px;font-weight:800;border-radius:20px;padding:2px 9px;margin-left:6px;background:#ff8a3a;color:#2b1a00}
+#chat{position:fixed;right:12px;bottom:12px;top:12px;width:min(380px,calc(100vw - 24px));z-index:40;background:#141a36;border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#chat .chd{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+#chatList{flex:1;overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+#chatList .m{background:#202a55;border-radius:12px;padding:6px 10px;max-width:88%;align-self:flex-start;font-size:14px;line-height:1.4;word-wrap:break-word}
+#chatList .m.me{align-self:flex-end;background:#3a3270}#chatList .m .w{font-size:11.5px;opacity:.7;margin-bottom:2px}#chatList .m .w b{color:#ffd76a}
+#chatList .sys{align-self:center;font-size:12px;opacity:.65;text-align:center}
+#chat .cin{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}#chat .cin input{flex:1;background:#0c1124;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:15px}
+#chat .small{font-size:11.5px;opacity:.6;padding:0 12px 10px}
+.cbadge{display:inline-block;min-width:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:#e5484d;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}
 .inst-tabs{display:flex;gap:6px;margin:8px 0}.inst-tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:#222a52;color:var(--ink);font-size:15px;cursor:pointer}.inst-tabs button.on{background:var(--gold);color:#2b1a00;font-weight:800}
 .inst ol{margin:6px 0 0;padding-left:22px;line-height:1.65;font-size:15px}.inst li{margin:4px 0}.inst .k{display:inline-block;background:#2a3366;border:1px solid var(--line);border-radius:7px;padding:0 7px;font-weight:700}
 .world .bar{height:6px;border-radius:6px;background:rgba(0,0,0,.35);margin-top:12px;overflow:hidden}.world .bar>div{height:100%;background:var(--gold)}
@@ -132,7 +141,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
   <button class="ibtn" id="menuGear">⚙ Cài đặt</button>
   <h1>⚔ Thế Giới Toán Học</h1>
   <p class="sub">Phiêu lưu qua 7 vùng đất từ <b>Lớp 6</b> đến <b>Lớp 12</b>. Mỗi con quái vật sẽ <b>đố bạn một câu toán</b> trước khi giao chiến: trả lời đúng thì nó yếu đi và dễ hạ gục, trả lời sai thì nó <b>biến hình</b> và mạnh hơn rất nhiều!</p>
-  <div style="text-align:center;margin:-4px 0 12px"><button class="ibtn" id="menuInstall">📲 Cài game lên điện thoại</button></div>
+  <div style="text-align:center;margin:-4px 0 12px"><button class="ibtn" id="menuInstall">📲 Cài game lên điện thoại</button> <button class="ibtn" id="menuChat">💬 Kênh chat khối<span class="cbadge hidden" id="chatBadge2"></span></button></div>
   <div id="acct"></div>
   <div class="who"><div class="card" id="pinfo"></div><div class="card chars" id="charPick"></div></div>
   <div class="worlds" id="worlds"></div>
@@ -143,7 +152,9 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
     <div>📖 <b>Sổ tay</b> ghi điểm chuyên cần từng chương (7 → 10) và còn thiếu gì để lên mức tiếp theo. Đạt 10 điểm thì nhận <b>danh hiệu</b> của chương.</div>
     <div>🧠 <b>Phải nghĩ thật mới có thưởng:</b> trả lời <b>sai</b> thì hạ quái <b>không được kinh nghiệm</b>. Đáp án chỉ hiện sau vài giây đọc đề; sai thì phải đọc lời giải rồi mới vào trận.</div>
     <div>🔥 <b>Chuỗi đúng</b> liên tiếp nhân kinh nghiệm (tới ×2). 🔁 <b>Câu báo thù:</b> dạng bài em từng sai sẽ quay lại — trả lời đúng được thưởng thêm.</div>
-    <div>🔒 <b>Vào lớp</b> bằng SBD thì chỉ mở vùng đất từ lớp của em trở xuống. Lên lớp mới (năm học sau) sẽ mở thêm vùng đất mới.</div>
+    <div>🔒 <b>Vào lớp</b> bằng SBD thì chỉ mở vùng đất từ lớp của em trở xuống. Ôn ở <b>lớp dưới</b> không có kinh nghiệm và không tính điểm. Lên lớp mới (năm học sau) sẽ mở thêm vùng đất mới.</div>
+    <div>🛡 <b>Hộ vệ chương</b> đố 5 câu. Hạ được Hộ vệ thì nhận <b>danh hiệu</b> và <b>điểm thường xuyên</b> (2 điểm/câu đúng) gửi cho thầy/cô. Mỗi chương tối đa 3 lượt/ngày.</div>
+    <div>💬 <b>Kênh chat</b> theo khối: trao đổi với các bạn cùng khối (cần vào lớp). Lịch sự, không nói tục — thầy/cô đọc được và có thể khoá chat.</div>
   </div>
 </div>
 
@@ -159,6 +170,7 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
   <button id="challenge" class="hidden">⚔ Thách đấu</button>
   <div id="act"><button class="abtn sk" id="bSkill">Tuyệt<br>chiêu<div class="cd" id="skCd" style="transform:scaleY(0)"></div></button><button class="abtn" id="bAtk">Đánh</button></div>
   <div id="joy"><div></div></div>
+  <button class="ibtn" id="bChat" style="position:fixed;left:12px;top:100px;z-index:9">💬 Chat<span class="cbadge hidden" id="chatBadge"></span></button>
 </div>
 <div id="flash"></div><div id="hurt"></div>
 
@@ -197,6 +209,10 @@ html,body{margin:0;height:100%;overflow:hidden;background:#101528;color:var(--in
   <p style="font-size:13px;opacity:.75;margin:8px 0">💡 Nên xoay ngang điện thoại khi chơi. Cần có mạng để tải vùng đất và gửi điểm cho thầy/cô.</p>
   <button class="ibtn" id="instClose">Đóng</button>
 </div></div>
+<div id="chat" class="hidden"><div class="chd"><b id="chatTitle">💬 Kênh chat</b><button class="ibtn" id="chatX" style="padding:4px 10px">✕</button></div>
+  <div id="chatList"></div>
+  <div class="cin"><input id="chatIn" maxlength="200" placeholder="Nhắn cho các bạn cùng khối…" autocomplete="off"><button class="go2" id="chatSend">Gửi</button></div>
+  <div class="small" id="chatNote">Lịch sự, không nói tục, không chia sẻ đáp án lúc đang thi. Thầy/cô đọc được tất cả tin nhắn.</div></div>
 <div id="over" class="hidden">💀 Bạn đã gục ngã…</div>
 <div id="loading" class="hidden"><div class="spin"></div><div id="loadTxt">Đang tải vùng đất…</div></div>
 
@@ -242,9 +258,9 @@ async function fbToken(){
   if(!r.ok) throw new Error(/OPERATION_NOT_ALLOWED|ADMIN_ONLY/.test(d.error && d.error.message || '') ? 'Máy chủ chưa bật đăng nhập cho học sinh — báo thầy/cô.' : 'Không đăng nhập được máy chủ.');
   fbAuth = {uid:d.localId, id:d.idToken, rt:d.refreshToken, exp:Date.now() + (+d.expiresIn)*1000}; saveAuth(); return fbAuth.id;
 }
-async function fb(path, method = 'GET', body){
+async function fb(path, method = 'GET', body, q = ''){
   const t = await fbToken(); let r;
-  try{ r = await fetch(`${FB.db}/${path}.json?auth=${encodeURIComponent(t)}`, {method, headers:{'Content-Type':'application/json'}, body:body === undefined ? undefined : JSON.stringify(body)}); }catch(e){ throw new Error('NET'); }
+  try{ r = await fetch(`${FB.db}/${path}.json?auth=${encodeURIComponent(t)}${q}`, {method, headers:{'Content-Type':'application/json'}, body:body === undefined ? undefined : JSON.stringify(body)}); }catch(e){ throw new Error('NET'); }
   if(r.status === 401 || r.status === 403) throw new Error('DENIED'); if(!r.ok) throw new Error('HTTP ' + r.status); return r.json();
 }
 const norm = s=> String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -267,7 +283,8 @@ async function login(ma, sbd, ten){
   if(kq.ch) Object.keys(kq.ch).forEach(g=>{ save.ch = save.ch || {}; save.ch[g] = save.ch[g] || {}; Object.keys(kq.ch[g]).forEach(ci=>{ const a = save.ch[g][ci], b = kq.ch[g][ci]; if(!a || (b.n || 0) > (a.n || 0)) save.ch[g][ci] = Object.assign({d:{}, days:{}, r:''}, b); }); });
   if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
   if(!save.char && kq.prof && kq.prof.char) save.char = kq.prof.char;
-  persist(); syncNow();
+  if(kq.tx) Object.keys(kq.tx).forEach(g=> Object.keys(kq.tx[g]).forEach(ci=>{ const a = txRec(g, ci), b = kq.tx[g][ci] || {}; if((b.n || 0) > a.n || (b.b || 0) > a.b) Object.assign(a, b, {b:Math.max(a.b, b.b || 0), a:Object.assign({}, b.a || {}, a.a)}); }));
+  persist(); syncNow(); try{ await fb('game/who/' + fbAuth.uid, 'PUT', {ma, s:sbd}); }catch(e){}
 }
 // khối của lớp: chỉ mở vùng đất ≤ khối (thầy/cô nâng khối lớp ở năm học sau thì mở thêm)
 const maxGrade = ()=> save.acct && save.acct.khoi ? save.acct.khoi : 99;
@@ -280,7 +297,7 @@ function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
 function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
-  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, last:Date.now()}, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, last:Date.now()}, sc}); cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
 addEventListener('online', ()=> syncSoon(500));
 
@@ -308,6 +325,23 @@ function checkLevel(ci){ const R = chRec(grade, ci), C = META[grade][ci], sc = c
   if(sc.lv === 10){ toast(`🏅 DANH HIỆU: BẬC THẦY ${shortCh(C.ten).toUpperCase()}<br><span style="font-size:.6em">Điểm chuyên cần chương: 10</span>`, 5000); hero.victory(); burst(player.position, 0xc77dff, 2, 30); pillar(player.position, 0xc77dff); }
   else toast(`⭐ ${LVN[sc.lv]} — chương ${shortCh(C.ten)}<br><span style="font-size:.6em">Điểm chuyên cần: ${sc.lv}</span>`, 3200);
   sfx('lvl'); refreshFlags(); } }
+// ----- điểm thường xuyên: thắng Hộ vệ chương (bài 5 câu: 1 NB · 2 TH · 2 VD), mỗi câu đúng 2 điểm; chỉ tính ở lớp của em, tối đa 3 lượt/ngày/chương -----
+const TX_DAY = 3;
+const txOn = ()=> !!(save.acct && save.acct.khoi && +grade === +save.acct.khoi);
+const lowGrade = ()=> !!(save.acct && save.acct.khoi && +grade < +save.acct.khoi);
+let lowTip = 0;
+function txRec(g, ci){ save.tx = save.tx || {}; const G = save.tx[g] = save.tx[g] || {}; const X = G[ci] = G[ci] || {}; X.b = X.b || 0; X.n = X.n || 0; X.w = X.w || 0; X.a = X.a || {}; X.h = X.h || []; return X; }
+function txWin(M){
+  if(!txOn()){ if(lowGrade()) toast('🛡 Đã hạ Hộ vệ (ôn tập lớp dưới — không tính điểm)', 2600); else if(!save.acct) toast('🛡 Đã hạ Hộ vệ chương! (chơi tự do — vào lớp để được chấm điểm)', 2800); return; }
+  const X = txRec(grade, M.Z.ci), sc = 2*(M.right || 0), t = today(), C = META[grade][M.Z.ci];
+  X.w++; X.h.push(sc + '@' + t); X.h = X.h.slice(-8); if(sc > X.b){ X.b = sc; X.d = t; }
+  const title = M.answered === true && !X.title; if(M.answered === true) X.title = X.title || t;
+  // dọn số lượt các ngày cũ
+  Object.keys(X.a).sort().slice(0, -7).forEach(k=> delete X.a[k]);
+  persist(); syncNow();
+  setTimeout(()=> toast((title ? `🏆 DANH HIỆU MỚI: Khắc tinh Hộ vệ<br><span style="font-size:.62em">${shortCh(C.ten)}</span><br>` : `🛡 Hạ Hộ vệ chương!<br>`) + `<span style="font-size:.62em">Điểm thường xuyên lần này: <b>${fmtS(sc)}</b> (${M.right}/${M.total} câu) · cao nhất: <b>${fmtS(X.b)}</b> — đã gửi cho thầy/cô</span>`, 5200, true), 1600);
+  if(title){ hero.victory(); pillar(player.position, 0xffd23a); burst(player.position, 0xffd23a, 2, 30); sfx('lvl'); }
+}
 function recAnswer(q, ok){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
   if(ok){ R.c++; if(q.k != null) R.d[q.k] = 1; if(q.m === 'VD') R.vd++; if(q.m === 'TH') R.th++; R.st++; R.best = Math.max(R.best, R.st); } else R.st = 0;
   const t = today(); R.days[t] = (R.days[t] || 0) + 1; const ks = Object.keys(R.days).sort(); while(ks.length > 60) delete R.days[ks.shift()];
@@ -425,12 +459,13 @@ function renderAcct(err){
     ${qsLop ? `<div class="muted">Mã lớp: <b>${qsLop}</b></div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
     <div class="muted">Hoặc chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"></div>`;
   $('aGo').onclick = async ()=>{ const b = $('aGo'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
-    try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); }catch(e){ renderAcct(e.message); } };
+    try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); chatPull(); chatLoop(); }catch(e){ renderAcct(e.message); } };
 }
 async function showMenu(){
   $('menu').classList.remove('hidden'); $('game').classList.add('hidden'); running = false; musStop(); $('tip').classList.add('hidden');
   renderAcct();
-  $('pinfo').innerHTML = `<div>⭐ Cấp <b>${save.lv}</b></div><div>🧠 ${save.stars} câu đúng</div><div>👾 ${save.kills} quái</div>`;
+  const nTitle = Object.values(save.tx || {}).reduce((t, G)=> t + Object.values(G).filter(X=> X.title).length, 0);
+  $('pinfo').innerHTML = `<div>⭐ Cấp <b>${save.lv}</b></div><div>🧠 ${save.stars} câu đúng</div><div>👾 ${save.kills} quái</div>${nTitle ? `<div>🏆 ${nTitle} danh hiệu</div>` : ''}`;
   makeHero(save.char || 'boy'); const ch = save.char || 'boy';
   $('charPick').innerHTML = `<div class="lb">Chọn nhân vật</div>` + [['boy', 'Hiệp sĩ'], ['girl', 'Tiểu thư']].map(([k, n])=> `<button data-c="${k}" class="${ch === k ? 'on' : ''}"><img src="icons/char-${k}.png" alt="">${n}</button>`).join('');
   $('charPick').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ auInit(); sfx('click'); save.char = b.dataset.c; persist(); makeHero(save.char); $('charPick').querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b)); });
@@ -844,8 +879,8 @@ function spawnMonster(Z, kind){
       let dmin = 1e9; monsters.forEach(o=>{ if(!o.dead) dmin = Math.min(dmin, Math.hypot(o.g.position.x - px, o.g.position.z - pz) - (o.kind === 'guard' ? 4 : 0)); });
       if(dmin > best){ best = dmin; x = px; z = pz; } if(dmin > 9) break; } }
   g.position.set(x, height(x, z), z); g.scale.setScalar(0.001); world.add(g);
-  const hpMax = Math.round((40 + lvl*22)*(guard ? 3 : kind === 'boss' ? 4 : kind === 'elite' ? 1.6 : 1));
-  const M = {g, mat, det, body, wings, model, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:4 + lvl*2.4*(guard ? 1.4 : kind === 'boss' ? 1.6 : kind === 'elite' ? 1.25 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
+  const hpMax = Math.round((52 + lvl*28)*(guard ? 5 : kind === 'boss' ? 4 : kind === 'elite' ? 1.7 : 1));
+  const M = {g, mat, det, body, wings, model, type, kind, Z, lvl, home:new THREE.Vector3(x, 0, z), hp:hpMax, hpMax, atk:5 + lvl*3.0*(guard ? 1.9 : kind === 'boss' ? 1.6 : kind === 'elite' ? 1.3 : 1), state:'idle', t:Math.random()*10, wander:null, baseScale:scale, color,
     name:guard ? 'Hộ vệ chương' : (kind === 'boss' ? 'Trùm ' : kind === 'elite' ? 'Tinh anh ' : '') + MNAMES[type], answered:null, cd:1, dead:false, spawnT:0, baseEm:0x000000, kb:new THREE.Vector3(), wind:0};
   if(kind === 'boss') M.baseEm = 0x1a0830;
   // vương miện của Hộ vệ nằm trong monsters.js, gắn vào xương đầu nên chuyển động theo
@@ -864,7 +899,7 @@ function transform(M){
   M.shadow.scale.set(2.4*M.baseScale, 1, 2.4*M.baseScale);
   burst(M.g.position, 0xff2a2a, 1.8, 26); shockwave(M.g.position, 0xff3a3a, 9*M.baseScale/1.45);
 }
-function weaken(M){ M.hp = Math.round(M.hpMax*0.55); M.atk *= 0.5; M.stun = 3.5; M.baseEm = 0x183050; if(M.mat) M.mat.emissive.setHex(M.baseEm); burst(M.g.position, 0x4aa3ff, 1.3, 20); }
+function weaken(M){ M.hp = Math.round(M.hpMax*0.7); M.atk *= 0.65; M.stun = 2.5; M.baseEm = 0x183050; if(M.mat) M.mat.emissive.setHex(M.baseEm); burst(M.g.position, 0x4aa3ff, 1.3, 20); }
 
 /* ======================= NGƯỜI CHƠI ======================= */
 const player = new THREE.Group(); scene.add(player);
@@ -937,7 +972,7 @@ async function enterWorld(g){
   $('avTxt').textContent = (save.name || '?').trim().split(' ').pop().slice(0,1).toUpperCase(); updHud(); cloudTxt(save.acct ? '☁ ' + save.acct.lop + ' · SBD ' + save.acct.sbd : 'Chơi tự do (không tính điểm)'); toast(`${WORLDS[g].mood} ${WORLDS[g].name}<br><span style="font-size:.6em">Lớp ${g} · ${zones.length} khu vực</span>`, 2600);
   renderer.compile(scene, camera); $('loading').classList.add('hidden');
   perfM.t = 0; perfM.n = 0; perfM.skip = 1; mus.mode = 'explore'; musStart(g);
-  if(!save.tut) tutStart();
+  if(!save.tut) tutStart(); lowTip = 0; if(lowGrade()) setTimeout(()=> toast(`📘 Ôn tập Lớp ${g}: không nhận kinh nghiệm và điểm thường xuyên`, 3200), 2800);
   lastT = performance.now(); requestAnimationFrame(loop);
 }
 function updHud(){
@@ -951,8 +986,9 @@ function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.l
 const used = new Set();
 function pickQuestion(M){
   const all = PACK[grade], pool = all.map((q, i)=> [q, i]).filter(([q])=> q.c === M.Z.ci);
-  const want = M.kind === 'boss' || M.kind === 'guard' ? ['VD','TH'] : M.kind === 'elite' ? ['TH','VD'] : ['NB','TH'];
-  let cand = pool.filter(([q, i])=> want.includes(q.m) && !used.has(grade + ':' + i)); if(!cand.length) cand = pool.filter(([q, i])=> !used.has(grade + ':' + i)); if(!cand.length){ pool.forEach(([q, i])=> used.delete(grade + ':' + i)); cand = pool; }
+  const GSEQ = [['NB','TH'], ['TH'], ['TH','VD'], ['VD','TH'], ['VD','TH']];   // bài kiểm tra Hộ vệ: 1 NB · 2 TH · 2 VD
+  const want = M.kind === 'guard' ? GSEQ[M._qi || 0] : M.kind === 'boss' ? ['VD','TH'] : M.kind === 'elite' ? ['TH','VD'] : ['NB','TH'];
+  let cand = []; for(const w of (M.kind === 'guard' ? want : [want])){ cand = pool.filter(([q, i])=> (Array.isArray(w) ? w : [w]).includes(q.m) && !used.has(grade + ':' + i)); if(cand.length) break; } if(!cand.length) cand = pool.filter(([q, i])=> !used.has(grade + ':' + i)); if(!cand.length){ pool.forEach(([q, i])=> used.delete(grade + ':' + i)); cand = pool; }
   const R = chRec(grade, M.Z.ci); R.retry = R.retry || []; let revenge = false;
   { const rv = R.retry.length && Math.random() < 0.5 ? pool.filter(([q, i])=> R.retry.includes(q.k) && !used.has(grade + ':' + i)) : [];
     if(rv.length){ cand = rv; revenge = true; } else { const un = cand.filter(([q])=> !R.d[q.k]); if(un.length && Math.random() < 0.75) cand = un; } }
@@ -965,9 +1001,9 @@ function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement
 function fitFigs(root){ root.querySelectorAll('.fig').forEach(f=>{ const inner = f.firstElementChild; if(!inner) return; inner.style.zoom = ''; const w = Math.max(inner.scrollWidth, inner.firstElementChild ? inner.firstElementChild.scrollWidth : 0), avail = f.clientWidth; if(w > avail && avail > 0) inner.style.zoom = (avail/w).toFixed(3); }); }
 function askQuiz(M){
   return new Promise(res=>{
-    let step = 0, right = 0, rvOk = 0; const big = M.kind === 'boss' || M.kind === 'guard', total = big ? 3 : 1;
+    let step = 0, right = 0, rvOk = 0; const big = M.kind === 'boss' || M.kind === 'guard', total = M.kind === 'guard' ? 5 : big ? 3 : 1;
     const one = ()=>{
-      const q = pickQuestion(M); curQ = q; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
+      M._qi = step; const q = pickQuestion(M); curQ = q; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
       $('quiz').classList.remove('hidden'); $('qFace').textContent = M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
       $('qSay').innerHTML = (big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!') + (q.rv ? '<span class="tag">🔁 Câu báo thù</span>' : '') + ((save.streak || 0) >= 2 ? `<span class="tag" style="background:#ffd23a">🔥 ${save.streak}</span>` : '');
       $('qMeta').textContent = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}`;
@@ -984,13 +1020,13 @@ function askQuiz(M){
         else { save.streak = 0; if(q.k != null && !R.retry.includes(q.k)){ R.retry.push(q.k); if(R.retry.length > 12) R.retry.shift(); } }
         hero.emote(ok ? 'happy' : 'sad', ok ? 1.8 : 2.4); persist(); refreshFlags(); updHud();
         step++; const more = step < total;
-        const sk = save.streak || 0, fin = big ? right >= 2 : right === 1;
+        const sk = save.streak || 0, fin = M.kind === 'guard' ? right >= 3 : big ? right >= 2 : right === 1;
         $('qRes').innerHTML = `<div class="res ${ok ? 'ok' : 'bad'}">${ok ? '✅ <b>Chính xác!</b> ' + (more ? 'Tiếp câu sau…' : big ? '' : 'Quái vật choáng váng và yếu đi một nửa — hạ nó nhanh lên!') + rvTxt + (sk >= 2 ? `<br>🔥 Chuỗi đúng <b>${sk}</b> — kinh nghiệm ×${streakMul(sk).toFixed(1)}` : '') : (i < 0 ? '⏰ <b>Hết giờ!</b> ' : '❌ <b>Sai rồi!</b> ') + (more ? 'Chuỗi đúng bị mất.' : 'Quái vật nổi giận và <b>biến hình</b>!') + (!more && !fin ? '<br>⚠ Hạ nó cũng <b>không được kinh nghiệm</b> — dạng này sẽ quay lại làm <b>câu báo thù</b>.' : '')}
           ${!ok && q.s ? `<div class="sol"><b>Lời giải:</b> ${q.s}</div>` : ''}</div><button class="go">${more ? 'Câu tiếp theo ➜' : '⚔ Vào trận!'}</button>`;
         renderMath($('qRes'));
         const go = $('qRes').querySelector('.go'), lbl = go.textContent; let wait = ok || fastQ() ? 0 : (q.s ? 6 : 3);
         if(wait){ go.disabled = true; const tk = ()=>{ if(wait <= 0){ go.disabled = false; go.textContent = lbl; return; } go.textContent = `📖 Đọc lời giải… (${wait})`; wait--; go._t = setTimeout(tk, 1000); }; tk(); }
-        go.onclick = ()=>{ if(go.disabled) return; sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk}); } };
+        go.onclick = ()=>{ if(go.disabled) return; sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk, total}); } };
       };
       $('qOpts').querySelectorAll('.opt').forEach(b=> b.onclick = ()=> finish(+b.dataset.i));
       $('qTime').textContent = left; $('qTime').style.color = ''; clearInterval(quizTimer);
@@ -1004,7 +1040,9 @@ function askQuiz(M){
 let inQuiz = false;
 async function challenge(M){
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
-  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
+  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; } }
+  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
+  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; persist(); syncSoon(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
@@ -1028,7 +1066,7 @@ function dim(k){ skyMat.uniforms.dim.value = k; hemi.intensity = W._hemi*(1 - 0.
 
 /* ======================= ĐIỀU KHIỂN ======================= */
 let keys = {}, joyV = {x:0, y:0}, rotAcc = 0, moveAcc = 0;
-addEventListener('keydown', e=>{ if(inQuiz || !running) return; keys[e.key.toLowerCase()] = true; if(e.key === ' '){ e.preventDefault(); attack(); } if(e.key.toLowerCase() === 'q') skill(); if(e.key.toLowerCase() === 'e') challenge(near); });
+addEventListener('keydown', e=>{ if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if(inQuiz || !running) return; keys[e.key.toLowerCase()] = true; if(e.key === ' '){ e.preventDefault(); attack(); } if(e.key.toLowerCase() === 'q') skill(); if(e.key.toLowerCase() === 'e') challenge(near); });
 addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 let drag = null;
 canvas.addEventListener('pointerdown', e=>{ drag = {x:e.clientX, y:e.clientY, id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
@@ -1087,9 +1125,12 @@ function hit(M, dmg, crit, isSkill){
 }
 function killMonster(M){
   M.dead = true; M.dying = M.boss ? 0 : M.model ? 1.0 : 0.4; if(M.model) M.model.die(); M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
-  if((M.kind === 'guard' || M.kind === 'boss') && M.answered === true){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === 3 ? 2 : 1); toast(M.right === 3 ? '🛡 Hạ Hộ vệ với 3/3 câu đúng!' : '🛡 Đã hạ Hộ vệ chương', 2200); checkLevel(M.Z.ci); syncSoon(800); }
+  if((M.kind === 'guard' || M.kind === 'boss') && M.answered === true){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === M.total ? 2 : 1); checkLevel(M.Z.ci); syncSoon(800); }
+  if(M.kind === 'guard' && M.answered !== null) txWin(M);
   save.kills++;
-  if(M.answered === true){ const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? 6 : M.kind === 'guard' ? 4 : M.kind === 'elite' ? 2 : 1)*1.5*streakMul(M.sk)*(M.rv ? 1.5 : 1));
+  const low = lowGrade();
+  if(low){ floatText(M.g.position, '0 KN — ôn lớp dưới', '#ffd0a0'); if(!lowTip){ lowTip = 1; toast(`📘 Đang ôn tập Lớp ${grade} (dưới lớp của em)<br><span style="font-size:.65em">Không nhận kinh nghiệm và điểm thường xuyên — luyện ở vùng đất Lớp ${save.acct.khoi} để lên cấp</span>`, 3600); } }
+  else if(M.answered === true){ const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? 6 : M.kind === 'guard' ? 4 : M.kind === 'elite' ? 2 : 1)*1.5*streakMul(M.sk)*(M.rv ? 1.5 : 1));
     floatText(M.g.position, `+${xp} KN` + (M.sk >= 2 ? ' 🔥' : ''), '#7fd1ff', M.sk >= 5); gainXp(xp); hero.emote('happy', 1.2); }
   else { floatText(M.g.position, '0 KN — trả lời sai', '#ffb0b0'); hero.emote('sad', 1.4); if(!save.noXpTip){ save.noXpTip = 1; toast('Trả lời sai nên hạ quái <b>không được kinh nghiệm</b>.<br><span style="font-size:.65em">Đọc kỹ đề, trả lời đúng mới có phần thưởng!</span>', 3200); } persist(); }
   if(M.kind === 'boss'){ hero.victory(); if(M.morph){ save.badges = save.badges || {}; save.badges[grade] = 1; persist(); toast(`👑 HUYỀN THOẠI! Bạn đã hạ Ma Vương Vô Cực thức tỉnh<br><span style="font-size:.6em">Danh hiệu: Kẻ Diệt Vô Cực — Lớp ${grade}</span>`, 4500); } else toast(`🏆 Hạ gục Trùm ${WORLDS[grade].name}!`, 3200); }
@@ -1180,7 +1221,7 @@ function loop(t){
         if(M.wind > 0){ M.wind -= dt; if(!M.model) M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ if(!M.model) M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
         else { M.g.rotation.x *= 0.85;
           if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); mv = 1; }
-          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.4 : 1.6; M.wind = 0.4; if(M.model) M.model.attack(); } } } }
+          else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.05 : 1.25; M.wind = 0.4; if(M.model) M.model.attack(); } } } }
       M.g.rotation.y = Math.atan2(player.position.x - M.g.position.x, player.position.z - M.g.position.z);
       if(d > 30){ M.state = 'idle'; M.hp = M.hpMax; M.wind = 0; target = target === M ? null : target; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
     } else if(M.state !== 'fight'){
@@ -1256,14 +1297,46 @@ function drawMini(){
 function openBook(){
   const rows = META[grade].map((c, ci)=> c.n ? (()=>{ const R = (save.ch || {})[grade] && save.ch[grade][ci], sc = chScore(R, c);
     return `<tr><td>${c.ten}<div style="font-size:12px;opacity:.75;margin-top:3px">${sc.lv === 10 ? '🏅 Bậc thầy ' + shortCh(c.ten) : sc.need.length ? 'Để lên ' + (sc.lv ? sc.lv + 1 : 7) + ' điểm cần: ' + sc.need.join('; ') : ''}</div></td>
-      <td style="text-align:center"><span class="lvchip" style="background:${sc.lv ? LVC[sc.lv] : 'rgba(255,255,255,.1)'};color:${sc.lv ? '#1a1a1a' : '#fff'}">${fmtS(sc.s)}</span></td><td style="font-size:12px">${R ? `${R.c || 0}/${R.n || 0} đúng<br>${Math.round(sc.cov*100)}% dạng` : '—'}</td></tr>`; })() : '').join('');
+      <td style="text-align:center"><span class="lvchip" style="background:${sc.lv ? LVC[sc.lv] : 'rgba(255,255,255,.1)'};color:${sc.lv ? '#1a1a1a' : '#fff'}">${fmtS(sc.s)}</span></td><td style="font-size:12px">${R ? `${R.c || 0}/${R.n || 0} đúng<br>${Math.round(sc.cov*100)}% dạng` : '—'}</td>
+      <td style="text-align:center;font-size:12px">${(()=>{ const X = save.tx && save.tx[grade] && save.tx[grade][ci]; if(!X || !X.n) return '—'; return `${X.title ? '🏆 ' : ''}<b style="font-size:15px">${X.w ? fmtS(X.b) : '—'}</b><br>${X.w}/${X.n} lần thắng · hôm nay ${X.a[today()] || 0}/${TX_DAY}`; })()}</td></tr>`; })() : '').join('');
   $('bookBox').innerHTML = `<h3 style="margin:0 0 4px">📖 Sổ tay — Lớp ${grade}${save.acct ? ' · ' + save.acct.ten : ''}</h3>
     <p style="margin:0 0 10px;opacity:.8;font-size:13px">Điểm chuyên cần từng chương: <b style="color:${LVC[7]}">7 Chiến binh</b> · <b style="color:${LVC[8]}">8 Hiệp sĩ</b> · <b style="color:${LVC[9]}">9 Dũng sĩ</b> · <b style="color:${LVC[10]}">10 Bậc thầy (danh hiệu)</b>. Tỉ lệ đúng tính trên 30 câu gần nhất; mức 9–10 cần hạ Hộ vệ chương và chơi nhiều ngày.${save.acct ? '' : ' <b>Đang chơi tự do — điểm không gửi cho thầy/cô.</b>'}</p>
-    <table><tr><th>Chương</th><th>Điểm</th><th>Tiến độ</th></tr>${rows}</table><p style="opacity:.75;font-size:13px">⭐ Cấp ${save.lv} · 🧠 ${save.stars} câu đúng · 👾 ${save.kills} quái đã hạ</p><button class="ibtn" onclick="document.getElementById('book').classList.add('hidden')">Đóng</button>`;
+    <table><tr><th>Chương</th><th>Chuyên cần</th><th>Tiến độ</th><th>Thường xuyên<br><span style="font-weight:400;font-size:11px">(thắng Hộ vệ)</span></th></tr>${rows}</table>
+    <p style="opacity:.8;font-size:12.5px;margin:8px 0 0">🛡 <b>Điểm thường xuyên</b>: thách đấu Hộ vệ chương (5 câu: 1 Nhận biết · 2 Thông hiểu · 2 Vận dụng), <b>hạ được Hộ vệ</b> thì được chấm 2 điểm/câu đúng; lấy lần cao nhất. Đúng ≥ 3 câu rồi thắng: nhận <b>danh hiệu Khắc tinh Hộ vệ</b>. Tối đa ${TX_DAY} lượt/ngày mỗi chương. ${lowGrade() ? '<b>Đang ôn lớp dưới: không tính điểm, không có kinh nghiệm.</b>' : ''}</p><p style="opacity:.75;font-size:13px">⭐ Cấp ${save.lv} · 🧠 ${save.stars} câu đúng · 👾 ${save.kills} quái đã hạ</p><button class="ibtn" onclick="document.getElementById('book').classList.add('hidden')">Đóng</button>`;
   $('book').classList.remove('hidden');
 }
 
 if(/debug/.test(location.search)) window.G = {chScore, chRec, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+// ----- kênh chat theo khối (Firebase: game/chat/{khối}) -----
+const CHAT = {open:false, msgs:[], last:0, sent:0, timer:null, seenKey:'mbp_chat_seen'};
+const chatK = ()=> save.acct && save.acct.khoi ? String(save.acct.khoi) : null;
+const BAD = ['đm','đmm','dmm','vcl','vkl','clm','đéo','địt','lồn','cặc','buồi','đĩ','óc chó','oc cho','mẹ mày','con mẹ mày','fuck','shit','bitch'];
+const BAD_RE = new RegExp('(^|[^\\p{L}])(' + BAD.map(w=> w.replace(/\s+/g, '\\s+')).join('|') + ')(?=$|[^\\p{L}])', 'giu');
+const clean = t=> String(t).replace(BAD_RE, (m, a, w)=> a + '*'.repeat(w.length));
+const esc = t=> String(t).replace(/[&<>"]/g, c=> ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'})[c]);
+let whoOk = false;
+async function ensureWho(){ if(whoOk || !save.acct) return; try{ await fbToken(); await fb('game/who/' + fbAuth.uid, 'PUT', {ma:save.acct.ma, s:save.acct.sbd}); whoOk = true; }catch(e){} }
+function chatRender(){ const L = $('chatList'), me = fbAuth && fbAuth.uid;
+  if(!chatK()){ L.innerHTML = '<div class="sys">Vào lớp bằng <b>mã lớp + SBD + họ tên</b> ở màn hình chính để chat với các bạn cùng khối.</div>'; return; }
+  L.innerHTML = (CHAT.msgs.length ? '' : '<div class="sys">Chưa có tin nhắn nào. Hãy chào các bạn nhé! 👋</div>') + CHAT.msgs.map(m=> `<div class="m${m.u === me ? ' me' : ''}"><div class="w"><b>${esc(m.n || '?')}</b> · ${new Date(m.ts).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</div>${esc(clean(m.t))}</div>`).join('');
+  L.scrollTop = L.scrollHeight; }
+function chatBadge(){ let seen = 0; try{ seen = +localStorage.getItem(CHAT.seenKey + chatK()) || 0; }catch(e){} const n = CHAT.open ? 0 : CHAT.msgs.filter(m=> m.ts > seen && m.u !== (fbAuth && fbAuth.uid)).length;
+  ['chatBadge', 'chatBadge2'].forEach(id=>{ const b = $(id); if(b){ b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hidden', !n); } }); }
+async function chatPull(){ const k = chatK(); if(!k) return; await ensureWho();
+  try{ const d = await fb('game/chat/' + k, 'GET', undefined, '&orderBy=%22ts%22&limitToLast=60'); CHAT.msgs = Object.values(d || {}).filter(m=> m && m.t).sort((a, b)=> a.ts - b.ts); $('chatNote').textContent = 'Lịch sự, không nói tục, không chia sẻ đáp án. Thầy/cô đọc được tất cả tin nhắn.'; }
+  catch(e){ if(CHAT.open) $('chatNote').textContent = e.message === 'DENIED' ? '⚠ Kênh chat chưa mở — báo thầy/cô cập nhật quy tắc máy chủ.' : '⚠ Chưa tải được tin nhắn, sẽ thử lại.'; }
+  if(CHAT.open){ chatRender(); try{ localStorage.setItem(CHAT.seenKey + k, String(Date.now())); }catch(e){} } chatBadge(); }
+function chatLoop(){ clearTimeout(CHAT.timer); CHAT.timer = setTimeout(async ()=>{ if(!document.hidden && chatK()) await chatPull(); chatLoop(); }, CHAT.open ? 4000 : 45000); }
+function chatOpen(){ CHAT.open = true; $('chat').classList.remove('hidden'); $('chatTitle').textContent = chatK() ? `💬 Kênh chat Khối ${chatK()}` : '💬 Kênh chat'; chatRender(); chatPull(); chatLoop(); if(!mobile) setTimeout(()=> $('chatIn').focus(), 50); }
+function chatClose(){ CHAT.open = false; $('chat').classList.add('hidden'); chatBadge(); chatLoop(); }
+async function chatSend(){ const k = chatK(), inp = $('chatIn'), t = inp.value.trim(); if(!t) return; if(!k){ toast('Vào lớp để chat với các bạn cùng khối', 2200); return; }
+  if(Date.now() - CHAT.sent < 5000){ toast('Chờ vài giây rồi gửi tiếp nhé', 1500); return; }
+  CHAT.sent = Date.now(); inp.value = ''; const A = save.acct, nm = A.ten.trim().split(/\s+/).slice(-2).join(' ') + ' (' + A.lop + ')';
+  try{ await ensureWho(); await fb('game/chat/' + k, 'POST', {u:fbAuth.uid, n:nm, t:clean(t).slice(0, 200), ts:{'.sv':'timestamp'}}); await chatPull(); }
+  catch(e){ inp.value = t; toast(e.message === 'DENIED' ? 'Không gửi được: kênh chat chưa mở hoặc em đang bị khoá chat' : 'Không gửi được, kiểm tra mạng', 2600); } }
+$('bChat').onclick = $('menuChat').onclick = ()=>{ auInit(); sfx('click'); CHAT.open ? chatClose() : chatOpen(); };
+$('chatX').onclick = chatClose; $('chatSend').onclick = chatSend; $('chatIn').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); chatSend(); } });
+if(chatK()){ chatPull(); chatLoop(); }
 // ----- cài lên màn hình điện thoại (PWA) -----
 let instEvt = null; const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = ()=> matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
