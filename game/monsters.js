@@ -19,7 +19,9 @@ export function createMonster(THREE, type, color, opts = {}){
   const detMat = opts.detMat || toon({vertexColors:true});
   T.bones.forEach(([n, p, x, y, z])=>{ const b = new THREE.Group(); b.name = 'mo_' + n; b.position.set(x, y, z); (p ? B[p] : object).add(b); B[n] = b; });
   const meshes = [];
-  T.parts.forEach(([bn, geo, tinted, ol])=>{ const m = new THREE.Mesh(geo, tinted ? mat : detMat); B[bn].add(m); meshes.push(m); if(ol){ const o = addOutline(m, ol); if(o) outs.push(o); } if(!tinted) m.userData.det = true; });
+  T.parts.forEach(([bn, geo, tinted, ol])=>{
+    if(tinted === 'decal' || tinted === 'gloss' || tinted === 'crack'){ const m = new THREE.Mesh(geo, tinted === 'decal' ? T.dm[0] : tinted === 'gloss' ? T.gloss : T.crack[0]); m.renderOrder = tinted === 'decal' ? 3 : 2; m.userData.kind = tinted; B[bn].add(m); meshes.push(m); return; }
+    const m = new THREE.Mesh(geo, tinted ? mat : detMat); B[bn].add(m); meshes.push(m); if(ol){ const o = addOutline(m, ol); if(o) outs.push(o); } if(!tinted) m.userData.det = true; });
   if(type === 'spirit'){ mat.transparent = true; mat.opacity = 0.9; }
   const mixer = new THREE.AnimationMixer(object), A = {};
   Object.keys(T.clips).forEach(k=>{ const a = A[k] = mixer.clipAction(T.clips[k]); if(['attack', 'hurt', 'die'].includes(k)){ a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; } a.setEffectiveWeight(0); a.play(); });
@@ -33,7 +35,7 @@ export function createMonster(THREE, type, color, opts = {}){
     stun(on){ stunned = !!on; },
     die(){ if(dead) return; dead = true; play('die'); },
     // biến hình: mọc gai, mắt đỏ (màu thân do game đổi qua mat)
-    morph(redMat){ meshes.forEach(m=>{ if(m.userData.det && redMat) m.material = redMat; }); const sp = new THREE.Mesh(T.spikes, opts.spikeMat || mat); B[T.spikeBone].add(sp); const o = addOutline(sp, 0.05); if(o) outs.push(o); },
+    morph(redMat){ meshes.forEach(m=>{ if(m.userData.det && redMat) m.material = redMat; if(m.userData.kind === 'decal') m.material = T.dm[1]; if(m.userData.kind === 'crack') m.material = T.crack[1]; }); const sp = new THREE.Mesh(T.spikes, opts.spikeMat || mat); B[T.spikeBone].add(sp); const o = addOutline(sp, 0.05); if(o) outs.push(o); },
     setDetail(on){ outs.forEach(o=> o.visible = on); },
     update(dt){
       speedS += (speed - speedS)*Math.min(1, dt*8);
@@ -71,15 +73,62 @@ export function createMonster(THREE, type, color, opts = {}){
       return new THREE.AnimationClip(name, dur, tracks);
     }
     const part = (bone, arr, tinted = true, ol = 0.045)=> [bone, merge(arr), tinted, ol];
+    const keep = m=>{ m.userData.keep = true; return m; };
+    const canvasT = (w, h, f)=>{ const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round'; f(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t; };
+    const decalMat = t=> keep(new THREE.MeshBasicMaterial({map:t, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4, toneMapped:false}));
+    // mảnh cong bám mặt elip (tâm c, bán kính r), có UV phẳng theo kinh/vĩ độ — trừ off để gắn vào xương
+    function patch(c, r, lon, lat0, lat1, off = [0, 0, 0], nx = 22, ny = 14, lift = 1.012){
+      const P = [], U = [], I = [];
+      for(let j = 0; j <= ny; j++) for(let i = 0; i <= nx; i++){ const a = (-lon + 2*lon*i/nx)*D, b = (lat0 + (lat1 - lat0)*j/ny)*D;
+        P.push(c[0] + r[0]*lift*Math.sin(a)*Math.cos(b) - off[0], c[1] + r[1]*lift*Math.sin(b) - off[1], c[2] + r[2]*lift*Math.cos(a)*Math.cos(b) - off[2]); U.push(i/nx, j/ny); }
+      for(let j = 0; j < ny; j++) for(let i = 0; i < nx; i++){ const a = j*(nx + 1) + i, b = a + 1, cc = a + nx + 1, d = cc + 1; I.push(a, b, cc, b, d, cc); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals(); g.userData.keep = true; return g; }
+    // mặt cau có kiểu hoạt hình: mắt xếch có lông mày dày, con ngươi đen, miệng nhếch có răng nanh
+    function angryFace(o){ return red=> canvasT(512, o.h, (x, w, h)=>{
+      const ey = o.ey, ex = o.ex, rx = o.er || 52, ry = (o.er || 52)*0.86;
+      [-1, 1].forEach(d=>{ const cx = 256 + d*ex;
+        x.save(); x.beginPath(); x.moveTo(cx - d*(rx + 20), ey - ry*0.15); x.lineTo(cx + d*(rx + 20), ey - ry*0.95); x.lineTo(cx + d*(rx + 20), ey + ry + 20); x.lineTo(cx - d*(rx + 20), ey + ry + 20); x.closePath(); x.clip();
+        x.fillStyle = red ? '#fff2a8' : '#ffffff'; x.beginPath(); x.ellipse(cx, ey, rx, ry, 0, 0, 7); x.fill();
+        const px = cx - d*rx*0.22, py = ey + ry*0.18, pr = rx*0.5;
+        if(red){ const g = x.createRadialGradient(px, py, 2, px, py, pr); g.addColorStop(0, '#fff'); g.addColorStop(0.35, '#ff3030'); g.addColorStop(1, '#7a0008'); x.fillStyle = g; } else x.fillStyle = '#16121c';
+        x.beginPath(); x.arc(px, py, pr, 0, 7); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(px + d*pr*0.35, py - pr*0.4, pr*0.28, 0, 7); x.fill();
+        x.strokeStyle = '#16121c'; x.lineWidth = 7; x.beginPath(); x.ellipse(cx, ey, rx, ry, 0, 0, 7); x.stroke(); x.restore();
+        // lông mày xếch
+        x.strokeStyle = '#16121c'; x.lineWidth = o.bw || 15; x.beginPath(); x.moveTo(cx - d*(rx + 8), ey - ry*0.05); x.lineTo(cx + d*(rx + 6), ey - ry*1.0); x.stroke(); });
+      // miệng nhếch + 2 răng nanh
+      const my = o.my, mw = o.mw || 70; if(!o.noMouth){ x.strokeStyle = '#16121c'; x.lineWidth = 8; x.beginPath(); x.moveTo(256 - mw, my - 10); x.quadraticCurveTo(256, my + 22, 256 + mw, my - 16); x.stroke();
+      [-1, 1].forEach(d=>{ const fx = 256 + d*mw*0.42, fy = my + 6 - d*2; x.fillStyle = '#fff'; x.beginPath(); x.moveTo(fx - 10, fy - 4); x.lineTo(fx + 10, fy - 6); x.lineTo(fx + d*2, fy + 20); x.closePath(); x.fill(); x.lineWidth = 3; x.stroke(); }); }
+      if(o.blush){ [-1, 1].forEach(d=>{ const g = x.createRadialGradient(256 + d*o.blush, my - 10, 2, 256 + d*o.blush, my - 10, 40); g.addColorStop(0, 'rgba(255,90,120,.45)'); g.addColorStop(1, 'rgba(255,90,120,0)'); x.fillStyle = g; x.fillRect(256 + d*o.blush - 45, my - 50, 90, 80); }); }
+      if(o.extra) o.extra(x, red); }); }
+    const faceMats = f=> [decalMat(f(false)), decalMat(f(true))];
+    const _c = new THREE.Color(), _v = new THREE.Vector3();
+    function mergeU(parts){ const P = [], N = [], C = [], O = [], U = [];
+      for(const p of parts){ const g = p.g.index ? p.g.toNonIndexed() : p.g.clone(); p.g.dispose(); if(p.m) g.applyMatrix4(p.m); g.computeBoundingBox(); const ctr = g.boundingBox.getCenter(new THREE.Vector3());
+        _c.set(p.c == null ? 0xffffff : p.c); const pa = g.attributes.position, na = g.attributes.normal, ua = g.attributes.uv;
+        for(let i = 0; i < pa.count; i++){ P.push(pa.getX(i), pa.getY(i), pa.getZ(i)); N.push(na.getX(i), na.getY(i), na.getZ(i)); C.push(_c.r, _c.g, _c.b); U.push(ua ? ua.getX(i) : 0, ua ? ua.getY(i) : 0);
+          _v.set(pa.getX(i) - ctr.x, pa.getY(i) - ctr.y, pa.getZ(i) - ctr.z); if(_v.lengthSq() < 1e-8) _v.set(0, 1, 0); _v.normalize(); O.push(_v.x, _v.y, _v.z); } g.dispose(); }
+      const o = new THREE.BufferGeometry(); o.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); o.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3)); o.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+      o.setAttribute('odir', new THREE.Float32BufferAttribute(O, 3)); o.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); o.computeBoundingSphere(); o.userData.keep = true; return o; }
+    const crackTex = ()=> canvasT(256, 256, (x)=>{ let sd = 7; const rnd = ()=> (sd = (sd*16807) % 2147483647)/2147483647; x.fillStyle = '#000'; x.fillRect(0, 0, 256, 256);
+      const crack = (px, py, a, L, w)=>{ for(let k = 0; k < L; k++){ const nx = px + Math.cos(a)*14, ny = py + Math.sin(a)*14; x.lineWidth = w; x.strokeStyle = '#7fe9ff'; x.shadowColor = '#bff6ff'; x.shadowBlur = 8; x.beginPath(); x.moveTo(px, py); x.lineTo(nx, ny); x.stroke(); px = nx; py = ny; a += (rnd() - 0.5)*1.1; if(rnd() < 0.12 && w > 2.5) crack(px, py, a + (rnd() < 0.5 ? 1 : -1)*0.9, Math.floor(L*0.4), w*0.6); } };
+      crack(0, 90, 0.35, 13, 4); crack(150, 0, 1.6, 10, 3.5); crack(256, 200, Math.PI + 0.3, 9, 3); });
+    const crackMats = ()=>{ const t = crackTex(); return [0x9ff2ff, 0xff4040].map(c=> keep(new THREE.MeshBasicMaterial({color:c, map:t, transparent:true, opacity:0.85, blending:THREE.AdditiveBlending, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2}))); };
+    const GLOSS = keep(new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.85, depthWrite:false}));
+    const sparkle = (pts)=> merge(pts.map(([x, y, z, s])=> ({g:new THREE.OctahedronGeometry(s, 0), m:M4(x, y, z, 1, 1.8, 0.4)})));
     const spikeRing = (y, r, n = 8, h = 0.7, tilt = 0.9)=> merge(Array.from({length:n}, (_, i)=>{ const a = i/n*Math.PI*2; return {g:Co(0.14, h, 5), m:M4(Math.cos(a)*r, y + (i % 2)*0.25, Math.sin(a)*r, 1, 1, 1, Math.sin(a)*tilt, 0, -Math.cos(a)*tilt), c:0x2a0a10}; }));
 
     if(type === 'slime'){
+      // thạch bóng loáng: thân dẹt tròn, vệt sáng lớn, lấp lánh, mầm lá trên đỉnh, mặt cau có răng nanh
       REST = {'body.p':[0, 0, 0], 'body.s':[1, 1, 1], body:[0, 0, 0], face:[0, 0, 0], 'face.s':[1, 1, 1], sprout:[0, 0, 0]};
-      return {height:2.0, hitAt:0.4, spikeBone:'body', spikes:spikeRing(1.25, 0.75, 8, 0.6, 0.7),
-        bones:[['body', null, 0, 0, 0], ['face', 'body', 0, 0.82, 0.86], ['sprout', 'body', 0, 1.5, 0]],
-        parts:[part('body', [{g:Sp(1, 22, 16), m:M4(0, 0.8, 0, 1, 0.8, 1)}, {g:Sp(0.25, 10, 8), m:M4(-0.42, 1.25, 0.5, 1, 0.55, 0.6), c:0xffffff}, {g:new THREE.SphereGeometry(0.92, 18, 6, 0, Math.PI*2, Math.PI*0.62, Math.PI*0.38), m:M4(0, 0.82, 0, 1, 0.82, 1), c:SH}], true, 0.05),
-          part('face', [...eyes(0.08, 0, 0.16, 0.3, 1.3), {g:Sp(0.1, 8, 6), m:M4(0, -0.22, 0.02, 1.5, 0.7, 0.5), c:0x5a1a2a}, {g:Sp(0.08, 8, 6), m:M4(0.48, -0.1, -0.05, 1.3, 0.7, 0.4), c:0xff9aa8}, {g:Sp(0.08, 8, 6), m:M4(-0.48, -0.1, -0.05, 1.3, 0.7, 0.4), c:0xff9aa8}], false, 0),
-          part('sprout', [{g:Cy(0.04, 0.05, 0.4, 5), m:M4(0, 0.2, 0), c:0x3f8f3a}, {g:Sp(0.18, 8, 6), m:M4(0.18, 0.42, 0, 1.4, 0.4, 0.8, 0, 0, -0.4), c:0x6fd05a}, {g:Sp(0.16, 8, 6), m:M4(-0.15, 0.38, 0, 1.4, 0.4, 0.8, 0, 0, 0.4), c:0x8ae06a}], false, 0.03)],
+      const BC = [0, 0.74, 0], BR = [1.08, 0.76, 1.08], FO = [0, 0.66, 1.0];
+      const fm = faceMats(angryFace({h:320, ex:112, ey:150, er:54, my:248, mw:62, blush:190}));
+      return {height:1.9, hitAt:0.4, spikeBone:'body', spikes:spikeRing(1.2, 0.8, 8, 0.6, 0.7), dm:fm, gloss:GLOSS,
+        bones:[['body', null, 0, 0, 0], ['face', 'body', ...FO], ['sprout', 'body', 0, 1.48, 0]],
+        parts:[part('body', [{g:Sp(1, 30, 22), m:M4(...BC, ...BR)}, {g:new THREE.SphereGeometry(0.99, 26, 8, 0, Math.PI*2, Math.PI*0.6, Math.PI*0.4), m:M4(...BC, ...BR), c:SH}], true, 0.05),
+          ['body', merge([{g:Sp(0.3, 14, 10), m:M4(-0.46, 1.2, 0.56, 1.25, 0.5, 0.45, 0.5, -0.5, 0.45)}, {g:Sp(0.09, 8, 6), m:M4(0.52, 1.14, 0.62, 1, 0.8, 0.5)}, {g:Sp(0.05, 6, 4), m:M4(-0.15, 1.36, 0.42)}]), 'gloss'],
+          ['body', sparkle([[0.72, 0.95, 0.58, 0.06], [-0.78, 0.6, 0.55, 0.05], [0.3, 1.32, 0.5, 0.045]]), 'gloss'],
+          ['face', patch(BC, BR, 46, -32, 26, FO), 'decal'],
+          part('sprout', [{g:Cy(0.045, 0.06, 0.4, 6), m:M4(0, 0.2, 0, 1, 1, 1, 0, 0, 0.1), c:0x3f8f3a}, {g:Sp(0.2, 10, 8), m:M4(0.2, 0.44, 0, 1.5, 0.35, 0.8, 0, 0, -0.45), c:0x5fc04a}, {g:Sp(0.17, 10, 8), m:M4(-0.17, 0.4, 0.02, 1.5, 0.35, 0.8, 0, 0, 0.45), c:0x7ad85a}], false, 0.03)],
         clips:{
           idle:bake('idle', 1.6, [[0, {}], [0.4, {'body.s':[1.06, 0.92, 1.06], sprout:[8, 0, 8]}, 'sm'], [0.8, {'body.s':[0.96, 1.06, 0.96], sprout:[-6, 0, -8]}, 'sm'], [1.2, {'body.s':[1.04, 0.95, 1.04], 'face.s':[1, 0.15, 1]}, 'sm'], [1.3, {'face.s':[1, 1, 1]}, 'lin']], true),
           move:bake('move', 0.7, [[0, {'body.s':[1.18, 0.8, 1.18]}], [0.12, {'body.s':[0.86, 1.2, 0.86], 'body.p':[0, 0.18, 0], sprout:[20, 0, 0]}, 'out'], [0.35, {'body.p':[0, 0.75, 0], 'body.s':[0.96, 1.06, 0.96], sprout:[-25, 0, 0]}, 'out'], [0.58, {'body.p':[0, 0.1, 0], 'body.s':[0.9, 1.14, 0.9], sprout:[10, 0, 0]}, 'in']], true),
@@ -89,18 +138,23 @@ export function createMonster(THREE, type, color, opts = {}){
           die:bake('die', 0.8, [[0, {}], [0.2, {'body.s':[1.2, 0.85, 1.2], 'face.s':[1, 0.1, 1]}, 'out'], [0.8, {'body.s':[1.9, 0.08, 1.9], sprout:[80, 0, 0]}, 'in']])}};
     }
     if(type === 'golem'){
+      // người đá pha lê: khối vuông vức có vết nứt phát sáng, gai pha lê trên vai, ngọc ngực, mắt sáng xếch
       REST = {'hips.p':[0, 1.0, 0], hips:[0, 0, 0], torso:[0, 0, 0], head:[0, 0, 0], armL:[0, 0, 18], foreL:[-15, 0, 0], fistL:[0, 0, 0], armR:[0, 0, -18], foreR:[-15, 0, 0], fistR:[0, 0, 0], legL:[0, 0, 0], footL:[0, 0, 0], legR:[0, 0, 0], footR:[0, 0, 0]};
-      const moss = 0x6fbf4a;
-      return {height:3.2, hitAt:0.45, spikeBone:'torso', spikes:spikeRing(1.0, 0.7, 7, 0.9, 1.0),
-        bones:[['hips', null, 0, 1.0, 0], ['torso', 'hips', 0, 0.3, 0], ['head', 'torso', 0, 1.15, 0], ['armL', 'torso', 0.95, 0.85, 0], ['foreL', 'armL', 0, -0.72, 0], ['fistL', 'foreL', 0, -0.6, 0], ['armR', 'torso', -0.95, 0.85, 0], ['foreR', 'armR', 0, -0.72, 0], ['fistR', 'foreR', 0, -0.6, 0],
+      const CR = 0xd8f8ff, GL = 0x8ff0ff, cm = crackMats();
+      const blk = (bone, arr, ol = 0.05)=>{ const g = mergeU(arr); return [[bone, g, true, ol], [bone, g, 'crack']]; };
+      const B3 = (x, y, z, w, h, d, rx = 0, ry = 0, rz = 0, c)=> ({g:Bx(w, h, d), m:M4(x, y, z, 1, 1, 1, rx, ry, rz), c});
+      const shard = (x, y, z, h, rx, rz, r = 0.13)=> ({g:new THREE.ConeGeometry(r, h, 4), m:M4(x, y + h/2, z, 1, 1, 1, rx, 0.6, rz), c:CR});
+      return {height:3.2, hitAt:0.45, spikeBone:'torso', spikes:spikeRing(1.0, 0.7, 7, 0.9, 1.0), crack:cm, gloss:GLOSS,
+        bones:[['hips', null, 0, 1.0, 0], ['torso', 'hips', 0, 0.3, 0], ['head', 'torso', 0, 1.15, 0], ['armL', 'torso', 0.98, 0.85, 0], ['foreL', 'armL', 0, -0.72, 0], ['fistL', 'foreL', 0, -0.6, 0], ['armR', 'torso', -0.98, 0.85, 0], ['foreR', 'armR', 0, -0.72, 0], ['fistR', 'foreR', 0, -0.6, 0],
           ['legL', 'hips', 0.4, -0.1, 0], ['footL', 'legL', 0, -0.55, 0], ['legR', 'hips', -0.4, -0.1, 0], ['footR', 'legR', 0, -0.55, 0]],
-        parts:[part('hips', [{g:Do(0.55), m:M4(0, 0, 0, 1.3, 0.7, 1)}]),
-          part('torso', [{g:Do(0.75), m:M4(0, 0.55, 0, 1.35, 1.05, 1.0)}, {g:Sp(0.3, 8, 6), m:M4(0.5, 1.1, 0.2, 1.4, 0.35, 1.2), c:moss}, {g:Sp(0.25, 8, 6), m:M4(-0.6, 0.35, 0.45, 1.2, 0.35, 1), c:moss}], true, 0.05),
-          part('torso', [{g:new THREE.OctahedronGeometry(0.2, 0), m:M4(0, 0.6, 0.72, 1, 1.4, 0.6), c:0x7fe7ff}], false, 0),
-          part('head', [{g:Do(0.45), m:M4(0, 0.25, 0.05, 1.15, 0.9, 1)}, {g:Sp(0.2, 8, 6), m:M4(0.2, 0.62, -0.05, 1.5, 0.4, 1.2), c:moss}, {g:Bx(0.75, 0.12, 0.2), m:M4(0, 0.42, 0.42, 1, 1, 1, 0.2, 0, 0), c:SH}], true, 0.05),
-          part('head', [{g:Bx(0.16, 0.1, 0.06), m:M4(0.17, 0.27, 0.48), c:0x7fe7ff}, {g:Bx(0.16, 0.1, 0.06), m:M4(-0.17, 0.27, 0.48), c:0x7fe7ff}, {g:Bx(0.22, 0.04, 0.05), m:M4(0, 0.08, 0.47), c:DK}], false, 0),
-          ...['L', 'R'].flatMap(s=> [part('arm' + s, [{g:Do(0.42), m:M4(0, -0.05, 0)}, {g:Do(0.3), m:M4(0, -0.42, 0, 1, 1.2, 1)}]), part('fore' + s, [{g:Do(0.32), m:M4(0, -0.3, 0, 1, 1.25, 1)}]),
-            part('fist' + s, [{g:Do(0.45), m:M4(0, -0.2, 0.05, 1.1, 0.95, 1.05)}]), part('leg' + s, [{g:Do(0.36), m:M4(0, -0.25, 0, 1, 1.2, 1)}]), part('foot' + s, [{g:Bx(0.55, 0.35, 0.75), m:M4(0, -0.27, 0.1)}])])],
+        parts:[...blk('hips', [B3(0, 0, 0, 1.25, 0.55, 0.85, 0, 0.05, 0)]),
+          ...blk('torso', [B3(0, 0.5, 0, 1.6, 1.2, 1.05), B3(0, 1.02, 0, 1.9, 0.56, 1.15, 0.05, 0, 0), B3(0, -0.02, 0.06, 1.2, 0.5, 0.9), B3(0.98, 1.0, 0, 0.72, 0.62, 0.72, 0.1, 0.2, 0.15), B3(-0.98, 1.0, 0, 0.72, 0.62, 0.72, 0.1, -0.2, -0.15)]),
+          part('torso', [shard(0.95, 1.28, 0.05, 0.7, 0.2, -0.35), shard(1.15, 1.22, -0.15, 0.55, -0.2, -0.7), shard(0.75, 1.3, -0.2, 0.5, -0.3, -0.1), shard(-0.95, 1.28, 0.05, 0.7, 0.2, 0.35), shard(-1.15, 1.22, -0.15, 0.55, -0.2, 0.7), shard(-0.75, 1.3, -0.2, 0.5, -0.3, 0.1),
+            {g:new THREE.OctahedronGeometry(0.22, 0), m:M4(0, 0.62, 0.55, 1, 1.45, 0.55), c:GL}], false, 0.03),
+          ...blk('head', [B3(0, 0.3, 0.02, 0.86, 0.74, 0.8), B3(0, 0.52, 0.38, 0.96, 0.17, 0.26, 0.28, 0, 0), B3(0, 0.03, 0.34, 0.62, 0.2, 0.26)]),
+          ['head', merge([B3(0.2, 0.36, 0.43, 0.22, 0.09, 0.04, 0, 0, 0.32), B3(-0.2, 0.36, 0.43, 0.22, 0.09, 0.04, 0, 0, -0.32)]), 'gloss'], part('head', [ B3(0, 0.12, 0.475, 0.26, 0.04, 0.03, 0, 0, 0, 0x0a2030)], false, 0),
+          ...['L', 'R'].flatMap(sd=>{ const d = sd === 'L' ? 1 : -1; return [...blk('arm' + sd, [B3(0, -0.05, 0, 0.62, 0.62, 0.62, 0, 0, d*0.1), B3(0, -0.45, 0, 0.5, 0.55, 0.5)]), ...blk('fore' + sd, [B3(0, -0.3, 0, 0.56, 0.64, 0.56, 0, 0.2, 0)]),
+            ...blk('fist' + sd, [B3(0, -0.22, 0.05, 0.84, 0.74, 0.82, 0, 0.15, 0)]), ...blk('leg' + sd, [B3(0, -0.25, 0, 0.62, 0.72, 0.62)]), ...blk('foot' + sd, [B3(0, -0.27, 0.1, 0.72, 0.36, 0.88)])]; })],
         clips:{
           idle:bake('idle', 2.4, [[0, {}], [1.2, {'hips.p':[0, 0.96, 0], torso:[5, 0, 0], head:[-4, 0, 3], armL:[3, 0, 22], armR:[3, 0, -22]}, 'sm']], true),
           move:bake('move', 1.2, [[0, {'hips.p':[0, 0.95, 0], hips:[0, 8, 4], torso:[10, -6, 0], legL:[-28, 0, 0], footL:[15, 0, 0], legR:[22, 0, 0], footR:[-5, 0, 0], armL:[25, 0, 18], armR:[-25, 0, -18]}],
@@ -116,10 +170,11 @@ export function createMonster(THREE, type, color, opts = {}){
       REST = {'body.p':[0, 1.85, 0], body:[0, 0, 0], wingL:[0, 0, 10], tipL:[0, 0, 10], wingR:[0, 0, -10], tipR:[0, 0, -10], feet:[0, 0, 0]};
       const wing = (sg, inner)=>{ const s = new THREE.Shape(), pts = inner ? [[0, 0.25], [0.55, 0.5], [1.05, 0.42], [1.05, -0.35], [0.7, -0.2], [0.35, -0.42], [0, -0.2]] : [[0, 0.42], [0.55, 0.62], [1.2, 0.5], [1.05, 0.0], [0.85, -0.3], [0.55, -0.08], [0.3, -0.38], [0, -0.35]];
         pts.forEach(([x, y], i)=> i ? s.lineTo(sg*x, y) : s.moveTo(sg*x, y)); s.closePath(); const g = new THREE.ExtrudeGeometry(s, {depth:0.06, bevelEnabled:false}); g.translate(0, 0, -0.03); g.rotateX(Math.PI/2 - 0.25); return g; };
-      return {height:2.6, hitAt:0.42, spikeBone:'body', spikes:spikeRing(0.15, 0.55, 6, 0.55, 1.2),
+      return {height:2.6, hitAt:0.42, spikeBone:'body', spikes:spikeRing(0.15, 0.55, 6, 0.55, 1.2), dm:faceMats(angryFace({h:336, ex:104, ey:150, er:50, my:258, mw:58})), gloss:GLOSS,
         bones:[['body', null, 0, 1.85, 0], ['wingL', 'body', 0.45, 0.1, -0.05], ['tipL', 'wingL', 1.0, 0.02, 0], ['wingR', 'body', -0.45, 0.1, -0.05], ['tipR', 'wingR', -1.0, 0.02, 0], ['feet', 'body', 0, -0.55, 0]],
-        parts:[part('body', [{g:Sp(0.62, 16, 12), m:M4(0, 0, 0, 1, 0.95, 0.95)}, {g:Co(0.2, 0.5, 5), m:M4(0.32, 0.6, -0.05, 1, 1, 0.6, 0, 0, -0.3)}, {g:Co(0.2, 0.5, 5), m:M4(-0.32, 0.6, -0.05, 1, 1, 0.6, 0, 0, 0.3)}, {g:Sp(0.42, 10, 8), m:M4(0, -0.2, 0.25, 1, 0.8, 0.6), c:0xe8d0c0}], true, 0.05),
-          part('body', [...eyes(0.12, 0.5, 0.13, 0.22, 1.2), {g:Co(0.045, 0.14, 3), m:M4(-0.08, -0.1, 0.58, 1, 1, 1, Math.PI, 0, 0), c:W}, {g:Co(0.045, 0.14, 3), m:M4(0.08, -0.1, 0.58, 1, 1, 1, Math.PI, 0, 0), c:W}, {g:Sp(0.06, 6, 4), m:M4(0, 0.0, 0.6, 1.2, 0.7, 0.6), c:0xff8aa0}], false, 0),
+        parts:[part('body', [{g:Sp(0.62, 16, 12), m:M4(0, 0, 0, 1, 0.95, 0.95)}, {g:Co(0.2, 0.5, 5), m:M4(0.32, 0.6, -0.05, 1, 1, 0.6, 0, 0, -0.3)}, {g:Co(0.2, 0.5, 5), m:M4(-0.32, 0.6, -0.05, 1, 1, 0.6, 0, 0, 0.3)}, {g:Sp(0.4, 12, 10), m:M4(0, -0.24, 0.3, 1, 0.7, 0.5), c:0xffe6c8}], true, 0.05),
+          ['body', patch([0, 0, 0], [0.62, 0.589, 0.589], 52, -40, 30), 'decal'], ['body', merge([{g:Sp(0.12, 10, 8), m:M4(-0.26, 0.3, 0.42, 1.2, 0.6, 0.4, 0, -0.4, 0.5)}]), 'gloss'],
+          part('body', [{g:Co(0.12, 0.34, 4), m:M4(0.32, 0.6, 0.0, 1, 1, 0.4, 0, 0, -0.3), c:0xffa0b8}, {g:Co(0.12, 0.34, 4), m:M4(-0.32, 0.6, 0.0, 1, 1, 0.4, 0, 0, 0.3), c:0xffa0b8}], false, 0),
           part('wingL', [{g:wing(1, true), c:SH}], true, 0.035), part('tipL', [{g:wing(1, false)}], true, 0.035), part('wingR', [{g:wing(-1, true), c:SH}], true, 0.035), part('tipR', [{g:wing(-1, false)}], true, 0.035),
           part('feet', [{g:Co(0.06, 0.22, 4), m:M4(0.15, 0, 0, 1, 1, 1, Math.PI, 0, 0), c:0x3a2a2a}, {g:Co(0.06, 0.22, 4), m:M4(-0.15, 0, 0, 1, 1, 1, Math.PI, 0, 0), c:0x3a2a2a}], false, 0)],
         clips:{
@@ -133,13 +188,14 @@ export function createMonster(THREE, type, color, opts = {}){
     }
     if(type === 'spirit'){
       REST = {'body.p':[0, 1.65, 0], body:[0, 0, 0], 'jaw.s':[1, 1, 1], armL:[0, 0, 25], armR:[0, 0, -25], tail1:[0, 0, 0], tail2:[0, 0, 0], tail3:[0, 0, 0], 'root.s':[1, 1, 1]};
-      return {height:3.3, hitAt:0.42, spikeBone:'body', spikes:spikeRing(0.95, 0.55, 7, 0.6, 0.6),
+      return {height:3.3, hitAt:0.42, spikeBone:'body', spikes:spikeRing(0.95, 0.55, 7, 0.6, 0.6), dm:faceMats(angryFace({h:304, ex:100, ey:132, er:48, my:232, mw:54, blush:170})), gloss:GLOSS,
         bones:[['root', null, 0, 0, 0], ['body', 'root', 0, 1.65, 0], ['jaw', 'body', 0, 0.62, 0.6], ['armL', 'body', 0.72, 0.15, 0.05], ['armR', 'body', -0.72, 0.15, 0.05], ['tail1', 'body', 0, -0.35, 0], ['tail2', 'tail1', 0, -0.5, 0], ['tail3', 'tail2', 0, -0.45, 0]],
         parts:[part('body', [{g:Sp(0.8, 18, 14), m:M4(0, 0.75, 0)}, {g:Cy(0.78, 0.72, 0.6, 16), m:M4(0, 0.15, 0)}, {g:Sp(0.18, 8, 6), m:M4(0.32, 1.32, 0.35, 1, 0.6, 0.6), c:0xffffff}], true, 0.05),
-          part('body', [...eyes(0.88, 0.66, 0.15, 0.26, 1.45), {g:Sp(0.08, 8, 6), m:M4(0.5, 0.62, 0.55, 1.4, 0.7, 0.4), c:0xff9ac8}, {g:Sp(0.08, 8, 6), m:M4(-0.5, 0.62, 0.55, 1.4, 0.7, 0.4), c:0xff9ac8}], false, 0),
-          part('jaw', [{g:Sp(0.12, 10, 8), m:M4(0, 0, 0.08, 1.2, 1, 0.5), c:0x2a1030}], false, 0),
+          ['body', patch([0, 0.75, 0], [0.8, 0.8, 0.8], 44, -24, 30), 'decal'], ['body', merge([{g:Sp(0.16, 10, 8), m:M4(-0.36, 1.25, 0.48, 1.2, 0.55, 0.45, 0, -0.5, 0.5)}]), 'gloss'],
+          part('body', [{g:Co(0.15, 0.5, 6), m:M4(0.36, 1.48, 0.05, 1, 1, 1, 0, 0, -0.45)}, {g:Co(0.15, 0.5, 6), m:M4(-0.36, 1.48, 0.05, 1, 1, 1, 0, 0, 0.45)}, {g:Co(0.12, 0.38, 5), m:M4(0, 1.2, -0.68, 1, 1, 1, -1.0, 0, 0)}, {g:Co(0.1, 0.32, 5), m:M4(0, 0.7, -0.82, 1, 1, 1, -1.3, 0, 0)}], true, 0.035),
+          part('jaw', [{g:Sp(0.1, 10, 8), m:M4(0, -0.12, 0.1, 1.2, 0.8, 0.4), c:0x2a1030}], false, 0),
           part('armL', [{g:Ca(0.13, 0.35), m:M4(0.12, -0.2, 0, 1, 1, 1, 0, 0, 0.5)}], true, 0.035), part('armR', [{g:Ca(0.13, 0.35), m:M4(-0.12, -0.2, 0, 1, 1, 1, 0, 0, -0.5)}], true, 0.035),
-          part('tail1', [{g:Cy(0.7, 0.5, 0.55, 14), m:M4(0, -0.25, 0)}], true, 0.04), part('tail2', [{g:Cy(0.5, 0.3, 0.5, 12), m:M4(0, -0.25, 0), c:0xeeeeee}], true, 0.035), part('tail3', [{g:Co(0.3, 0.6, 10), m:M4(0, -0.25, 0, 1, 1, 1, Math.PI, 0, 0), c:0xdddddd}], true, 0.03)],
+          part('tail1', [{g:Cy(0.76, 0.5, 0.75, 16), m:M4(0, -0.15, 0)}], true, 0.04), part('tail2', [{g:Cy(0.5, 0.3, 0.5, 12), m:M4(0, -0.25, 0), c:0xeeeeee}], true, 0.035), part('tail3', [{g:Co(0.3, 0.6, 10), m:M4(0, -0.25, 0, 1, 1, 1, Math.PI, 0, 0), c:0xdddddd}], true, 0.03)],
         clips:{
           idle:bake('idle', 2.0, [[0, {tail1:[8, 0, 8], tail2:[12, 0, -10], tail3:[16, 0, 14], armL:[-10, 0, 30], armR:[10, 0, -20]}], [0.5, {tail1:[-6, 0, -6], tail2:[10, 0, 12], tail3:[-12, 0, -14]}, 'sm'],
             [1.0, {'body.p':[0, 1.85, 0], tail1:[6, 0, -8], tail2:[-10, 0, 10], tail3:[14, 0, -12], armL:[10, 0, 20], armR:[-10, 0, -30]}, 'sm'], [1.5, {tail1:[-8, 0, 6], tail2:[-12, 0, -10], tail3:[-16, 0, 12]}, 'sm']], true),
@@ -155,10 +211,11 @@ export function createMonster(THREE, type, color, opts = {}){
     const legs = []; for(let i = 0; i < 4; i++) ['L', 'R'].forEach((s, si)=>{ const d = si ? -1 : 1, y0 = (i - 1.5)*24*d; legs.push({n:s + i, d, i, y0}); REST['hip' + s + i] = [0, y0, 0]; REST['knee' + s + i] = [0, 0, 0]; });
     const grp = l=> (l.i + (l.d > 0 ? 0 : 1)) % 2;   // 2 nhóm 3 chân + 1 xen kẽ
     const legPose = (fn)=>{ const o = {}; legs.forEach(l=>{ const [ry, rz, kz] = fn(l); o['hip' + l.n] = [0, l.y0 + ry*l.d, rz*l.d]; o['knee' + l.n] = [0, 0, kz*l.d]; }); return o; };
-    return {height:1.9, hitAt:0.42, spikeBone:'abdomen', spikes:spikeRing(0.55, 0.5, 7, 0.55, 0.9),
+    return {height:1.9, hitAt:0.42, spikeBone:'abdomen', spikes:spikeRing(0.55, 0.5, 7, 0.55, 0.9), dm:faceMats(angryFace({h:310, ex:92, ey:170, er:46, my:280, noMouth:1, bw:12,
+        extra:(x, red)=>{ [[-44, 66, 22], [44, 66, 22], [-124, 92, 16], [124, 92, 16]].forEach(([dx, y, r])=>{ x.fillStyle = red ? '#ff3030' : '#16121c'; x.beginPath(); x.arc(256 + dx, y, r, 0, 7); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(256 + dx + r*0.3, y - r*0.35, r*0.3, 0, 7); x.fill(); }); }})),
       bones:[['body', null, 0, 0.95, 0], ['abdomen', 'body', 0, 0.1, -0.45], ['fangs', 'body', 0, -0.12, 0.62], ...legs.flatMap(l=> [['hip' + l.n, 'body', l.d*0.36, 0, 0.32 - l.i*0.22], ['knee' + l.n, 'hip' + l.n, l.d*0.75, 0.42, 0]])],
       parts:[part('body', [{g:Sp(0.48, 14, 10), m:M4(0, 0, 0.18, 1.1, 0.8, 1.15)}, {g:Sp(0.36, 12, 10), m:M4(0, 0.06, 0.62, 1, 0.85, 0.9), c:SH}], true, 0.045),
-        part('body', [...eyes(0.18, 0.88, 0.1, 0.17, 1.2), ...eyes(0.32, 0.8, 0.065, 0.11, 1.1)], false, 0),
+        ['body', patch([0, 0.06, 0.62], [0.36, 0.306, 0.324], 60, -30, 42), 'decal'],
         part('abdomen', [{g:Sp(0.62, 16, 12), m:M4(0, 0.12, -0.45, 1.05, 0.9, 1.25)}, {g:Sp(0.25, 8, 6), m:M4(0, 0.56, -0.4, 1.4, 0.3, 1.6), c:0xffd23a}, {g:Sp(0.16, 8, 6), m:M4(0, 0.5, -0.85, 1.2, 0.3, 1.2), c:0xffd23a}], true, 0.05),
         part('fangs', [{g:Co(0.05, 0.22, 4), m:M4(0.08, -0.08, 0, 1, 1, 1, Math.PI + 0.3, 0, 0), c:0xfff4e0}, {g:Co(0.05, 0.22, 4), m:M4(-0.08, -0.08, 0, 1, 1, 1, Math.PI + 0.3, 0, 0), c:0xfff4e0}], false, 0),
         ...legs.flatMap(l=>{ const a = Math.atan2(0.42, 0.75); return [part('hip' + l.n, [{g:Cy(0.07, 0.06, 0.86, 6), m:M4(l.d*0.375, 0.21, 0, 1, 1, 1, 0, 0, -l.d*(Math.PI/2 - a)), c:SH}, {g:Sp(0.09, 6, 4), m:M4(l.d*0.75, 0.42, 0), c:SH}], true, 0.03),
