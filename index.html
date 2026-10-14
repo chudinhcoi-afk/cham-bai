@@ -105,8 +105,10 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .score small{font-size:.95rem;color:var(--mut);font-weight:600}
 #shotFix{background:#fff8e6;border-top:2px solid #e0b030;padding:8px 12px;max-height:32vh;overflow:auto}
 .fxh{font-size:.82rem;font-weight:700;color:#7a4a00;margin-bottom:4px}
-.fxr{display:flex;align-items:center;gap:6px;padding:4px 0}
-.fxl{flex:1;min-width:0;font-weight:700;font-size:.92rem}
+.fxr{display:flex;align-items:center;gap:6px;padding:6px 0;flex-wrap:wrap;border-bottom:1px dashed #ecd9a8}
+.fxr.tl .fxl{flex:1 0 100%}.fxr .tln{font-size:.7rem;font-weight:700;background:#ffe2a8;color:#7a4a00;border-radius:8px;padding:1px 6px;margin-left:4px}
+.fxt{flex:1;min-width:6em;min-height:44px;border:2px solid #c9ced9;border-radius:10px;padding:0 10px;font-size:1.2rem;font-weight:800;letter-spacing:2px}.fxr .kh{flex:1 0 100%;color:#5a6378;font-size:.75rem}
+.fxl{flex:0 0 5.2em;min-width:5.2em;font-weight:700;font-size:.92rem}
 .fxl small{display:block;font-weight:500;color:#9a5b00;font-size:.72rem}
 .fxb{min-width:42px;min-height:42px;border-radius:50%;border:2px solid #c9ced9;background:#fff;font-weight:800;font-size:1rem;color:var(--ink);box-shadow:0 2px 0 #d6dae6}
 .fxb.no{border-radius:21px;font-size:.78rem;padding:0 9px;font-weight:700}
@@ -621,7 +623,8 @@ function wakRead(img, pickTest){
   const mapMm = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
   const sc = wakScores(gray, w, h, loc, test, G), T = wakThreshold(sc), thr = T.thr;
   const warn = [];
-  const picks = test.rows.map((r,k)=>{ const O = wakOpts(r), pk = wakPick2(O.map(v=> ({v})), sc[k], T);
+  const picks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
+    if(r.t && pk.state==='weak' && Math.max(...sc[k]) < 0.6*T.thr) pk = {v:'', state:'blank', i:pk.i};   // trả lời ngắn: hàng chỉ có vết nhạt (chữ in, bụi) coi là để trống
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, keyIdx:O.indexOf(r.key)}; });
   const gr = wakGrade(test, picks);
@@ -830,10 +833,35 @@ function drawShot(){
   }
   if(!S || !S.fix || !S.fix.length){ fx.style.display = 'none'; fx.innerHTML = ''; return; }
   const r = S.f.r, why = p=> p.pk.manual ? 'đã chấm tay' : p.pk.state==='multi' ? 'tô nhiều ô' : p.pk.state==='weak' ? 'tô mờ' : p.pk.state==='blank' ? 'để trống' : 'tô nhạt';
-  fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Chấm tay ' + S.fix.length + ' câu máy chưa chắc — chạm ô học sinh đã tô</div>' + S.fix.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row), cur = p.pk.state==='ok' ? p.pk.i : -1;
-    return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('');
-  fx.querySelectorAll('.fxb').forEach(b=> b.onclick = ()=> manualPick(+b.dataset.k, +b.dataset.i));
+  // câu trắc nghiệm / đúng – sai: chạm ô; câu trả lời ngắn: gộp 4 hàng thành MỘT ô nhập đáp số học sinh đã tô
+  const nk = S.fix.filter(k=> !r.test.rows[k].t), gs = [...new Set(S.fix.filter(k=> r.test.rows[k].t).map(k=> r.test.rows[k].g))];
+  const tlRead = g=> r.picks.filter(p=> r.test.rows[p.k].t && r.test.rows[p.k].g===g).map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state==='blank' ? '' : '?').join('');
+  const tlKey = g=> r.test.rows.filter(x=> x.t && x.g===g).map(x=> x.key).join('');
+  const tlDone = g=> r.picks.some(p=> r.test.rows[p.k].t && r.test.rows[p.k].g===g && p.pk.manual);
+  fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Máy chưa chắc ' + (nk.length + gs.length) + ' câu — nhìn ảnh rồi sửa cho đúng bài học sinh</div>' +
+    nk.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row), cur = p.pk.state==='ok' ? p.pk.i : -1;
+      return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('') +
+    gs.map(g=>{ const rd = tlRead(g), done = tlDone(g);
+      return '<div class="fxr tl"><span class="fxl">Câu ' + esc(g) + ' <span class="tln">trả lời ngắn</span><small>' + (done ? '✔ đã sửa tay' : 'máy đọc được: <b>' + esc(rd || '(trống)') + '</b> — ô có “?” bị tô mờ / tô nhiều') + '</small></span>' +
+        '<input class="fxt" data-g="' + esc(g) + '" inputmode="decimal" autocomplete="off" value="' + esc(rd.replace(/\?/g, '')) + '" placeholder="đáp số HS tô">' +
+        '<button class="fxb no on" data-g="' + esc(g) + '" data-ok="1">Lưu</button><button class="fxb no" data-g="' + esc(g) + '" data-ok="0">Trống</button>' +
+        '<small class="kh">Đáp án đúng: ' + esc(tlKey(g)) + '</small></div>'; }).join('');
+  fx.querySelectorAll('.fxb[data-k]').forEach(b=> b.onclick = ()=> manualPick(+b.dataset.k, +b.dataset.i));
+  fx.querySelectorAll('.fxb[data-g]').forEach(b=> b.onclick = ()=>{ const inp = fx.querySelector('.fxt[data-g="' + b.dataset.g + '"]'); manualTln(b.dataset.g, b.dataset.ok==='1' && inp ? inp.value : ''); });
+  fx.querySelectorAll('.fxt').forEach(inp=> inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); manualTln(inp.dataset.g, inp.value); } });
 }
+// sửa tay cả câu trả lời ngắn: tách đáp số học sinh tô thành 4 kí tự (từ trái sang) rồi chấm lại
+function manualTln(g, val){
+  const S = pendSrc; if(!S) return; const r = S.f.r, t = String(val||'').trim().replace(/\s+/g, '').replace(/[.]/g, ',').replace(/[−–]/g, '-').slice(0, 4);
+  r.picks.forEach(p=>{ const row = r.test.rows[p.k]; if(!row.t || row.g !== String(g)) return; const ri = +row.lab.split('.')[1] - 1, c = t[ri] || '', O = wakOpts(row), i = O.indexOf(c);
+    p.pk = i >= 0 ? {v:c, state:'ok', i, manual:true} : {v:'', state:'blank', i:p.pk.i, manual:true}; });
+  regradeWs(r);
+}
+function regradeWs(r){ const gr = wakGrade(r.test, r.picks), warn = [];
+  r.picks.forEach(q=>{ const rw = r.test.rows[q.k]; if(q.pk.manual) return;
+    if(q.pk.state==='multi') warn.push('câu ' + rw.lab + ': tô nhiều ô'); else if(q.pk.state==='weak') warn.push('câu ' + rw.lab + ': tô mờ'); else if(q.pk.faint) warn.push('câu ' + rw.lab + ': tô nhạt (nhận ' + q.pk.v + ')'); });
+  r.pts = gr.pts; r.max = gr.max; r.right = gr.right; r.total = gr.total; r.warn = warn;
+  const S = pendSrc, at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.manual = r.picks.filter(q=> q.pk.manual).length; drawShot(); }
 function examManual(u, v){
   // giáo viên chấm tay một ô của phiếu đề thi → sửa bài làm, bỏ cảnh báo ô đó, chấm lại và vẽ lại ảnh
   const S = pendSrc; if(!S || !u) return; const r = S.f.r, L = r.L;
@@ -849,11 +877,7 @@ function examManual(u, v){
 function manualPick(k, i){
   const S = pendSrc; if(!S) return; const r = S.f.r, p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row);
   p.pk = i < 0 ? {v:'', state:'blank', i:p.pk.i, manual:true} : {v:opts[i], state:'ok', i, manual:true};
-  const gr = wakGrade(r.test, r.picks); const warn = [];
-  r.picks.forEach(q=>{ const rw = r.test.rows[q.k]; if(q.pk.manual) return;
-    if(q.pk.state==='multi') warn.push('câu ' + rw.lab + ': tô nhiều ô'); else if(q.pk.state==='weak') warn.push('câu ' + rw.lab + ': tô mờ'); else if(q.pk.faint) warn.push('câu ' + rw.lab + ': tô nhạt (nhận ' + q.pk.v + ')'); });
-  r.pts = gr.pts; r.max = gr.max; r.right = gr.right; r.total = gr.total; r.warn = warn;
-  const at = pending.at; pending = makeRecord(S.canvas, S.f); pending.at = at; pending.manual = r.picks.filter(q=> q.pk.manual).length; drawShot();
+  regradeWs(r);
 }
 function closeShot(ok){ if(ok && pending) keep(pending); pending = null; pendSrc = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
 $('bNext').onclick = ()=> closeShot(true);
