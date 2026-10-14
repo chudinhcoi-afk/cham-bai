@@ -65,20 +65,22 @@ export function createHero(THREE, opts = {}){
     // vầng sáng trên tóc (thiên thần)
     {g:new THREE.SphereGeometry(0.496, 48, 3, Math.PI/2 - 1.0, 2.0, 0.55, 0.075), m:M4(0, 0.4, -0.06, 1.04, 1, 1, -0.4, 0, 0), c:HL}];
   // mái: 9 lọn nhọn từ đỉnh đầu rủ xuống trán
-  [-64, -50, -37, -24, -12, 0, 12, 25, 38, 51, 65].forEach((a, i)=>{ const s = Math.sign(a) || 1, L = 27 - Math.abs(a)*0.1 + (i % 2)*5;
-    hair.push({g:strand([surf(a*0.5, 84, 0.5), surf(a*0.82, 64, 0.515), surf(a, L + 15, 0.505), surf(a + s*3, L, 0.47)], 0.11 + (i % 2)*0.015, 0.36, 18, 12, 0.7), c:i % 4 === 1 ? HD : C.hair}); });
+  // mái bằng: các lọn dày, đuôi cắt gần ngang (hơi so le), rủ từ đỉnh đầu xuống trán
+  for(let i = 0; i < 15; i++){ const a = -70 + i*10, s = Math.sign(a) || 1, L = 31 - Math.abs(a)*0.13 + (i % 3 === 1 ? 2.5 : 0);
+    hair.push({g:strand([surf(a*0.45, 85, 0.5), surf(a*0.8, 66, 0.518), surf(a, L + 14, 0.508), surf(a + s*1.5, L, 0.478)], 0.105, 0.34, 18, 12, 0.32), c:i % 4 === 1 ? HD : C.hair}); }
   // tóc mai hai bên má
   [-1, 1].forEach(d=>{ hair.push({g:strand([surf(d*70, 40, 0.5), surf(d*80, 12, 0.5), surf(d*78, -18, 0.49), surf(d*72, -36, 0.47)], 0.085, 0.4, 18), c:C.hair},
     {g:strand([surf(d*84, 36, 0.5), surf(d*94, 5, 0.5), surf(d*96, -24, 0.48)], 0.075, 0.45), c:HD}); });
   // hai bím tóc dài, mượt, cong ra ngoài rồi rủ xuống, buộc nơ hồng
   const tails = [];
   [-1, 1].forEach(d=>{ const r0 = [d*0.48, 0.6, -0.12];
-    tails.push({g:strand([r0, [d*0.66, 0.56, -0.16], [d*0.78, 0.3, -0.16], [d*0.76, 0.0, -0.12], [d*0.7, -0.26, -0.08]], 0.17, 0.75, 22, 12, 1.1), c:C.hair},
-      {g:strand([[d*0.5, 0.62, -0.1], [d*0.62, 0.6, -0.05], [d*0.72, 0.38, -0.06], [d*0.74, 0.14, -0.04], [d*0.68, -0.08, 0.0]], 0.09, 0.7, 20, 10, 1), c:HD},
+    tails.push({g:strand([r0, [d*0.66, 0.56, -0.16], [d*0.8, 0.32, -0.16], [d*0.8, 0.04, -0.12], [d*0.72, -0.22, -0.1], [d*0.76, -0.46, -0.08], [d*0.7, -0.66, -0.06]], 0.17, 0.75, 30, 12, 0.9), c:C.hair},
+      {g:strand([[d*0.5, 0.62, -0.1], [d*0.62, 0.6, -0.05], [d*0.74, 0.38, -0.05], [d*0.76, 0.1, -0.02], [d*0.68, -0.14, 0.0], [d*0.72, -0.38, 0.0], [d*0.66, -0.56, 0.02]], 0.1, 0.7, 28, 10, 0.9), c:HD},
+      {g:strand([[d*0.5, 0.6, -0.16], [d*0.7, 0.5, -0.24], [d*0.84, 0.22, -0.24], [d*0.82, -0.08, -0.2], [d*0.78, -0.34, -0.18], [d*0.8, -0.54, -0.16]], 0.1, 0.7, 26, 10, 0.9), c:HL},
       {g:Sp(0.11, 16, 12), m:M4(d*0.5, 0.6, -0.1, 1, 1, 0.9), c:C.hair},
-      {g:Sp(0.085, 14, 10), m:M4(d*0.54, 0.66, -0.0, 1.45, 0.85, 0.5, 0, d*0.3, d*0.45), c:C.ribbon}, {g:Sp(0.085, 14, 10), m:M4(d*0.6, 0.54, 0.0, 1.45, 0.85, 0.5, 0, d*0.3, d*1.5), c:C.ribbon}, {g:Sp(0.045, 10, 8), m:M4(d*0.57, 0.6, 0.04), c:C.gold}); });
+      {g:Sp(0.1, 14, 10), m:M4(d*0.54, 0.7, -0.0, 1.5, 0.85, 0.5, 0, d*0.3, d*0.45), c:C.ribbon}, {g:Sp(0.1, 14, 10), m:M4(d*0.62, 0.53, 0.0, 1.5, 0.85, 0.5, 0, d*0.3, d*1.5), c:C.ribbon}, {g:Sp(0.05, 10, 8), m:M4(d*0.58, 0.62, 0.05), c:0xff7fb6}, {g:Bx(0.05, 0.26, 0.02), m:M4(d*0.62, 0.44, 0.06, 1, 1, 1, 0, 0, d*0.35), c:C.ribbon}, {g:Bx(0.05, 0.22, 0.02), m:M4(d*0.54, 0.46, 0.07, 1, 1, 1, 0, 0, -d*0.2), c:C.ribbon}); });
   const hm = new THREE.Mesh(merge([...hair, ...tails]), mat); hm.castShadow = true; B.head.add(hm); meshes.push(hm); addOutline(hm, 0.02);
-  // vỏ bám mặt có vân UV phẳng: mắt (gắn xương mắt để chớp), miệng + má hồng (gắn đầu)
+  // vỏ bám mặt có vân UV phẳng: lớp mắt (gắn xương mắt để chớp) + lớp nét mặt vẽ tay (lông mày, mũi, miệng, má, nước mắt) — vẽ khi cần lần đầu
   function shell(x0, x1, y0, y1, nx = 26, ny = 14, lift = 0.006){
     const P = [], U = [], I = [];
     for(let j = 0; j <= ny; j++) for(let i = 0; i <= nx; i++){ const x = x0 + (x1 - x0)*i/nx, y = y0 + (y1 - y0)*j/ny, k = 1 - ((x - FC.x)/FR.x)**2 - ((y - FC.y)/FR.y)**2;
@@ -86,68 +88,99 @@ export function createHero(THREE, opts = {}){
     for(let j = 0; j < ny; j++) for(let i = 0; i < nx; i++){ const a = j*(nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1; I.push(a, b, c, b, d, c); }
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals(); return g; }
   const texs = []; api_texs = texs;
-  const paint = (w, h, draw)=>{ const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); draw(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texs.push(t); return t; };
-  const decal = (bone, geo, tex, off)=>{ const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({map:tex, transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-4, polygonOffsetUnits:-4, toneMapped:false}));
-    if(off) m.position.copy(off); m.renderOrder = 2; B[bone].add(m); meshes.push(m); m.visible = false; return m; };
-  // ---- mắt: 512×256 phủ x∈[-0.3,0.3], y∈[0.2,0.48]
-  const EG = shell(-0.3, 0.3, 0.17, 0.49), EOFF = new THREE.Vector3(0, -0.33, -0.43); EG.translate(EOFF.x, EOFF.y, EOFF.z);
-  const LASH = '#2a1020', ex = [115, 397], ey = 128;
-  function eyeOpen(x, cx, d){ x.save(); x.translate(cx, ey); x.scale(1.12, 1.2); x.translate(-cx, -ey); eyeDraw(x, cx, d); x.restore(); }
-  function eyeDraw(x, cx, d){
-    // tròng trắng
-    x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(cx, ey + 6, 58, 76, 0, 0, 7); x.fill();
-    const sh = x.createLinearGradient(0, ey - 80, 0, ey); sh.addColorStop(0, 'rgba(150,120,170,.55)'); sh.addColorStop(1, 'rgba(150,120,170,0)'); x.fillStyle = sh; x.beginPath(); x.ellipse(cx, ey + 6, 58, 76, 0, 0, 7); x.fill();
-    // tròng đen: gradient tím đậm → hồng sáng
-    const g = x.createLinearGradient(0, ey - 70, 0, ey + 70); g.addColorStop(0, '#2a0d2a'); g.addColorStop(0.45, '#7a2f78'); g.addColorStop(1, '#f08ad0');
-    x.fillStyle = g; x.beginPath(); x.ellipse(cx, ey + 10, 46, 68, 0, 0, 7); x.fill();
-    x.strokeStyle = '#2a0d2a'; x.lineWidth = 5; x.stroke();
-    const rg = x.createRadialGradient(cx, ey + 46, 4, cx, ey + 40, 40); rg.addColorStop(0, 'rgba(255,200,240,.9)'); rg.addColorStop(1, 'rgba(255,200,240,0)'); x.fillStyle = rg; x.beginPath(); x.ellipse(cx, ey + 10, 44, 66, 0, 0, 7); x.fill();
-    x.fillStyle = '#1a0618'; x.beginPath(); x.ellipse(cx, ey + 4, 18, 30, 0, 0, 7); x.fill();
-    // mí trên đổ bóng
-    x.fillStyle = 'rgba(60,20,60,.35)'; x.beginPath(); x.ellipse(cx, ey - 50, 58, 30, 0, 0, Math.PI); x.fill();
+  const paint = (w, h, draw)=>{ const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.lineCap = 'round'; x.lineJoin = 'round'; draw(x, w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texs.push(t); return t; };
+  // lớp vẽ: tạo mesh ngay, vẽ texture khi hiện lần đầu
+  function layer(bone, geo, draws, order){ const mat = new THREE.MeshBasicMaterial({transparent:true, depthWrite:false, polygonOffset:true, polygonOffsetFactor:-4 - order, polygonOffsetUnits:-4 - order, toneMapped:false});
+    const m = new THREE.Mesh(geo, mat); m.renderOrder = 2 + order; m.visible = false; B[bone].add(m); meshes.push(m); const cache = {};
+    return {mesh:m, set(k){ if(!draws[k]) k = Object.keys(draws)[0]; if(!cache[k]) cache[k] = paint(draws[k].w, draws[k].h, draws[k].f); mat.map = cache[k]; mat.needsUpdate = true; m.visible = true; }}; }
+  // ---------- MẮT: 512×256 phủ x∈[-0.3,0.3], y∈[0.17,0.49]; tâm mắt (115|397, 128); vẽ mắt bên phải, mắt trái lật gương
+  const EG = shell(-0.36, 0.36, 0.11, 0.51, 28, 16), EOFF = new THREE.Vector3(0, -0.33, -0.43); EG.translate(EOFF.x, EOFF.y, EOFF.z);
+  const LASH = '#24101c', EX = [139, 373], EY = 146, EK = 1.36;
+  const both = f=> (x)=> EX.forEach((cx, i)=>{ x.save(); x.translate(cx, EY); x.scale(i ? EK : -EK, EK); f(x); x.restore(); });
+  // mi: [đầu mắt y, điểm uốn y, đuôi mắt y]; gaze: lệch con ngươi; iris: tỉ lệ tròng
+  function eyeOpen(o){ return x=>{ const li = o.li ?? -4, lc = o.lc ?? -96, lo = o.lo ?? -30, gy = o.gy || 0, gx = o.gx || 0, ir = o.ir || 1, lw = o.lw ?? 92;
+    const lid = ()=>{ x.beginPath(); x.moveTo(-60, li); x.quadraticCurveTo(-4, lc, 66, lo); };
+    x.save(); x.beginPath(); x.moveTo(-60, li); x.quadraticCurveTo(-4, lc, 66, lo); x.quadraticCurveTo(14, lw + 6, -60, li); x.closePath(); x.clip();
+    x.fillStyle = '#fbf7fb'; x.fillRect(-80, -110, 160, 220);
+    // tròng mắt tím nhiều lớp
+    const ix = gx, iy = 8 + gy, rx = 47*ir, ry = 56*ir;
+    let g = x.createRadialGradient(ix, iy + 22*ir, 4, ix, iy, ry); g.addColorStop(0, '#e8c8ff'); g.addColorStop(0.3, '#a46ad8'); g.addColorStop(0.7, '#5a2a96'); g.addColorStop(1, '#22103e');
+    x.fillStyle = g; x.beginPath(); x.ellipse(ix, iy, rx, ry, 0, 0, 7); x.fill();
+    for(let k = 0; k < 44; k++){ const a = k/44*Math.PI*2; x.strokeStyle = k % 2 ? 'rgba(255,255,255,.16)' : 'rgba(50,15,80,.22)'; x.lineWidth = 2; x.beginPath(); x.moveTo(ix + Math.cos(a)*rx*0.36, iy + Math.sin(a)*ry*0.36); x.lineTo(ix + Math.cos(a)*rx*0.92, iy + Math.sin(a)*ry*0.92); x.stroke(); }
+    x.strokeStyle = '#26103e'; x.lineWidth = 4.5; x.beginPath(); x.ellipse(ix, iy, rx, ry, 0, 0, 7); x.stroke();
+    x.fillStyle = '#170722'; x.beginPath(); x.ellipse(ix, iy + 2, 15*ir*(o.pup || 1), 19*ir*(o.pup || 1), 0, 0, 7); x.fill();
+    g = x.createRadialGradient(ix, iy + 34*ir, 2, ix, iy + 30*ir, 26*ir); g.addColorStop(0, 'rgba(255,235,255,.7)'); g.addColorStop(1, 'rgba(255,235,255,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(ix, iy + 28*ir, 34*ir, 22*ir, 0, 0, 7); x.fill();
+    // bóng mí trên đổ xuống
+    g = x.createLinearGradient(0, lc*0.5 - 10, 0, lc*0.5 + 46); g.addColorStop(0, 'rgba(40,12,55,.62)'); g.addColorStop(1, 'rgba(40,12,55,0)'); x.fillStyle = g; x.fillRect(-80, -110, 160, lc*0.5 + 160);
     // điểm sáng
-    x.fillStyle = '#fff'; x.beginPath(); x.ellipse(cx + d*-2 + 16, ey - 24, 17, 22, -0.4, 0, 7); x.fill();
-    x.beginPath(); x.arc(cx - 18, ey + 40, 8, 0, 7); x.fill(); x.beginPath(); x.arc(cx + 22, ey + 30, 4, 0, 7); x.fill();
-    // viền mi trên dày cong + đuôi mi
-    x.strokeStyle = LASH; x.lineCap = 'round'; x.lineWidth = 13; x.beginPath(); x.moveTo(cx - d*62, ey - 34); x.quadraticCurveTo(cx - d*10, ey - 92, cx + d*62, ey - 50); x.stroke();
-    x.lineWidth = 9; x.beginPath(); x.moveTo(cx + d*56, ey - 54); x.quadraticCurveTo(cx + d*78, ey - 62, cx + d*86, ey - 78); x.stroke();
-    x.beginPath(); x.moveTo(cx + d*48, ey - 60); x.quadraticCurveTo(cx + d*66, ey - 76, cx + d*68, ey - 92); x.stroke();
+    x.fillStyle = '#ffffff'; x.beginPath(); x.ellipse(ix - 14, iy - 22*ir, 13, 17, -0.5, 0, 7); x.fill(); x.beginPath(); x.arc(ix + 17, iy + 26*ir, 6, 0, 7); x.fill(); x.beginPath(); x.arc(ix + 21, iy - 12*ir, 3, 0, 7); x.fill();
+    if(o.tear){ x.fillStyle = 'rgba(200,235,255,.55)'; x.beginPath(); x.ellipse(0, lw - 12, 62, 16, 0, 0, 7); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(-20, lw - 18, 4, 0, 7); x.arc(14, lw - 16, 3, 0, 7); x.fill(); }
+    x.restore();
+    // nếp mí đôi
+    x.strokeStyle = 'rgba(120,60,60,.45)'; x.lineWidth = 3; x.beginPath(); x.moveTo(-40, li - 26); x.quadraticCurveTo(0, lc - 18, 52, lo - 22); x.stroke();
+    // viền mi trên dày + mi cong từng sợi
+    x.strokeStyle = LASH; x.lineWidth = 10; lid(); x.stroke();
+    x.fillStyle = LASH; for(let k = 0; k < 6; k++){ const t = 0.45 + k*0.11, px = (1 - t)*(1 - t)*-60 + 2*(1 - t)*t*-4 + t*t*66, py = (1 - t)*(1 - t)*li + 2*(1 - t)*t*lc + t*t*lo, L = 16 + k*4, a = -1.25 + k*0.17;
+      x.beginPath(); x.moveTo(px - 4, py + 2); x.quadraticCurveTo(px + Math.cos(a)*L*0.4 - 6, py + Math.sin(a)*L*0.6, px + Math.cos(a)*L, py + Math.sin(a)*L); x.lineTo(px + 5, py + 1); x.fill(); }
+    x.lineWidth = 7; x.beginPath(); x.moveTo(58, lo + 2); x.quadraticCurveTo(76, lo - 2, 84, lo - 16); x.stroke();
     // mi dưới mảnh
-    x.lineWidth = 4; x.strokeStyle = 'rgba(90,30,60,.8)'; x.beginPath(); x.moveTo(cx - d*30, ey + 80); x.quadraticCurveTo(cx + d*20, ey + 86, cx + d*50, ey + 62); x.stroke(); }
-  const arcEye = (x, cx, d, up)=>{ x.save(); x.translate(cx, ey); x.scale(1.15, 1.15); x.translate(-cx, -ey); x.strokeStyle = LASH; x.lineCap = 'round'; x.lineWidth = 12; x.beginPath(); if(up){ x.moveTo(cx - 52, ey + 22); x.quadraticCurveTo(cx, ey - 46, cx + 52, ey + 22); } else { x.moveTo(cx - 54, ey + 2); x.quadraticCurveTo(cx, ey + 44, cx + 54, ey + 2); x.lineWidth = 7; x.moveTo(cx + d*50, ey + 6); x.lineTo(cx + d*72, ey - 8); } x.stroke(); x.restore(); };
-  const EYE_T = {
-    normal:paint(512, 256, x=> ex.forEach((cx, i)=> eyeOpen(x, cx, i ? 1 : -1))),
-    happy:paint(512, 256, x=> ex.forEach((cx, i)=> arcEye(x, cx, i ? 1 : -1, true))),
-    closed:paint(512, 256, x=> ex.forEach((cx, i)=> arcEye(x, cx, i ? 1 : -1, false))),
-    pain:paint(512, 256, x=> ex.forEach((cx, i)=>{ const d = i ? -1 : 1; x.strokeStyle = LASH; x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = 12; x.beginPath(); x.moveTo(cx - d*40, ey - 34); x.lineTo(cx + d*36, ey); x.lineTo(cx - d*40, ey + 34); x.stroke(); })),
-    dead:paint(512, 256, x=> ex.forEach(cx=>{ x.strokeStyle = LASH; x.lineCap = 'round'; x.lineWidth = 12; x.beginPath(); x.moveTo(cx - 36, ey - 36); x.lineTo(cx + 36, ey + 36); x.moveTo(cx + 36, ey - 36); x.lineTo(cx - 36, ey + 36); x.stroke(); }))};
-  ANI.eyes = {}; Object.keys(EYE_T).forEach(k=> ANI.eyes[k] = decal('eyes', EG, EYE_T[k]));
-  // ---- miệng + má hồng: 512×160 phủ x∈[-0.36,0.36], y∈[0.05,0.27]
-  const MG = shell(-0.36, 0.36, 0.05, 0.27, 28, 10, 0.004), mx = 256, my = 80, MCOL = '#9a3048';
-  const blush = x=>{ [64, 448].forEach(bx=>{ const g = x.createRadialGradient(bx, 52, 4, bx, 52, 58); g.addColorStop(0, 'rgba(255,120,160,.75)'); g.addColorStop(1, 'rgba(255,120,160,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(bx, 52, 62, 30, 0, 0, 7); x.fill();
-    x.strokeStyle = 'rgba(255,255,255,.75)'; x.lineWidth = 3; x.lineCap = 'round'; for(let k = -1; k <= 1; k++){ x.beginPath(); x.moveTo(bx + k*16 - 4, 60); x.lineTo(bx + k*16 + 6, 44); x.stroke(); } }); };
-  const mouth = draw=> paint(512, 160, x=>{ blush(x); x.strokeStyle = 'rgba(200,120,100,.7)'; x.lineWidth = 3; x.lineCap = 'round'; x.beginPath(); x.moveTo(mx + 2, 14); x.lineTo(mx + 5, 22); x.stroke(); x.strokeStyle = MCOL; x.fillStyle = MCOL; x.lineCap = 'round'; x.lineJoin = 'round'; x.lineWidth = 5; draw(x); });
-  const MOUTH_T = {
-    neutral:mouth(x=>{ x.beginPath(); x.moveTo(mx - 12, my); x.quadraticCurveTo(mx, my + 5, mx + 12, my); x.stroke(); }),
-    smile:mouth(x=>{ x.beginPath(); x.moveTo(mx - 20, my - 6); x.quadraticCurveTo(mx - 10, my + 8, mx, my - 2); x.quadraticCurveTo(mx + 10, my + 8, mx + 20, my - 6); x.stroke(); }),
-    grin:mouth(x=>{ x.beginPath(); x.moveTo(mx - 24, my - 10); x.quadraticCurveTo(mx, my - 6, mx + 24, my - 10); x.quadraticCurveTo(mx + 18, my + 26, mx, my + 26); x.quadraticCurveTo(mx - 18, my + 26, mx - 24, my - 10); x.fillStyle = '#7a1830'; x.fill(); x.stroke();
-      x.fillStyle = '#ff7a96'; x.beginPath(); x.ellipse(mx, my + 17, 12, 7, 0, 0, 7); x.fill(); }),
-    frown:mouth(x=>{ x.beginPath(); x.moveTo(mx - 16, my + 8); x.quadraticCurveTo(mx, my - 8, mx + 16, my + 8); x.stroke(); }),
-    o:mouth(x=>{ x.fillStyle = '#7a1830'; x.beginPath(); x.ellipse(mx, my + 4, 10, 13, 0, 0, 7); x.fill(); x.stroke(); }),
-    grit:mouth(x=>{ x.beginPath(); x.moveTo(mx - 22, my); for(let k = 0; k < 6; k++) x.lineTo(mx - 22 + (k + 0.5)*7.3, my + (k % 2 ? 6 : -6)); x.lineTo(mx + 22, my); x.stroke(); })};
-  ANI.mouth = {}; Object.keys(MOUTH_T).forEach(k=> ANI.mouth[k] = decal('head', MG, MOUTH_T[k]));
+    x.strokeStyle = 'rgba(110,50,60,.45)'; x.lineWidth = 3; x.beginPath(); x.moveTo(-30, lw*0.42 + 8); x.quadraticCurveTo(14, lw*0.62 + 2, 60, lo + 14); x.stroke();
+    x.strokeStyle = 'rgba(70,25,40,.55)'; x.lineWidth = 2.5; for(let k = 0; k < 4; k++){ const px = 20 + k*11, py = lw*0.55 - k*6; x.beginPath(); x.moveTo(px, py); x.lineTo(px + 3, py + 8); x.stroke(); } }; }
+  const arcEye = (up)=> x=>{ x.strokeStyle = LASH; x.lineWidth = 11; x.beginPath(); if(up){ x.moveTo(-54, 24); x.quadraticCurveTo(0, -44, 56, 22); } else { x.moveTo(-56, 0); x.quadraticCurveTo(0, 40, 58, 2); } x.stroke();
+    x.lineWidth = 6; x.beginPath(); if(up){ x.moveTo(50, 12); x.lineTo(70, 4); } else { for(let k = 0; k < 4; k++){ const px = 10 + k*13, py = 22 - k*5; x.moveTo(px, py); x.lineTo(px + 3, py + 13); } } x.stroke(); };
+  const E = (f)=> ({w:512, h:284, f:both(f)});
+  const EYE_D = {
+    open:E(eyeOpen({})), wide:E(eyeOpen({li:-10, lc:-110, lo:-36, lw:100, ir:0.88, pup:0.7})), half:E(eyeOpen({li:12, lc:-24, lo:6, gx:6, gy:6})),
+    up:E(eyeOpen({gy:-16, gx:-4})), teary:E(eyeOpen({li:-10, lc:-90, lo:-12, tear:1, gy:4})), droop:E(eyeOpen({li:-12, lc:-88, lo:-10})), narrow:E(eyeOpen({li:16, lc:-46, lo:-30, gy:4, pup:0.85})),
+    arc:E(arcEye(true)), closed:E(arcEye(false)),
+    pain:E(x=>{ x.strokeStyle = LASH; x.lineWidth = 11; x.beginPath(); x.moveTo(40, -32); x.lineTo(-34, 0); x.lineTo(40, 32); x.stroke(); }),
+    dead:E(x=>{ x.strokeStyle = LASH; x.lineWidth = 11; x.beginPath(); x.moveTo(-36, -36); x.lineTo(36, 36); x.moveTo(36, -36); x.lineTo(-36, 36); x.stroke(); })};
+  // ---------- NÉT MẶT: 512×384 phủ x∈[-0.42,0.42], y∈[0,0.62]; lông mày y≈74, mũi y≈232, miệng (256, 285), má (91|421, 262)
+  const FG = shell(-0.42, 0.42, 0.0, 0.62, 30, 22, 0.004), MX = 256, MY = 285;
+  const brows = (L, R)=> x=>{ x.strokeStyle = 'rgba(95,52,38,.9)'; [[L, -1], [R, 1]].forEach(([b, d])=>{ const cx = MX + d*100, Y = 92; x.lineWidth = 7; x.beginPath(); x.moveTo(cx - d*44, Y + b[0]); x.quadraticCurveTo(cx, Y - 14 + b[1], cx + d*42, Y - 2 + b[2]); x.stroke(); x.lineWidth = 3.5; x.beginPath(); x.moveTo(cx + d*30, Y - 4 + b[2]*0.8); x.lineTo(cx + d*50, Y + 4 + b[2]); x.stroke(); }); };
+  const blush = (a = 0.55)=> x=>{ [MX - 165, MX + 165].forEach(bx=>{ const g = x.createRadialGradient(bx, 262, 6, bx, 262, 78); g.addColorStop(0, `rgba(255,110,140,${a})`); g.addColorStop(1, 'rgba(255,110,140,0)'); x.fillStyle = g; x.beginPath(); x.ellipse(bx, 262, 84, 50, 0, 0, 7); x.fill();
+      if(a > 0.6){ x.strokeStyle = 'rgba(255,255,255,.7)'; x.lineWidth = 3; for(let k = -1; k <= 1; k++){ x.beginPath(); x.moveTo(bx + k*15 - 5, 272); x.lineTo(bx + k*15 + 6, 252); x.stroke(); } } }); };
+  const base = x=>{ let g = x.createLinearGradient(0, 0, 0, 60); g.addColorStop(0, 'rgba(150,80,70,.32)'); g.addColorStop(1, 'rgba(150,80,70,0)'); x.fillStyle = g; x.fillRect(60, 0, 392, 60);   // bóng tóc mái trên trán
+    g = x.createRadialGradient(MX, 384, 30, MX, 384, 120); g.addColorStop(0, 'rgba(200,120,110,.22)'); g.addColorStop(1, 'rgba(200,120,110,0)'); x.fillStyle = g; x.fillRect(120, 280, 272, 104);   // bóng cằm
+    x.strokeStyle = 'rgba(190,110,95,.75)'; x.lineWidth = 3; x.beginPath(); x.moveTo(MX + 4, 222); x.quadraticCurveTo(MX + 9, 236, MX + 2, 242); x.stroke();   // mũi
+    x.fillStyle = 'rgba(255,255,255,.6)'; x.beginPath(); x.arc(MX - 2, 226, 3, 0, 7); x.fill(); };
+  const LIP = '#b8485e', IN = '#7a1f34';
+  const mouth = {
+    neutral:x=>{ x.strokeStyle = LIP; x.lineWidth = 4; x.beginPath(); x.moveTo(MX - 15, MY); x.quadraticCurveTo(MX, MY + 4, MX + 15, MY); x.stroke(); x.fillStyle = 'rgba(230,120,140,.35)'; x.beginPath(); x.ellipse(MX, MY + 9, 11, 4, 0, 0, 7); x.fill(); },
+    smile:x=>{ x.strokeStyle = LIP; x.lineWidth = 4.5; x.beginPath(); x.moveTo(MX - 26, MY - 6); x.quadraticCurveTo(MX, MY + 16, MX + 26, MY - 6); x.stroke(); x.fillStyle = 'rgba(230,120,140,.35)'; x.beginPath(); x.ellipse(MX, MY + 14, 12, 4, 0, 0, 7); x.fill(); },
+    coy:x=>{ x.strokeStyle = LIP; x.lineWidth = 4; x.beginPath(); x.moveTo(MX - 18, MY - 1); x.quadraticCurveTo(MX + 2, MY + 10, MX + 22, MY - 7); x.stroke(); },
+    grin:x=>{ x.fillStyle = IN; x.beginPath(); x.moveTo(MX - 30, MY - 8); x.quadraticCurveTo(MX, MY - 2, MX + 30, MY - 8); x.quadraticCurveTo(MX + 22, MY + 30, MX, MY + 30); x.quadraticCurveTo(MX - 22, MY + 30, MX - 30, MY - 8); x.fill(); x.strokeStyle = LIP; x.lineWidth = 3; x.stroke();
+      x.fillStyle = '#fff'; x.beginPath(); x.moveTo(MX - 24, MY - 6); x.quadraticCurveTo(MX, MY, MX + 24, MY - 6); x.lineTo(MX + 20, MY + 2); x.quadraticCurveTo(MX, MY + 6, MX - 20, MY + 2); x.fill(); x.fillStyle = '#ff7f99'; x.beginPath(); x.ellipse(MX, MY + 21, 14, 7, 0, 0, 7); x.fill(); },
+    sad:x=>{ x.strokeStyle = LIP; x.lineWidth = 4; x.beginPath(); x.moveTo(MX - 16, MY + 8); x.quadraticCurveTo(MX, MY - 6, MX + 16, MY + 8); x.stroke(); x.fillStyle = 'rgba(230,120,140,.35)'; x.beginPath(); x.ellipse(MX, MY + 14, 9, 4, 0, 0, 7); x.fill(); },
+    pout:x=>{ x.fillStyle = 'rgba(200,80,100,.85)'; x.beginPath(); x.ellipse(MX, MY + 4, 13, 8, 0, 0, 7); x.fill(); x.strokeStyle = IN; x.lineWidth = 3; x.beginPath(); x.moveTo(MX - 11, MY + 3); x.quadraticCurveTo(MX, MY - 3, MX + 11, MY + 3); x.stroke(); },
+    o:x=>{ x.fillStyle = IN; x.beginPath(); x.ellipse(MX, MY + 4, 11, 14, 0, 0, 7); x.fill(); x.strokeStyle = LIP; x.lineWidth = 3.5; x.stroke(); x.fillStyle = '#ff7f99'; x.beginPath(); x.ellipse(MX, MY + 12, 6, 4, 0, 0, 7); x.fill(); },
+    side:x=>{ x.strokeStyle = LIP; x.lineWidth = 4; x.beginPath(); x.moveTo(MX - 6, MY + 2); x.quadraticCurveTo(MX + 10, MY + 6, MX + 22, MY - 4); x.stroke(); },
+    grit:x=>{ x.fillStyle = '#fff'; x.beginPath(); x.ellipse(MX, MY + 2, 22, 8, 0, 0, 7); x.fill(); x.strokeStyle = LIP; x.lineWidth = 3.5; x.stroke(); x.strokeStyle = 'rgba(120,60,70,.6)'; x.lineWidth = 2; x.beginPath(); x.moveTo(MX - 20, MY + 2); x.lineTo(MX + 20, MY + 2); x.stroke(); },
+    flat:x=>{ x.strokeStyle = LIP; x.lineWidth = 4; x.beginPath(); x.moveTo(MX - 14, MY + 2); x.lineTo(MX + 14, MY + 2); x.stroke(); }};
+  const tear = x=>{ const tx = MX + 108, ty = 250; let g = x.createLinearGradient(tx, ty - 20, tx, ty + 40); g.addColorStop(0, 'rgba(180,225,255,.2)'); g.addColorStop(1, 'rgba(180,225,255,.85)'); x.fillStyle = g;
+    x.beginPath(); x.moveTo(tx, ty - 26); x.quadraticCurveTo(tx + 12, ty + 6, tx + 10, ty + 18); x.arc(tx, ty + 18, 10, 0, Math.PI); x.quadraticCurveTo(tx - 12, ty + 6, tx, ty - 26); x.fill(); x.fillStyle = '#fff'; x.beginPath(); x.arc(tx - 3, ty + 14, 3, 0, 7); x.fill(); };
+  const F = (...fs)=> ({w:512, h:384, f:x=>{ base(x); fs.forEach(f=> f(x)); }});
+  const N = [0, 0, 0];
+  const FACE_D = {
+    neutral:F(blush(0.45), brows(N, N), mouth.neutral), happy:F(blush(0.55), brows([-2, -6, -2], [-2, -6, -2]), mouth.smile), joy:F(blush(0.7), brows([-8, -14, -6], [-8, -14, -6]), mouth.grin),
+    coy:F(blush(0.85), brows([2, -2, 2], [2, -2, 2]), mouth.coy), sad:F(blush(0.5), brows([-14, 2, 10], [-14, 2, 10]), mouth.sad, tear), worried:F(blush(0.4), brows([-12, 0, 8], [-12, 0, 8]), mouth.sad),
+    pain:F(blush(0.5), brows([10, 2, -4], [10, 2, -4]), mouth.grit), angry:F(blush(0.65), brows([16, 4, -8], [16, 4, -8]), mouth.pout), surprised:F(blush(0.5), brows([-16, -22, -12], [-16, -22, -12]), mouth.o),
+    think:F(blush(0.45), brows([4, 2, 0], [-10, -16, -6]), mouth.side), dead:F(blush(0.25), brows([0, 4, 6], [0, 4, 6]), mouth.flat), sleepy:F(blush(0.5), brows([4, 4, 4], [4, 4, 4]), mouth.neutral)};
+  const eyeL = layer('eyes', EG, EYE_D, 1), faceL = layer('head', FG, FACE_D, 0);
+  // [lớp mắt, lớp nét mặt]
+  const GE = {neutral:'open', happy:'open', joy:'arc', coy:'half', sad:'teary', worried:'droop', pain:'pain', angry:'narrow', surprised:'wide', think:'up', dead:'dead', sleepy:'closed'};
+  ANI.show = n=>{ if(!GE[n]) n = 'neutral'; eyeL.set(GE[n]); faceL.set(n); };
   }
   /* ---------- CẢM XÚC: mắt, miệng, lông mày, giọt mồ hôi đổi theo tình huống ---------- */
   const face = (bone, parts)=>{ const m = new THREE.Mesh(merge(parts), mat); B[bone].add(m); meshes.push(m); m.visible = false; return m; };
   const Arc = (r, t, a)=> new THREE.TorusGeometry(r, t, 6, 14, a), MC = 0x7a2a2a, DKc = C.dark;
-  const EYES = GIRL ? ANI.eyes : {normal:meshes[meshes.length - 1],
+  const EYES = GIRL ? {} : {normal:meshes[meshes.length - 1],
     happy:face('eyes', [-1, 1].map(d=> ({g:Arc(0.062, 0.02, Math.PI), m:M4(d*0.15, -0.035, 0.015), c:DKc}))),
     closed:face('eyes', [-1, 1].map(d=> ({g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, -0.01, 0.02), c:DKc}))),
     pain:face('eyes', [-1, 1].flatMap(d=> [{g:Bx(0.11, 0.024, 0.02), m:M4(d*0.15, 0.022, 0.02, 1, 1, 1, 0, 0, -d*0.42), c:DKc}, {g:Bx(0.11, 0.024, 0.02), m:M4(d*0.15, -0.022, 0.02, 1, 1, 1, 0, 0, d*0.42), c:DKc}])),
     dead:face('eyes', [-1, 1].flatMap(d=> [{g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, 0, 0.02, 1, 1, 1, 0, 0, 0.78), c:DKc}, {g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, 0, 0.02, 1, 1, 1, 0, 0, -0.78), c:DKc}]))};
-  if(GIRL) Object.values(EYES).forEach(m=> m.visible = false);
-  EYES.normal.visible = true;
-  const MOUTH = GIRL ? ANI.mouth : {
+  if(!GIRL) EYES.normal.visible = true;
+  const MOUTH = GIRL ? {} : {
     neutral:face('head', [{g:Bx(0.1, 0.025, 0.03), m:M4(0, 0.16, 0.44), c:MC}]),
     smile:face('head', [{g:Arc(0.065, 0.017, Math.PI), m:M4(0, 0.205, 0.425, 1, 1, 1, 0, 0, Math.PI), c:MC}]),
     grin:face('head', [{g:new THREE.CircleGeometry(0.09, 16, Math.PI, Math.PI), m:M4(0, 0.2, 0.442), c:0x8a2030}, {g:Bx(0.16, 0.022, 0.012), m:M4(0, 0.193, 0.446), c:0xffffff}, {g:Sp(0.032, 6, 4), m:M4(0, 0.14, 0.44, 1.4, 0.6, 0.3), c:0xff7a8a}]),
@@ -155,15 +188,16 @@ export function createHero(THREE, opts = {}){
     o:face('head', [{g:new THREE.TorusGeometry(0.042, 0.017, 6, 14), m:M4(0, 0.155, 0.436), c:MC}, {g:new THREE.CircleGeometry(0.036, 12), m:M4(0, 0.155, 0.437), c:0x4a1018}]),
     grit:face('head', [{g:Bx(0.15, 0.04, 0.02), m:M4(0, 0.16, 0.438), c:0xffffff}, {g:Bx(0.16, 0.012, 0.026), m:M4(0, 0.16, 0.44), c:MC}])};
   const BY = GIRL ? 0.53 : 0.53; const brow = d=>{ const m = new THREE.Mesh(merge([{g:GIRL ? Ca(0.012, 0.09, 6) : Bx(0.14, 0.034, 0.03), m:GIRL ? M4(0, 0, 0, 1, 1, 1, 0, 0, Math.PI/2) : null, c:GIRL ? 0x5a2a20 : C.hair}]), mat); m.position.set(d*(GIRL ? 0.16 : 0.15), BY, GIRL ? 0.43 : 0.41); m.rotation.z = -d*0.15; B.head.add(m); meshes.push(m); return m; };
-  const browL = brow(1), browR = brow(-1);
+  const browL = brow(1), browR = brow(-1); if(GIRL) browL.visible = browR.visible = false;
   const sweat = face('head', [{g:Sp(0.05, 8, 6), m:M4(0, 0, 0, 1, 1.3, 0.8), c:0x8fd8ff}, {g:Co(0.05, 0.08, 8), m:M4(0, 0.07, 0), c:0x8fd8ff}]); sweat.position.set(0.36, 0.56, 0.22);
   // [mắt, miệng, nâng lông mày, nghiêng đầu trong lông mày (+ = cau có, − = buồn), mồ hôi, phóng to mắt]
   const EMO = {neutral:['normal', 'neutral', 0, 0], happy:['normal', 'smile', 0.02, -0.05], joy:['happy', 'grin', 0.05, -0.1], sad:['normal', 'frown', 0, -0.42, 1], worried:['normal', 'frown', 0.01, -0.3, 1],
-    pain:['pain', 'grit', -0.01, 0.35], angry:['normal', 'grit', -0.02, 0.42], surprised:['normal', 'o', 0.065, -0.05, 0, 1.28], think:['normal', 'neutral', 0.02, -0.18], dead:['dead', 'o', 0, -0.2], sleepy:['closed', 'neutral', -0.01, -0.1]};
+    pain:['pain', 'grit', -0.01, 0.35], angry:['normal', 'grit', -0.02, 0.42], surprised:['normal', 'o', 0.065, -0.05, 0, 1.28], think:['normal', 'neutral', 0.02, -0.18], dead:['dead', 'o', 0, -0.2], sleepy:['closed', 'neutral', -0.01, -0.1], coy:['happy', 'smile', 0.02, -0.05]};
   let mood = 'neutral', emoteName = null, emoteT = 0, shownEmo = '';
   function showEmo(n){ if(n === shownEmo) return; shownEmo = n; const e = EMO[n] || EMO.neutral;
+    if(GIRL){ ANI.show(n); sweat.visible = n === 'worried'; return; }
     Object.keys(EYES).forEach(k=> EYES[k].visible = k === e[0]); Object.keys(MOUTH).forEach(k=> MOUTH[k].visible = k === e[1]);
-    EYES.normal.scale.setScalar(GIRL ? 1 + ((e[5] || 1) - 1)*0.4 : (e[5] || 1)); browL.position.y = browR.position.y = BY + e[2]; browL.rotation.z = -0.15 + e[3]; browR.rotation.z = 0.15 - e[3]; sweat.visible = !!e[4]; }
+    EYES.normal.scale.setScalar(e[5] || 1); browL.position.y = browR.position.y = BY + e[2]; browL.rotation.z = -0.15 + e[3]; browR.rotation.z = 0.15 - e[3]; sweat.visible = !!e[4]; }
   showEmo('neutral');
   if(!GIRL){
   // mũ học giả: vành, dải vàng, chóp gập, huy hiệu π
@@ -207,12 +241,21 @@ export function createHero(THREE, opts = {}){
   skin('hat', [{g:Sp(0.13, 12, 8), m:M4(0.17, 0.02, 0, 1.35, 0.95, 0.55, 0, 0, -0.35), c:C.ribbon}, {g:Sp(0.13, 12, 8), m:M4(-0.17, 0.02, 0, 1.35, 0.95, 0.55, 0, 0, 0.35), c:C.ribbon},
     {g:Sp(0.07, 8, 6), m:M4(0.17, 0.02, 0.05, 0.8, 0.6, 0.4), c:0xff86bd}, {g:Sp(0.07, 8, 6), m:M4(-0.17, 0.02, 0.05, 0.8, 0.6, 0.4), c:0xff86bd}, {g:Sp(0.065, 8, 6), m:M4(0, 0.02, 0.03), c:C.gold}]);
   skin('hatTip', [{g:Bx(0.07, 0.3, 0.03), m:M4(0.06, -0.15, -0.02, 1, 1, 1, 0, 0, 0.25), c:C.ribbon}, {g:Bx(0.07, 0.28, 0.03), m:M4(-0.06, -0.14, -0.02, 1, 1, 1, 0, 0, -0.25), c:C.ribbon}]);
+  function flowers(list, R){ const out = [], cols = [0xfff4e0, 0xffd6ec, 0xfff0a0];
+    list.forEach(([fx, fy], i)=>{ const fz = Math.sqrt(Math.max(0, R*R - fx*fx)) + 0.006, ry = Math.atan2(fx, fz), c = cols[i % 3];
+      for(let k = 0; k < 5; k++){ const a = k/5*Math.PI*2, dx = Math.cos(a)*0.026, dy = Math.sin(a)*0.026; out.push({g:Sp(0.017, 6, 4), m:M4(fx + dx*Math.cos(ry), fy + dy, fz - dx*Math.sin(ry), 1, 1, 0.5, 0, ry, 0), c}); }
+      out.push({g:Sp(0.013, 6, 4), m:M4(fx, fy, fz + 0.006, 1, 1, 0.6, 0, ry, 0), c:0xf2b84e}); }); return out; }
   // váy hồng: thân áo, cổ thuỷ thủ trắng, nơ ngực, đai lưng, chân váy xoè có diềm ren
   skin('chest', [
     {g:Cy(0.3, 0.33, 0.46, 16), m:M4(0, 0, 0), c:C.coat}, {g:Sp(0.3, 16, 8), m:M4(0, 0.2, 0, 1, 0.45, 0.9), c:C.coat},
     {g:Cy(0.33, 0.38, 0.07, 18), m:M4(0, 0.22, -0.01), c:C.white}, {g:Bx(0.5, 0.2, 0.04), m:M4(0, 0.13, -0.28, 1, 1, 1, 0.2, 0, 0), c:C.white},
     {g:Sp(0.075, 8, 6), m:M4(0.085, 0.1, 0.31, 1.3, 0.9, 0.5, 0, 0, -0.35), c:C.ribbon}, {g:Sp(0.075, 8, 6), m:M4(-0.085, 0.1, 0.31, 1.3, 0.9, 0.5, 0, 0, 0.35), c:C.ribbon}, {g:Sp(0.04, 6, 4), m:M4(0, 0.1, 0.34), c:C.gold},
     {g:Sp(0.03, 6, 4), m:M4(0, -0.06, 0.32), c:C.white}, {g:Sp(0.03, 6, 4), m:M4(0, -0.16, 0.33), c:C.white}]);
+  skin('chest', [
+    // cổ áo Peter Pan bo tròn
+    ...[-1, 1].map(d=> ({g:Sp(0.13, 16, 10), m:M4(d*0.12, 0.2, 0.24, 1.25, 0.5, 0.55, 0.35, 0, -d*0.35), c:C.white})),
+    // hoa thêu nhỏ trên thân áo
+    ...flowers([[-0.2, 0.0], [0.19, 0.04], [-0.12, -0.15], [0.14, -0.13], [-0.24, -0.18], [0.25, -0.16]], 0.315)], mat, 0);
   skin('spine', [{g:Cy(0.31, 0.32, 0.22, 16), m:M4(0, 0, 0), c:C.coat}, {g:Cy(0.335, 0.335, 0.085, 16), m:M4(0, -0.07, 0), c:C.ribbon}]);
   const dots = []; for(let i = 0; i < 10; i++){ const a = i/10*Math.PI*2 + 0.3, y = -0.16 - (i % 2)*0.17, r = 0.5 + (i % 2)*0.12; dots.push({g:Sp(0.035, 6, 4), m:M4(Math.sin(a)*r, y, Math.cos(a)*r, 1, 1, 0.5, 0, a, 0), c:C.white}); }
   skin('hips', [{g:Cy(0.33, 0.76, 0.56, 22), m:M4(0, -0.17, 0), c:C.coat}, {g:Cy(0.6, 0.8, 0.14, 22), m:M4(0, -0.39, 0), c:C.coat2},

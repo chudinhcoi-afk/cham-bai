@@ -1132,7 +1132,7 @@ function loop(t){
     player.position.y = height(player.position.x, player.position.z);
   }
   if(inQuiz || cine || deadT > 0) moveAmt = 0;
-  hero.setMood(deadT > 0 ? 'neutral' : pHp < pMaxHp()*0.3 ? 'worried' : mus.mode === 'battle' ? 'angry' : W._healing ? 'happy' : 'neutral');
+  hero.setMood(deadT > 0 ? 'neutral' : pHp < pMaxHp()*0.3 ? 'worried' : mus.mode === 'battle' ? 'angry' : W._healing ? 'coy' : 'neutral');
   hero.setMove(moveAmt); hero.update(dt);
   pShadow.position.set(player.position.x, player.position.y + 0.06, player.position.z);
   // vùng an toàn: hồi máu
