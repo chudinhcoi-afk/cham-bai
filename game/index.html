@@ -315,8 +315,9 @@ const fastQ = ()=> !!(window.G && window.G.fast);
 const xpNeed = lv=> Math.round(60*Math.pow(lv, 1.45));
 const pMaxHp = ()=> 100 + save.lv*20, pAtk = ()=> 12 + save.lv*3.6;
 let META = null; const PACK = {};
-async function loadMeta(){ if(!META) META = await (await fetch('q/meta.json')).json(); return META; }
-async function loadPack(g){ if(!PACK[g]) PACK[g] = await (await fetch('q/q' + g + '.json')).json(); return PACK[g]; }
+const DATA_V = '20261014b';   // đổi khi cập nhật ngân hàng câu hỏi để máy học sinh tải bản mới
+async function loadMeta(){ if(!META) META = await (await fetch('q/meta.json?v=' + DATA_V, {cache:'no-cache'})).json(); return META; }
+async function loadPack(g){ if(!PACK[g]) PACK[g] = await (await fetch('q/q' + g + '.json?v=' + DATA_V, {cache:'no-cache'})).json(); return PACK[g]; }
 
 /* ======================= ÂM THANH (tự tổng hợp, không cần tệp) ======================= */
 const AU = {ctx:null};
