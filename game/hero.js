@@ -33,13 +33,38 @@ export function createHero(THREE, opts = {}){
     {g:new THREE.SphereGeometry(0.47, 20, 12, 0, Math.PI*2, 0, Math.PI*0.55), m:M4(0, 0.4, -0.05, 1, 1, 1, -0.35, 0, 0), c:C.hair},
     {g:Co(0.12, 0.28, 6), m:M4(-0.18, 0.62, 0.34, 1, 1, 1, 2.6, 0, 0.3), c:C.hair}, {g:Co(0.13, 0.3, 6), m:M4(0.02, 0.66, 0.38, 1, 1, 1, 2.7, 0, 0), c:C.hair}, {g:Co(0.11, 0.26, 6), m:M4(0.2, 0.62, 0.33, 1, 1, 1, 2.6, 0, -0.3), c:C.hair},
     {g:Sp(0.09, 8, 6), m:M4(0.43, 0.34, 0, 0.6, 1, 1), c:C.skin}, {g:Sp(0.09, 8, 6), m:M4(-0.43, 0.34, 0, 0.6, 1, 1), c:C.skin},
-    {g:Sp(0.07, 8, 6), m:M4(0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek}, {g:Sp(0.07, 8, 6), m:M4(-0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek},
-    {g:Bx(0.1, 0.025, 0.03), m:M4(0, 0.16, 0.44, 1, 1, 1, 0, 0, 0), c:0x7a2a2a},
-    {g:Bx(0.13, 0.03, 0.03), m:M4(0.15, 0.52, 0.41, 1, 1, 1, 0, 0, -0.15), c:C.hair}, {g:Bx(0.13, 0.03, 0.03), m:M4(-0.15, 0.52, 0.41, 1, 1, 1, 0, 0, 0.15), c:C.hair}]);
+    {g:Sp(0.07, 8, 6), m:M4(0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek}, {g:Sp(0.07, 8, 6), m:M4(-0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek}]);
   // mắt to, có điểm sáng — đặt trên xương riêng để chớp mắt
   skin('eyes', [
     {g:Sp(0.075, 10, 8), m:M4(0.15, 0, 0, 0.9, 1.35, 0.5), c:C.dark}, {g:Sp(0.075, 10, 8), m:M4(-0.15, 0, 0, 0.9, 1.35, 0.5), c:C.dark},
     {g:Sp(0.025, 6, 4), m:M4(0.17, 0.035, 0.035), c:0xffffff}, {g:Sp(0.025, 6, 4), m:M4(-0.13, 0.035, 0.035), c:0xffffff}], mat, 0);
+  /* ---------- CẢM XÚC: mắt, miệng, lông mày, giọt mồ hôi đổi theo tình huống ---------- */
+  const face = (bone, parts)=>{ const m = new THREE.Mesh(merge(parts), mat); B[bone].add(m); meshes.push(m); m.visible = false; return m; };
+  const Arc = (r, t, a)=> new THREE.TorusGeometry(r, t, 6, 14, a), MC = 0x7a2a2a, DKc = C.dark;
+  const EYES = {normal:meshes[meshes.length - 1],
+    happy:face('eyes', [-1, 1].map(d=> ({g:Arc(0.062, 0.02, Math.PI), m:M4(d*0.15, -0.035, 0.015), c:DKc}))),
+    closed:face('eyes', [-1, 1].map(d=> ({g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, -0.01, 0.02), c:DKc}))),
+    pain:face('eyes', [-1, 1].flatMap(d=> [{g:Bx(0.11, 0.024, 0.02), m:M4(d*0.15, 0.022, 0.02, 1, 1, 1, 0, 0, -d*0.42), c:DKc}, {g:Bx(0.11, 0.024, 0.02), m:M4(d*0.15, -0.022, 0.02, 1, 1, 1, 0, 0, d*0.42), c:DKc}])),
+    dead:face('eyes', [-1, 1].flatMap(d=> [{g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, 0, 0.02, 1, 1, 1, 0, 0, 0.78), c:DKc}, {g:Bx(0.13, 0.024, 0.02), m:M4(d*0.15, 0, 0.02, 1, 1, 1, 0, 0, -0.78), c:DKc}]))};
+  EYES.normal.visible = true;
+  const MOUTH = {
+    neutral:face('head', [{g:Bx(0.1, 0.025, 0.03), m:M4(0, 0.16, 0.44), c:MC}]),
+    smile:face('head', [{g:Arc(0.065, 0.017, Math.PI), m:M4(0, 0.205, 0.425, 1, 1, 1, 0, 0, Math.PI), c:MC}]),
+    grin:face('head', [{g:new THREE.CircleGeometry(0.09, 16, Math.PI, Math.PI), m:M4(0, 0.2, 0.442), c:0x8a2030}, {g:Bx(0.16, 0.022, 0.012), m:M4(0, 0.193, 0.446), c:0xffffff}, {g:Sp(0.032, 6, 4), m:M4(0, 0.14, 0.44, 1.4, 0.6, 0.3), c:0xff7a8a}]),
+    frown:face('head', [{g:Arc(0.06, 0.017, Math.PI), m:M4(0, 0.125, 0.43), c:MC}]),
+    o:face('head', [{g:new THREE.TorusGeometry(0.042, 0.017, 6, 14), m:M4(0, 0.155, 0.436), c:MC}, {g:new THREE.CircleGeometry(0.036, 12), m:M4(0, 0.155, 0.437), c:0x4a1018}]),
+    grit:face('head', [{g:Bx(0.15, 0.04, 0.02), m:M4(0, 0.16, 0.438), c:0xffffff}, {g:Bx(0.16, 0.012, 0.026), m:M4(0, 0.16, 0.44), c:MC}])};
+  const brow = d=>{ const m = new THREE.Mesh(merge([{g:Bx(0.14, 0.034, 0.03), c:C.hair}]), mat); m.position.set(d*0.15, 0.53, 0.41); m.rotation.z = -d*0.15; B.head.add(m); meshes.push(m); return m; };
+  const browL = brow(1), browR = brow(-1);
+  const sweat = face('head', [{g:Sp(0.05, 8, 6), m:M4(0, 0, 0, 1, 1.3, 0.8), c:0x8fd8ff}, {g:Co(0.05, 0.08, 8), m:M4(0, 0.07, 0), c:0x8fd8ff}]); sweat.position.set(0.36, 0.56, 0.22);
+  // [mắt, miệng, nâng lông mày, nghiêng đầu trong lông mày (+ = cau có, − = buồn), mồ hôi, phóng to mắt]
+  const EMO = {neutral:['normal', 'neutral', 0, 0], happy:['normal', 'smile', 0.02, -0.05], joy:['happy', 'grin', 0.05, -0.1], sad:['normal', 'frown', 0, -0.42, 1], worried:['normal', 'frown', 0.01, -0.3, 1],
+    pain:['pain', 'grit', -0.01, 0.35], angry:['normal', 'grit', -0.02, 0.42], surprised:['normal', 'o', 0.065, -0.05, 0, 1.28], think:['normal', 'neutral', 0.02, -0.18], dead:['dead', 'o', 0, -0.2], sleepy:['closed', 'neutral', -0.01, -0.1]};
+  let mood = 'neutral', emoteName = null, emoteT = 0, shownEmo = '';
+  function showEmo(n){ if(n === shownEmo) return; shownEmo = n; const e = EMO[n] || EMO.neutral;
+    Object.keys(EYES).forEach(k=> EYES[k].visible = k === e[0]); Object.keys(MOUTH).forEach(k=> MOUTH[k].visible = k === e[1]);
+    EYES.normal.scale.setScalar(e[5] || 1); browL.position.y = browR.position.y = 0.53 + e[2]; browL.rotation.z = -0.15 + e[3]; browR.rotation.z = 0.15 - e[3]; sweat.visible = !!e[4]; }
+  showEmo('neutral');
   // mũ học giả: vành, dải vàng, chóp gập, huy hiệu π
   skin('hat', [
     {g:Cy(0.66, 0.66, 0.06, 20), m:M4(0, 0, 0), c:C.hat}, {g:Cy(0.42, 0.46, 0.14, 18), m:M4(0, 0.09, 0), c:C.gold}, {g:Co(0.44, 0.5, 18), m:M4(0, 0.4, 0), c:C.hat},
@@ -204,13 +229,18 @@ export function createHero(THREE, opts = {}){
         queued = true; return 0; }
       const n = clock - lastAtkEnd < 0.35 && api._lastCombo && api._lastCombo < 3 ? api._lastCombo + 1 : 1; play('attack' + n); return n; },
     skill(){ if(dead || cur === 'skill' || cur === 'revive') return false; play('skill'); return true; },
-    hurt(){ if(dead || busy()) return; play('hurt'); },
-    die(){ if(dead) return; dead = true; play('die'); },
-    revive(){ if(!dead) return; dead = false; play('revive'); },
-    victory(){ if(dead || busy()) return; play('victory'); },
+    hurt(){ if(dead) return; api.emote('pain', 0.6); if(busy()) return; play('hurt'); },
+    die(){ if(dead) return; dead = true; emoteT = 0; play('die'); },
+    revive(){ if(!dead) return; dead = false; api.emote('happy', 1.2); play('revive'); },
+    victory(){ api.emote('joy', 2); if(dead || busy()) return; play('victory'); },
+    emote(n, t = 1.6){ if(dead || !EMO[n]) return; emoteName = n; emoteT = t; },
+    setMood(n){ if(EMO[n]) mood = n; },
+    get emotion(){ return shownEmo; },
     think(on){ thinking = !!on; },
     update(dt){
       clock += dt; speedS += (speed - speedS)*Math.min(1, dt*10);
+      emoteT = Math.max(0, emoteT - dt); showEmo(dead ? 'dead' : emoteT > 0 ? emoteName : thinking ? 'think' : mood);
+      if(shownEmo === 'sad' || shownEmo === 'worried') sweat.position.y = 0.56 - ((clock*0.4) % 1)*0.12;
       // động tác đang chạy: báo sự kiện đúng khung hình, hết thì trả về nền
       if(cur){ const a = A[cur], dur = CL[cur].duration;
         (EVT[cur] || []).forEach((e, i)=>{ if(!fired.has(i) && a.time >= e.t){ fired.add(i); CB[e.ev].forEach(f=> f(e.d)); } });
