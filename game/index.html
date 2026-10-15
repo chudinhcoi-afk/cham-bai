@@ -129,6 +129,42 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 .seg{display:flex;gap:6px;flex-wrap:wrap}.seg button{flex:1;min-width:70px;padding:9px 8px;border-radius:10px;border:1px solid var(--line);background:#222a52;color:var(--ink);cursor:pointer;font-size:14px}
 .seg button.on{background:var(--gold);color:#2b1a00;font-weight:800;border-color:var(--gold)}
 .tog{display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;margin:8px 0}.tog input{width:20px;height:20px}
+/* trang bị */
+#equip{z-index:25}
+#equip .box{width:min(900px,100%);max-height:92vh;padding:0;overflow:hidden;display:flex;flex-direction:column;background:linear-gradient(180deg,#1b2347,#121834);border-color:rgba(242,193,78,.45)}
+#equip .ehd{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}#equip .ehd h3{margin:0;font-size:18px;white-space:nowrap}
+#equip .pw{margin-left:auto;font-weight:800;color:var(--gold);font-size:14px;background:rgba(242,193,78,.12);border:1px solid rgba(242,193,78,.4);border-radius:20px;padding:4px 12px;white-space:nowrap}
+#equip .ebody{display:grid;grid-template-columns:300px 1fr;min-height:0;flex:1;overflow:auto}
+#equip .left{padding:14px;border-right:1px solid var(--line);background:rgba(0,0,0,.15)}
+.doll{display:grid;grid-template-columns:62px 1fr 62px;grid-template-rows:repeat(3,62px);gap:8px 6px;align-items:center;justify-items:center}
+.doll .stage{grid-column:2;grid-row:1/4;position:relative;width:100%;height:100%;border-radius:16px;background:radial-gradient(circle at 50% 72%,rgba(242,193,78,.22),rgba(74,163,255,.08) 55%,transparent 75%);overflow:hidden}
+.doll .stage canvas,.doll .stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;cursor:grab;touch-action:none}
+.doll .stage .ped{position:absolute;left:14%;right:14%;bottom:8px;height:14px;border-radius:50%;background:radial-gradient(ellipse,rgba(242,193,78,.45),transparent 70%)}
+.eslot{width:62px;height:62px;border-radius:14px;border:2px solid var(--line);background:#1d2448;display:grid;place-items:center;font-size:26px;cursor:pointer;position:relative;color:var(--ink);padding:0 0 8px;font-weight:800}
+.eslot.on{box-shadow:0 0 0 3px rgba(242,193,78,.55)}.eslot small{position:absolute;bottom:2px;left:0;right:0;font-size:9.5px;font-weight:600;opacity:.8;text-align:center;line-height:1.2}
+.eslot .dot,.ecard .new,.etabs .new{position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:10px;font-weight:800;border-radius:9px;padding:0 5px;line-height:16px}
+.estats{margin-top:12px;display:grid;gap:5px;font-size:13.5px}
+.estats div{display:flex;justify-content:space-between;gap:8px;background:rgba(255,255,255,.04);border-radius:8px;padding:5px 9px}.estats b{white-space:nowrap}.estats i{font-style:normal;color:var(--green);font-weight:700;margin-left:4px}
+.estats .note{display:block;background:none;font-size:11.5px;opacity:.65;padding:2px 2px 0;line-height:1.4}
+#equip .right{padding:12px 14px;display:flex;flex-direction:column;min-width:0}
+.etabs{display:flex;gap:6px;overflow-x:auto;padding:6px 6px 4px 0}.etabs button{flex:1 0 auto;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#222a52;color:var(--ink);font-size:14px;cursor:pointer;position:relative}
+.etabs button.on{background:var(--gold);color:#2b1a00;font-weight:800;border-color:var(--gold)}
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:8px}
+.ecard{position:relative;border-radius:14px;border:2px solid var(--line);background:#1d2448;padding:10px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:5px;transition:transform .1s}
+.ecard:hover{transform:translateY(-2px)}.ecard.sel{background:#2c3466;box-shadow:0 0 0 3px rgba(242,193,78,.4)}
+.ecard .ic,.edet .ic,.eslot .ico{display:grid;place-items:center;font-weight:800;position:relative}
+.ecard .ic{width:46px;height:46px;border-radius:12px;font-size:26px}
+.ecard .nm{font-weight:800;font-size:14px;line-height:1.25}.ecard .rr{font-size:11px;opacity:.85}
+.ecard .wear{position:absolute;top:8px;right:8px;font-size:11px;font-weight:800;background:var(--green);color:#06210f;border-radius:8px;padding:1px 6px}
+.ecard.lock .ic,.ecard.lock .nm{filter:grayscale(1) brightness(.7)}.ecard .lk{position:absolute;left:40px;top:38px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}.chips span{font-size:11px;background:rgba(255,255,255,.08);border-radius:6px;padding:1px 6px}
+.ereq{font-size:11.5px;opacity:.9;line-height:1.35}.ereq .pbar{height:11px;margin-top:4px}.ereq .pbar span{font-size:9px;line-height:11px}
+.edet{margin-top:12px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.2);padding:12px 14px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.edet .ic{width:64px;height:64px;border-radius:14px;font-size:36px;flex:none}
+.edet .tx{flex:1 1 220px;min-width:0}.edet .tx p{margin:4px 0;font-size:13.5px;opacity:.85;line-height:1.45}
+.cmp{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.cmp span{font-size:12.5px;border-radius:8px;padding:2px 8px;background:rgba(255,255,255,.06)}.cmp .up{color:#6dff9a}.cmp .dn{color:#ff8a8a}
+.edet .go{align-self:center;background:linear-gradient(180deg,#ffd76a,#f2a93b);color:#2b1a00;border:none;border-radius:12px;padding:11px 18px;font-weight:800;font-size:15px;cursor:pointer}.edet .go:disabled{background:#3a4470;color:#c8d0f0;cursor:default}
+@media (max-width:720px){ #equip{padding:6px;align-items:flex-end} #equip .box{max-height:96vh} #equip .ebody{grid-template-columns:1fr} #equip .left{border-right:none;border-bottom:1px solid var(--line)} .doll{grid-template-columns:56px 1fr 56px;grid-template-rows:repeat(3,56px);max-width:340px;margin:0 auto} .eslot{width:56px;height:56px;font-size:23px} .egrid{grid-template-columns:repeat(auto-fill,minmax(135px,1fr))} .estats{grid-template-columns:1fr 1fr;font-size:12.5px} .estats .note{grid-column:1/-1} #equip .pw{font-size:12px;padding:3px 9px} }
 #over{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;background:rgba(60,0,0,.35);font-size:32px;font-weight:900;text-shadow:0 3px 12px #000;pointer-events:none}
 @media (max-width:700px){ #mini{width:104px;height:104px} #hud{min-width:0;padding:6px 10px 6px 6px} #hud .av{width:38px;height:38px} #zone{top:auto;bottom:178px;font-size:12px} #quiz .opts{grid-template-columns:1fr} #quiz .q{font-size:15px} .abtn{width:70px;height:70px} #tip{top:auto;bottom:220px;font-size:14px} }
 @media (hover:hover) and (pointer:fine){ #joy{display:none} }
@@ -164,7 +200,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   <button class="ibtn" id="menuGear">⚙<span class="t"> Cài đặt</span></button>
   <h1>⚔ Thế Giới Toán Học</h1>
   <p class="sub">Phiêu lưu qua 7 vùng đất từ <b>Lớp 6</b> đến <b>Lớp 12</b>. Mỗi con quái vật sẽ <b>đố bạn một câu toán</b> trước khi giao chiến: trả lời đúng thì nó yếu đi và dễ hạ gục, trả lời sai thì nó <b>biến hình</b> và mạnh hơn rất nhiều!</p>
-  <div style="text-align:center;margin:-4px 0 12px"><button class="ibtn" id="menuInstall">📲 Cài game lên điện thoại</button> <button class="ibtn" id="menuChat">💬 Kênh chat khối<span class="cbadge hidden" id="chatBadge2"></span></button></div>
+  <div style="text-align:center;margin:-4px 0 12px"><button class="ibtn" id="menuInstall">📲 Cài game lên điện thoại</button> <button class="ibtn" id="menuChat">💬 Kênh chat khối<span class="cbadge hidden" id="chatBadge2"></span></button> <button class="ibtn" id="menuEq">🎒 Trang bị<span class="cbadge hidden" id="eqBadge2"></span></button></div>
   <div id="acct"></div>
   <div class="who"><div class="card" id="pinfo"></div><div class="card chars" id="charPick"></div></div>
   <div class="worlds" id="worlds"></div>
@@ -177,6 +213,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div>🔥 <b>Chuỗi đúng</b> liên tiếp nhân kinh nghiệm (tới ×2). 🔁 <b>Câu báo thù:</b> dạng bài em từng sai sẽ quay lại — trả lời đúng được thưởng thêm.</div>
     <div>🔒 <b>Vào lớp</b> bằng SBD thì chỉ mở vùng đất từ lớp của em trở xuống. Ôn ở <b>lớp dưới</b> không có kinh nghiệm và không tính điểm. Lên lớp mới (năm học sau) sẽ mở thêm vùng đất mới.</div>
     <div>🛡 <b>Hộ vệ chương</b> đố 5 câu. Hạ được Hộ vệ thì nhận <b>danh hiệu</b> và <b>điểm thường xuyên</b> (2 điểm/câu đúng) gửi cho thầy/cô. Mỗi chương tối đa 3 lượt/ngày.</div>
+    <div>🎒 <b>Trang bị</b> (phím I): 5 ô vũ khí, mũ, áo giáp, giày, áo choàng — tăng tấn công, máu, chí mạng… và đổi màu nhân vật. Mở khoá bằng <b>thành tích học tập</b>: lên cấp, trả lời đúng, chuỗi đúng, điểm chuyên cần, danh hiệu.</div>
     <div>💬 <b>Kênh chat</b> theo khối: trao đổi với các bạn cùng khối (cần vào lớp). Lịch sự, không nói tục — thầy/cô đọc được và có thể khoá chat.</div>
   </div>
 </div>
@@ -187,7 +224,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div class="pbar"><div id="xpBar" style="background:linear-gradient(90deg,#4aa3ff,#7b5cff)"></div><span id="xpTxt"></span></div><div id="cloud"></div></div></div>
   <div id="zone">Trại xuất phát</div>
   <div id="topR"><canvas id="mini" width="300" height="300"></canvas>
-    <div class="tbtns"><button class="ibtn" id="bChat" title="Kênh chat">💬<span class="t"> Chat</span><span class="cbadge hidden" id="chatBadge"></span></button><button class="ibtn" id="bBook" title="Sổ tay">📖<span class="t"> Sổ tay</span></button><button class="ibtn" id="bGear" title="Cài đặt">⚙</button><button class="ibtn" id="bHome" title="Bản đồ">🗺<span class="t"> Bản đồ</span></button></div></div>
+    <div class="tbtns"><button class="ibtn" id="bChat" title="Kênh chat">💬<span class="t"> Chat</span><span class="cbadge hidden" id="chatBadge"></span></button><button class="ibtn" id="bEq" title="Trang bị">🎒<span class="t"> Trang bị</span><span class="cbadge hidden" id="eqBadge"></span></button><button class="ibtn" id="bBook" title="Sổ tay">📖<span class="t"> Sổ tay</span></button><button class="ibtn" id="bGear" title="Cài đặt">⚙</button><button class="ibtn" id="bHome" title="Bản đồ">🗺<span class="t"> Bản đồ</span></button></div></div>
   <div id="toast"></div>
   <div id="tip" class="hidden"></div>
   <button id="challenge" class="hidden">⚔ Thách đấu</button>
@@ -203,6 +240,11 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   <div id="qRes"></div>
 </div></div>
 <div id="book" class="modal hidden"><div class="box" id="bookBox"></div></div>
+<div id="equip" class="modal hidden"><div class="box">
+  <div class="ehd"><h3>🎒 Trang bị</h3><span class="pw" id="eqPw"></span><button class="ibtn" id="eqX" style="padding:4px 10px">✕</button></div>
+  <div class="ebody"><div class="left"><div class="doll" id="eqDoll"></div><div class="estats" id="eqStats"></div></div>
+    <div class="right"><div class="etabs" id="eqTabs"></div><div class="egrid" id="eqGrid"></div><div id="eqDet"></div></div></div>
+</div></div>
 <div id="opts" class="modal hidden"><div class="box">
   <h3 style="margin:0 0 6px">⚙ Cài đặt</h3>
   <div class="row"><div class="lbl">Chất lượng hình ảnh</div><div class="seg" id="oQ"><button data-q="auto">Tự động</button><button data-q="low">Thấp</button><button data-q="mid">Vừa</button><button data-q="high">Cao</button></div>
@@ -264,7 +306,7 @@ let save = loadSave(saveKey) || loadSave(SAVE_KEY) || {name:'', lv:1, xp:0, star
 save.opt = Object.assign({q:'auto', music:true, sfx:true, auto:null}, save.opt || {});
 const persist = ()=>{ try{ localStorage.setItem(saveKey, JSON.stringify(save)); localStorage.setItem(LAST_KEY, saveKey); }catch(e){} };
 // mỗi học sinh (mã lớp + SBD) một bản lưu riêng — dùng chung máy vẫn không lẫn
-function switchSave(key){ const opt = save.opt, tut = save.tut; saveKey = key; save = loadSave(key) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}}; save.opt = Object.assign({}, opt, save.opt || {}); if(tut && !save.tut) save.tut = tut; persist(); }
+function switchSave(key){ const opt = save.opt, tut = save.tut; saveKey = key; save = loadSave(key) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}}; eqDirty(); save.opt = Object.assign({}, opt, save.opt || {}); if(tut && !save.tut) save.tut = tut; persist(); }
 
 /* ======================= LỚP HỌC: ĐĂNG NHẬP, ĐỒNG BỘ, ĐIỂM CHUYÊN CẦN ======================= */
 const FB = {db:'https://kho-de-toan-vonhai-default-rtdb.firebaseio.com', key:'AIzaSyATpXxpfSc03NLbzFQG6J04tFZOptfuL1s'};
@@ -305,6 +347,8 @@ async function login(ma, sbd, ten){
   if(kq.ch) Object.keys(kq.ch).forEach(g=>{ save.ch = save.ch || {}; save.ch[g] = save.ch[g] || {}; Object.keys(kq.ch[g]).forEach(ci=>{ const a = save.ch[g][ci], b = kq.ch[g][ci]; if(!a || (b.n || 0) > (a.n || 0)) save.ch[g][ci] = Object.assign({d:{}, days:{}, r:''}, b); }); });
   if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
   if(!save.char && kq.prof && kq.prof.char) save.char = kq.prof.char;
+  if(!save.eq && kq.prof && kq.prof.eq) save.eq = kq.prof.eq;
+  eqDirty(); makeHero(save.char || 'boy');
   if(kq.tx) Object.keys(kq.tx).forEach(g=> Object.keys(kq.tx[g]).forEach(ci=>{ const a = txRec(g, ci), b = kq.tx[g][ci] || {}; if((b.n || 0) > a.n || (b.b || 0) > a.b) Object.assign(a, b, {b:Math.max(a.b, b.b || 0), a:Object.assign({}, b.a || {}, a.a)}); }));
   persist(); syncNow(); try{ await fb('game/who/' + fbAuth.uid, 'PUT', {ma, s:sbd}); }catch(e){}
 }
@@ -319,7 +363,7 @@ function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
 function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
-  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, last:Date.now()}, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, last:Date.now()}, sc}); cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
 addEventListener('online', ()=> syncSoon(500));
 
@@ -360,20 +404,67 @@ function txWin(M){
   const title = M.answered === true && !X.title; if(M.answered === true) X.title = X.title || t;
   // dọn số lượt các ngày cũ
   Object.keys(X.a).sort().slice(0, -7).forEach(k=> delete X.a[k]);
-  persist(); syncNow();
+  persist(); syncNow(); eqCheck();
   setTimeout(()=> toast((title ? `🏆 DANH HIỆU MỚI: Khắc tinh Hộ vệ<br><span style="font-size:.62em">${shortCh(C.ten)}</span><br>` : `🛡 Hạ Hộ vệ chương!<br>`) + `<span style="font-size:.62em">Điểm thường xuyên lần này: <b>${fmtS(sc)}</b> (${M.right}/${M.total} câu) · cao nhất: <b>${fmtS(X.b)}</b> — đã gửi cho thầy/cô</span>`, 5200, true), 1600);
   if(title){ hero.victory(); pillar(player.position, 0xffd23a); burst(player.position, 0xffd23a, 2, 30); sfx('lvl'); }
 }
 function recAnswer(q, ok){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
   if(ok){ R.c++; if(q.k != null) R.d[q.k] = 1; if(q.m === 'VD') R.vd++; if(q.m === 'TH') R.th++; R.st++; R.best = Math.max(R.best, R.st); } else R.st = 0;
   const t = today(); R.days[t] = (R.days[t] || 0) + 1; const ks = Object.keys(R.days).sort(); while(ks.length > 60) delete R.days[ks.shift()];
-  R.t = Date.now(); checkLevel(q.c); syncSoon(); }
+  R.t = Date.now(); checkLevel(q.c); syncSoon(); eqCheck(); }
 
 const streakMul = n=> 1 + 0.1*Math.min(n || 0, 10);
 const LOCK_S = {NB:3, TH:5, VD:8};
 const fastQ = ()=> !!(window.G && window.G.fast);
 const xpNeed = lv=> Math.round(60*Math.pow(lv, 1.45));
-const pMaxHp = ()=> 100 + save.lv*20, pAtk = ()=> 12 + save.lv*3.6;
+/* ----- trang bị: 5 ô (vũ khí, mũ, áo, giày, bùa), mở khoá bằng thành tích học tập — không mua bán, không rơi ngẫu nhiên ----- */
+const EQ_SLOTS = [['weapon', 'Vũ khí', '⚔'], ['hat', 'Mũ', '🎩'], ['armor', 'Áo giáp', '🛡'], ['boots', 'Giày', '👢'], ['charm', 'Áo choàng', '🧣']];
+const EQ_RAR = [null, {n:'Thường', c:'#aab3c8'}, {n:'Hiếm', c:'#4aa3ff'}, {n:'Sử thi', c:'#c77dff'}, {n:'Huyền thoại', c:'#f2c14e'}];
+const EQ_ST = {atk:['Tấn công', '%'], hp:['Máu tối đa', '%'], crit:['Chí mạng', '%'], def:['Giảm sát thương', '%'], cd:['Hồi tuyệt chiêu nhanh', '%'], regen:['Hồi máu', '%']};
+// col: màu đè lên nhân vật (hero.js) — vũ khí: lưỡi; mũ: mũ/nơ; áo: thân áo; giày: ủng; áo choàng: áo choàng/khăn
+const EQ = [
+  {id:'w0', s:'weapon', n:'Thước kẻ tập sự', ic:'📏', r:1, st:{}, d:'Vũ khí đầu tiên của mọi nhà toán học.'},
+  {id:'w1', s:'weapon', n:'Kiếm Com-pa', ic:'🧭', r:2, st:{atk:8}, col:{blade:0x8dffa0}, req:['lv', 5], d:'Vẽ đường tròn hoàn hảo quanh kẻ địch.'},
+  {id:'w2', s:'weapon', n:'Kiếm Số Pi', ic:'🥧', r:2, st:{atk:12, crit:3}, col:{blade:0xffe27a}, req:['stars', 150], d:'3,14159… đòn đánh không bao giờ lặp lại.'},
+  {id:'w3', s:'weapon', n:'Lưỡi Tích Phân', ic:'∫', r:3, st:{atk:20, crit:5}, col:{blade:0xc77dff}, req:['ch', 9, 2], d:'Cộng dồn từng nhát chém nhỏ thành sức mạnh lớn.'},
+  {id:'w4', s:'weapon', n:'Gươm Vô Cực', ic:'♾', r:4, st:{atk:30, crit:8}, col:{blade:0xff5a7a}, req:['title', 3], d:'Giới hạn của nó tiến tới vô cùng.'},
+  {id:'h0', s:'hat', n:'Mũ học giả', ic:'🎓', r:1, st:{}, d:'Chiếc mũ quen thuộc của người mới học.'},
+  {id:'h1', s:'hat', n:'Mũ Tam Giác', ic:'🔺', r:2, st:{hp:6}, col:{hat:0x2f9a55, ribbon:0x2fbf6a}, req:['lv', 3], d:'Ba cạnh vững chãi, tổng ba góc luôn 180°.'},
+  {id:'h2', s:'hat', n:'Mũ Phân Số', ic:'➗', r:2, st:{hp:8, crit:2}, col:{hat:0x7a35c0, ribbon:0x9a55e0}, req:['stars', 60], d:'Chia đều sức mạnh cho từng phần.'},
+  {id:'h3', s:'hat', n:'Vương Miện Định Lý', ic:'👑', r:4, st:{hp:14, crit:4}, col:{hat:0xd8a020, ribbon:0xf2c14e}, req:['ch', 10, 1], d:'Chỉ dành cho Bậc thầy một chương.'},
+  {id:'a0', s:'armor', n:'Áo khoác tân binh', ic:'🧥', r:1, st:{}, d:'Gọn nhẹ, dễ chạy nhảy.'},
+  {id:'a1', s:'armor', n:'Giáp Lục Giác', ic:'⬡', r:2, st:{def:6, hp:5}, col:{coat:0x2f9a9a, coat2:0x237878}, req:['kills', 40], d:'Kết cấu tổ ong — bền nhất với ít vật liệu nhất.'},
+  {id:'a2', s:'armor', n:'Giáp Đồ Thị', ic:'📈', r:3, st:{def:10, hp:10}, col:{coat:0x8a3ad0, coat2:0x6a2aa8}, req:['ch', 7, 3], d:'Đường cong phòng thủ luôn đồng biến.'},
+  {id:'a3', s:'armor', n:'Giáp Hằng Đẳng Thức', ic:'🟰', r:4, st:{def:16, hp:15}, col:{coat:0x2a3350, coat2:0x1c2238}, req:['title', 1], d:'Hai vế luôn bằng nhau — đòn nào cũng được cân bằng lại.'},
+  {id:'b0', s:'boots', n:'Ủng da', ic:'🥾', r:1, st:{}, d:'Đã đi qua nhiều vùng đất.'},
+  {id:'b1', s:'boots', n:'Giày Véc-tơ', ic:'➡', r:2, st:{cd:10}, col:{boots:0x2a7ad0}, req:['lv', 8], d:'Có hướng, có độ lớn — luôn đi đúng đường.'},
+  {id:'b2', s:'boots', n:'Giày Chuỗi Đúng', ic:'⚡', r:3, st:{cd:15, regen:30}, col:{boots:0xe0a020}, req:['best', 10], d:'Mười câu đúng liên tiếp nạp đầy năng lượng.'},
+  {id:'b3', s:'boots', n:'Giày Mây Cấp Số', ic:'☁', r:4, st:{cd:22, regen:50}, col:{boots:0xe8f4ff}, req:['lv', 20], d:'Mỗi bước nhân đôi tốc độ — như cấp số nhân.'},
+  {id:'c0', s:'charm', n:'Áo choàng đỏ', ic:'🧣', r:1, st:{}, d:'Tung bay theo từng bước chân.'},
+  {id:'c1', s:'charm', n:'Choàng Lửa Chuỗi', ic:'🔥', r:2, st:{regen:50, atk:4}, col:{cape:0xff7a2a}, req:['best', 5], d:'Bùng cháy khi trả lời đúng liên tiếp.'},
+  {id:'c2', s:'charm', n:'Choàng Căn Bậc Hai', ic:'√', r:3, st:{crit:5, def:5}, col:{cape:0x30b0e0}, req:['stars', 300], d:'Tìm ra gốc rễ điểm yếu của quái vật.'},
+  {id:'c3', s:'charm', n:'Choàng Euler Bất Tử', ic:'🌀', r:4, st:{regen:100, def:8, hp:8}, col:{cape:0x30d0a0}, req:['ch', 9, 5], d:'e^(iπ) + 1 = 0 — đẹp và bất khả xâm phạm.'}];
+const eqItem = id=> EQ.find(x=> x.id === id);
+let _eqC = null; const eqDirty = ()=> _eqC = null;
+function eqEquipped(){ if(_eqC) return _eqC; save.eq = save.eq || {}; return _eqC = EQ_SLOTS.map(([s])=> eqItem(save.eq[s]) && eqOwn(eqItem(save.eq[s])) ? eqItem(save.eq[s]) : EQ.find(x=> x.s === s && !x.req)); }
+const eqStat = k=> eqEquipped().reduce((t, x)=> t + (x.st[k] || 0), 0);
+// tiến độ mở khoá: [hiện có, cần, mô tả]
+function eqProg(req){ const [t, a, b] = req, CH = save.ch || {};
+  if(t === 'lv') return [save.lv, a, `Đạt cấp ${a}`];
+  if(t === 'stars') return [save.stars, a, `Trả lời đúng ${a} câu`];
+  if(t === 'kills') return [save.kills, a, `Hạ ${a} quái vật`];
+  if(t === 'best') return [Math.max(0, ...Object.values(CH).flatMap(G=> Object.values(G).map(R=> R.best || 0))), a, `Chuỗi ${a} câu đúng liên tiếp trong một chương`];
+  if(t === 'ch') return [Object.values(CH).reduce((n, G)=> n + Object.values(G).filter(R=> (R.lv || 0) >= a).length, 0), b, `${b} chương đạt điểm chuyên cần ${a} (${LVN[a]})`];
+  if(t === 'title') return [Object.values(save.tx || {}).reduce((n, G)=> n + Object.values(G).filter(X=> X.title).length, 0), a, `Nhận ${a} danh hiệu Khắc tinh Hộ vệ`];
+  return [0, 1, '']; }
+function eqOwn(x){ if(!x.req) return true; const [v, need] = eqProg(x.req); return v >= need; }
+const eqCol = ()=> Object.assign({}, ...eqEquipped().map(x=> x.col || {}));
+// báo trang bị mới mở khoá (một lần cho mỗi món)
+function eqCheck(){ eqDirty(); save.eqSeen = save.eqSeen || []; const fresh = EQ.filter(x=> x.req && eqOwn(x) && !save.eqSeen.includes(x.id)); if(!fresh.length) return;
+  fresh.forEach(x=> save.eqSeen.push(x.id)); save.eqNew = (save.eqNew || []).concat(fresh.map(x=> x.id)); persist(); eqBadge();
+  if(running) setTimeout(()=> toast(`🎒 Trang bị mới: <b style="color:${EQ_RAR[fresh[0].r].c}">${fresh[0].ic} ${fresh[0].n}</b>${fresh.length > 1 ? ` (+${fresh.length - 1} món)` : ''}<br><span style="font-size:.6em">Bấm 🎒 Trang bị để mặc thử</span>`, 3200), 2600); }
+const pMaxHp = ()=> Math.round((100 + save.lv*20)*(1 + eqStat('hp')/100)), pAtk = ()=> (12 + save.lv*3.6)*(1 + eqStat('atk')/100);
+const pCrit = base=> base + eqStat('crit')/100, pDmg = d=> Math.max(1, Math.round(d*(1 - eqStat('def')/100))), skMax = ()=> 7*(1 - eqStat('cd')/100);
 let META = null; const PACK = {};
 const DATA_V = '20261014d';   // đổi khi cập nhật ngân hàng câu hỏi để máy học sinh tải bản mới
 async function loadMeta(){ if(!META) META = await (await fetch('q/meta.json?v=' + DATA_V, {cache:'no-cache'})).json(); return META; }
@@ -488,6 +579,7 @@ async function showMenu(){
   renderAcct();
   const nTitle = Object.values(save.tx || {}).reduce((t, G)=> t + Object.values(G).filter(X=> X.title).length, 0);
   $('pinfo').innerHTML = `<div>⭐ Cấp <b>${save.lv}</b></div><div>🧠 ${save.stars} câu đúng</div><div>👾 ${save.kills} quái</div>${nTitle ? `<div>🏆 ${nTitle} danh hiệu</div>` : ''}`;
+  eqCheck(); eqBadge();
   makeHero(save.char || 'boy'); const ch = save.char || 'boy';
   $('charPick').innerHTML = `<div class="lb">Chọn nhân vật</div>` + [['boy', 'Hiệp sĩ'], ['girl', 'Tiểu thư']].map(([k, n])=> `<button data-c="${k}" class="${ch === k ? 'on' : ''}"><img src="icons/char-${k}.png" alt="">${n}</button>`).join('');
   $('charPick').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ auInit(); sfx('click'); save.char = b.dataset.c; persist(); makeHero(save.char); $('charPick').querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b)); });
@@ -862,7 +954,7 @@ function bossHit(M, d){
   shake = Math.max(shake, d.shape === 'line' ? 0.35 : 0.55); if(d.shape !== 'line' || d.attack === 'charge') sfx('thud');
   if(d.shape === 'circle' && d.attack !== 'shardRain') shockwave(d.center, 0xff5060, d.radius*0.9);
   if(deadT > 0 || M.dead || !inShape(d, player.position)) return;
-  const dmg = Math.round(M.atk*d.dmgScale*(0.85 + Math.random()*0.3)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b', dmg > pMaxHp()*0.3); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die();
+  const dmg = pDmg(M.atk*d.dmgScale*(0.85 + Math.random()*0.3)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b', dmg > pMaxHp()*0.3); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die();
 }
 // trùm: tiến lại gần, quay mặt, ra đòn (máu, vị trí, nhãn, bóng)
 function updBoss(M, d, dt, isC){
@@ -929,10 +1021,10 @@ const player = new THREE.Group(); scene.add(player);
 // chọn nhân vật: 'boy' Hiệp sĩ áo xanh / 'girl' Tiểu thư váy hồng — đổi được bất cứ lúc nào ở màn hình chính
 const heroCB = []; let heroImpl = null, heroStyle = '';
 const hero = new Proxy({}, {get:(t, k)=> k === 'on' ? (ev, fn)=>{ heroCB.push([ev, fn]); heroImpl.on(ev, fn); return hero; } : heroImpl[k]});
-function makeHero(style){ if(style === heroStyle && heroImpl) return; const rot = player.rotation.y;
+function makeHero(style){ const colors = eqCol(), sig = style + JSON.stringify(colors); if(sig === heroStyle && heroImpl) return; const rot = player.rotation.y;
   if(heroImpl){ player.remove(heroImpl.object); heroImpl.dispose(); }
-  heroImpl = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:style === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style});
-  heroStyle = style; player.add(heroImpl.object); player.rotation.y = rot; heroCB.forEach(([e, f])=> heroImpl.on(e, f)); }
+  heroImpl = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:style === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style, colors});
+  heroStyle = sig; player.add(heroImpl.object); player.rotation.y = rot; heroCB.forEach(([e, f])=> heroImpl.on(e, f)); }
 makeHero(save.char || 'boy');
 const pShadow = blob(1.8); scene.add(pShadow);
 let pHp = pMaxHp(), yaw = Math.PI, pitch = 0.42, dist = 11, skillCd = 0, skillTarget = null, moveAmt = 0, atkCd = 0, target = null, running = false, deadT = 0, inZone = null, walkPh = 0;
@@ -1068,7 +1160,7 @@ function updHud(){
   $('hpBar').style.width = Math.max(0, 100*pHp/pMaxHp()) + '%'; $('hpTxt').textContent = `${Math.max(0, Math.ceil(pHp))}/${pMaxHp()}`;
   const need = xpNeed(save.lv); $('xpBar').style.width = Math.min(100, 100*save.xp/need) + '%'; $('xpTxt').textContent = `KN ${save.xp}/${need}`;
 }
-function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.lv)){ save.xp -= xpNeed(save.lv); save.lv++; up = true; } if(up){ pHp = pMaxHp(); toast(`🎉 LÊN CẤP ${save.lv}!`, 2200); burst(player.position, 0xf2c14e, 1.5, 24); pillar(player.position, 0xf2c14e); sfx('lvl'); hero.victory(); } persist(); updHud(); }
+function gainXp(n){ save.xp += n; let up = false; while(save.xp >= xpNeed(save.lv)){ save.xp -= xpNeed(save.lv); save.lv++; up = true; } if(up){ pHp = pMaxHp(); toast(`🎉 LÊN CẤP ${save.lv}!`, 2200); burst(player.position, 0xf2c14e, 1.5, 24); pillar(player.position, 0xf2c14e); sfx('lvl'); hero.victory(); } persist(); updHud(); eqCheck(); }
 
 /* ======================= CÂU ĐỐ ======================= */
 const used = new Set();
@@ -1154,7 +1246,7 @@ function dim(k){ skyMat.uniforms.dim.value = k; hemi.intensity = W._hemi*(1 - 0.
 
 /* ======================= ĐIỀU KHIỂN ======================= */
 let keys = {}, joyV = {x:0, y:0}, rotAcc = 0, moveAcc = 0;
-addEventListener('keydown', e=>{ if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if(inQuiz || !running) return; keys[e.key.toLowerCase()] = true; if(e.key === ' '){ e.preventDefault(); attack(); } if(e.key.toLowerCase() === 'q') skill(); if(e.key.toLowerCase() === 'e') challenge(near); });
+addEventListener('keydown', e=>{ if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if(inQuiz || !running) return; keys[e.key.toLowerCase()] = true; if(e.key === ' '){ e.preventDefault(); attack(); } if(e.key.toLowerCase() === 'q') skill(); if(e.key.toLowerCase() === 'e') challenge(near); if(e.key.toLowerCase() === 'i') openEquip(); });
 addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 let drag = null;
 canvas.addEventListener('pointerdown', e=>{ drag = {x:e.clientX, y:e.clientY, id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
@@ -1170,6 +1262,85 @@ $('bAtk').onclick = ()=> attack(); $('bSkill').onclick = ()=> skill(); $('challe
 $('bHome').onclick = ()=>{ sfx('click'); persist(); showMenu(); };
 $('bBook').onclick = ()=>{ sfx('click'); openBook(); };
 $('book').onclick = e=>{ if(e.target.id === 'book') $('book').classList.add('hidden'); };
+// ----- màn hình trang bị: hình nhân 5 ô + xem trước 3D + danh sách theo ô + so sánh chỉ số -----
+const EQ_POS = {hat:'1/1', armor:'1/2', boots:'1/3', charm:'3/1', weapon:'3/2'};
+const EQ_SV = {}; let eqTab = 'weapon', eqSel = null;
+const hex = c=> '#' + c.toString(16).padStart(6, '0');
+const eqTint = x=>{ const c = x.col ? Object.values(x.col)[0] : null, r = EQ_RAR[x.r].c; return `background:linear-gradient(135deg,${c != null ? hex(c) + '55' : 'rgba(255,255,255,.06)'},${r}33);border:2px solid ${r};color:${r}`; };
+const eqChips = x=> Object.keys(x.st).length ? Object.entries(x.st).map(([k, v])=> `<span>+${v}${EQ_ST[k][1]} ${EQ_ST[k][0]}</span>`).join('') : '<span>Trang phục cơ bản</span>';
+function eqBadge(){ const n = (save.eqNew || []).length; ['eqBadge', 'eqBadge2'].forEach(id=>{ const el = $(id); if(el){ el.textContent = n; el.classList.toggle('hidden', !n); } }); }
+const eqSeenSlot = s=>{ if(!save.eqNew) return; const n = save.eqNew.length; save.eqNew = save.eqNew.filter(id=> eqItem(id).s !== s); if(save.eqNew.length !== n){ persist(); eqBadge(); } };
+function openEquip(slot){ auInit(); sfx('click'); eqCheck(); if(slot) eqTab = slot; eqSel = null; $('equip').classList.remove('hidden'); eqRender(); pvStart(); }
+function closeEquip(){ eqSeenSlot(eqTab); $('equip').classList.add('hidden'); pvStop(); }
+function eqPower(){ return Math.round(pAtk()*4 + pMaxHp()*0.6 + eqStat('crit')*6 + eqStat('def')*8 + eqStat('cd')*4 + eqStat('regen')*0.8); }
+function eqRender(){
+  const on = eqEquipped(), news = save.eqNew || [], own = EQ.filter(eqOwn).length;
+  $('eqPw').textContent = `⚡ Lực chiến ${eqPower()} · ${own}/${EQ.length} món`;
+  // hình nhân: 5 ô quanh nhân vật
+  const stage = $('eqDoll').querySelector('.stage');
+  $('eqDoll').innerHTML = EQ_SLOTS.map(([s, n], i)=>{ const x = on[i], [c, r] = EQ_POS[s].split('/'), nn = news.filter(id=> eqItem(id).s === s).length;
+    return `<button class="eslot${s === eqTab ? ' on' : ''}" data-s="${s}" title="${n}: ${x.n}" style="grid-column:${c};grid-row:${r};${eqTint(x)}"><span class="ico">${x.ic}</span><small>${n}</small>${nn ? `<span class="dot">${nn}</span>` : ''}</button>`; }).join('');
+  if(stage) $('eqDoll').appendChild(stage); else { const d = document.createElement('div'); d.className = 'stage'; d.innerHTML = '<div class="ped"></div>'; $('eqDoll').appendChild(d); }
+  $('eqDoll').querySelectorAll('.eslot').forEach(b=> b.onclick = ()=> eqSetTab(b.dataset.s));
+  // chỉ số: gốc theo cấp + phần trang bị cộng thêm
+  const P = (k, s = '%')=> eqStat(k) ? `<i>+${eqStat(k)}${s}</i>` : '';
+  $('eqStats').innerHTML = `<div><span>⚔ Tấn công</span><b>${Math.round(pAtk())}${P('atk')}</b></div><div><span>❤ Máu tối đa</span><b>${pMaxHp()}${P('hp')}</b></div>
+    <div><span>💥 Chí mạng</span><b>${12 + eqStat('crit')}%${P('crit')}</b></div><div><span>🛡 Giảm sát thương</span><b>${eqStat('def')}%</b></div>
+    <div><span>✨ Hồi tuyệt chiêu</span><b>${fmtS(skMax().toFixed(1))} giây${P('cd')}</b></div><div><span>💚 Hồi máu</span><b>×${fmtS((1 + eqStat('regen')/100).toFixed(1))}</b></div>
+    <div class="note">Trang bị mở khoá bằng <b>thành tích học tập</b> (cấp, câu đúng, chuỗi đúng, điểm chuyên cần, danh hiệu) — không mua, không rơi ngẫu nhiên.</div>`;
+  // thẻ ô đang chọn
+  $('eqTabs').innerHTML = EQ_SLOTS.map(([s, n, ic])=>{ const nn = news.filter(id=> eqItem(id).s === s).length; return `<button data-s="${s}" class="${s === eqTab ? 'on' : ''}">${ic} ${n}${nn ? `<span class="new">${nn}</span>` : ''}</button>`; }).join('');
+  $('eqTabs').querySelectorAll('button').forEach(b=> b.onclick = ()=> eqSetTab(b.dataset.s));
+  const cur = on[EQ_SLOTS.findIndex(x=> x[0] === eqTab)], list = EQ.filter(x=> x.s === eqTab); if(!eqSel || eqItem(eqSel).s !== eqTab) eqSel = cur.id;
+  $('eqGrid').innerHTML = list.map(x=>{ const ok = eqOwn(x), [v, need, txt] = x.req ? eqProg(x.req) : [1, 1, ''], R = EQ_RAR[x.r];
+    return `<button class="ecard${ok ? '' : ' lock'}${x.id === eqSel ? ' sel' : ''}" data-id="${x.id}" style="border-color:${x.id === eqSel ? R.c : 'var(--line)'}">
+      <div class="ic" style="${eqTint(x)}">${x.ic}</div>${ok ? '' : '<span class="lk">🔒</span>'}${x.id === cur.id ? '<span class="wear">Đang mặc</span>' : news.includes(x.id) ? '<span class="new">MỚI</span>' : ''}
+      <div><div class="nm" style="color:${ok ? R.c : 'inherit'}">${x.n}</div><div class="rr">${'★'.repeat(x.r)} ${R.n}</div></div>
+      <div class="chips">${eqChips(x)}</div>
+      ${ok ? '' : `<div class="ereq">🔒 ${txt}<div class="pbar"><div style="width:${Math.min(100, 100*v/need)}%;background:${R.c}"></div><span>${Math.min(v, need)}/${need}</span></div></div>`}</button>`; }).join('');
+  $('eqGrid').querySelectorAll('.ecard').forEach(b=> b.onclick = ()=>{ sfx('click'); eqSel = b.dataset.id; eqRender(); pvBuild(eqItem(eqSel)); });
+  // chi tiết + so sánh với món đang mặc
+  const x = eqItem(eqSel), ok = eqOwn(x), worn = x.id === cur.id, R = EQ_RAR[x.r];
+  const keys = [...new Set([...Object.keys(x.st), ...Object.keys(cur.st)])], cmp = worn ? '' : keys.map(k=>{ const d = (x.st[k] || 0) - (cur.st[k] || 0); return d ? `<span class="${d > 0 ? 'up' : 'dn'}">${d > 0 ? '▲ +' : '▼ '}${d}${EQ_ST[k][1]} ${EQ_ST[k][0]}</span>` : ''; }).join('');
+  $('eqDet').innerHTML = `<div class="edet"><div class="ic" style="${eqTint(x)}">${x.ic}</div><div class="tx"><b style="color:${R.c};font-size:16px">${x.n}</b> <span style="font-size:12px;opacity:.8">${'★'.repeat(x.r)} ${R.n}</span>
+    <p>${x.d}</p>${worn ? `<div class="chips">${eqChips(x)}</div>` : `<div class="cmp">${cmp || '<span>Không đổi chỉ số (chỉ đổi kiểu dáng)</span>'}</div>`}
+    ${ok ? '' : `<p>🔒 <b>Cách mở khoá:</b> ${eqProg(x.req)[2]} (hiện có ${eqProg(x.req)[0]}).</p>`}</div>
+    <button class="go" id="eqGo" ${ok && !worn ? '' : 'disabled'}>${worn ? '✓ Đang mặc' : ok ? 'Trang bị' : '🔒 Chưa mở khoá'}</button></div>`;
+  $('eqGo').onclick = ()=> eqWear(x);
+}
+function eqSetTab(s){ if(s === eqTab) return; sfx('click'); eqSeenSlot(eqTab); eqTab = s; eqSel = null; eqRender(); pvBuild(); }
+function eqWear(x){ if(!eqOwn(x)) return; const r = pHp/pMaxHp(); save.eq = save.eq || {}; save.eq[x.s] = x.id; eqDirty(); persist(); syncSoon();
+  pHp = Math.max(1, Math.round(r*pMaxHp())); if(running) updHud(); makeHero(save.char || 'boy'); sfx('ok'); eqRender(); pvBuild(null, true); }
+
+// xem trước 3D: bộ vẽ riêng, chỉ chạy khi hộp trang bị mở; kéo để xoay
+const PV = {};
+function pvOl(mesh, t){ const k = 'pv' + t; if(!EQ_SV[k]){ const m = EQ_SV[k] = new THREE.MeshBasicMaterial({color:0x15151c, side:THREE.BackSide});
+  m.onBeforeCompile = sh=>{ sh.vertexShader = 'attribute vec3 odir;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>\ntransformed += odir * ${t.toFixed(3)};`); }; m.customProgramCacheKey = ()=> k; }
+  mesh.add(new THREE.Mesh(mesh.geometry, EQ_SV[k])); }
+function pvStart(){
+  if(PV.r) return; const stage = $('eqDoll').querySelector('.stage'); if(!stage) return;
+  const cv = document.createElement('canvas'); stage.appendChild(cv);
+  try{ PV.r = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:true}); }catch(e){ cv.remove(); stage.insertAdjacentHTML('beforeend', `<img src="icons/char-${save.char || 'boy'}.png" alt="">`); return; }
+  PV.r.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); PV.cv = cv; PV.sc = new THREE.Scene(); PV.rot = 0.5; PV.drag = null;
+  PV.sc.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.15)); const dl = new THREE.DirectionalLight(0xffffff, 1.5); dl.position.set(3, 6, 5); PV.sc.add(dl);
+  PV.cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50); PV.cam.position.set(0, 1.55, 7.4); PV.cam.lookAt(0, 1.35, 0);
+  cv.onpointerdown = e=>{ PV.drag = e.clientX; cv.setPointerCapture(e.pointerId); }; cv.onpointermove = e=>{ if(PV.drag == null) return; PV.rot += (e.clientX - PV.drag)*0.012; PV.drag = e.clientX; }; cv.onpointerup = cv.onpointercancel = ()=> PV.drag = null;
+  pvBuild(); PV.t = performance.now();
+  const tick = ()=>{ if(!PV.r) return; PV.raf = requestAnimationFrame(tick); const t = performance.now(), dt = Math.min(0.05, (t - PV.t)/1000); PV.t = t;
+    const w = cv.clientWidth, h = cv.clientHeight; if(w && (w !== PV.w || h !== PV.hh)){ PV.w = w; PV.hh = h; PV.r.setSize(w, h, false); PV.cam.aspect = w/h; PV.cam.updateProjectionMatrix(); }
+    if(PV.drag == null) PV.rot += dt*0.5; if(PV.h){ PV.h.object.rotation.y = PV.rot; PV.h.update(dt); } PV.r.render(PV.sc, PV.cam); };
+  tick(); }
+// tạo lại nhân vật xem trước; try = món đang xem thử (chưa mặc)
+function pvBuild(tryItem, cheer){
+  if(!PV.r) return; if(PV.h){ PV.sc.remove(PV.h.object); PV.h.dispose(); PV.mats.forEach(m=> m.dispose()); }
+  const col = eqCol(); if(tryItem && tryItem.col) Object.assign(col, tryItem.col); const st = save.char || 'boy';
+  PV.mats = [toon({vertexColors:true}), toon({vertexColors:true, emissive:st === 'girl' ? 0x7a2a58 : 0x1a6a80})];
+  PV.h = createHero(THREE, {merge, material:PV.mats[0], glowMaterial:PV.mats[1], outline:pvOl, style:st, colors:col}); PV.sc.add(PV.h.object);
+  if(cheer) setTimeout(()=> PV.h && PV.h.victory(), 50); }
+function pvStop(){ if(!PV.r) return; cancelAnimationFrame(PV.raf); if(PV.h){ PV.h.dispose(); PV.mats.forEach(m=> m.dispose()); } PV.r.dispose(); try{ PV.r.forceContextLoss(); }catch(e){} PV.cv.remove(); Object.keys(PV).forEach(k=> delete PV[k]); }
+$('bEq').onclick = ()=> openEquip(); $('menuEq').onclick = ()=> openEquip(); $('eqX').onclick = closeEquip;
+$('equip').onclick = e=>{ if(e.target.id === 'equip') closeEquip(); };
+eqBadge();
 // cài đặt
 function openOpts(){ $('opts').classList.remove('hidden'); updOpts(); }
 function updOpts(){ $('oQ').querySelectorAll('button').forEach(b=> b.classList.toggle('on', b.dataset.q === save.opt.q)); $('oMus').checked = save.opt.music; $('oSfx').checked = save.opt.sfx; $('oFull').checked = fsOn();
@@ -1193,13 +1364,13 @@ function attack(){
 }
 hero.on('hit', d=>{
   slashFx(d.combo); const M = pickTarget(4.8); if(!M || M.answered === null) return; faceTo(M.g.position);
-  const crit = Math.random() < (d.combo === 3 ? 0.45 : 0.12); hit(M, pAtk()*d.dmgScale*(0.85 + Math.random()*0.3)*(crit ? 2 : 1), crit);
+  const crit = Math.random() < pCrit(d.combo === 3 ? 0.45 : 0.12); hit(M, pAtk()*d.dmgScale*(0.85 + Math.random()*0.3)*(crit ? 2 : 1), crit);
   if(d.combo === 3){ hero.weaponTip.getWorldPosition(_p); const to = M.g.position.clone().add(_v.set(0, 1.2*Math.min(2, M.baseScale), 0)); lightning(_p.clone(), to, {w:0.6, branch:1, life:0.25}); sparks(to, 0xbff6ff, 8); }
 });
 function skill(){
   if(!running || skillCd > 0 || deadT > 0 || cine || inQuiz) return; const M = pickTarget(6);
   if(!M || M.answered === null){ toast('Cần đứng gần quái đang giao chiến'); return; }
-  if(!hero.skill()) return; skillCd = 7; skillTarget = M; faceTo(M.g.position); sfx('skill');
+  if(!hero.skill()) return; skillCd = skMax(); skillTarget = M; faceTo(M.g.position); sfx('skill');
 }
 hero.on('impact', ()=>{
   shockwave(player.position, 0xa99bff, 8); burst(player.position, 0x8b7bff, 1.2, 16); shake = 0.9; hitStop = 0.12; sfx('hit'); sfx('zap');
@@ -1224,7 +1395,7 @@ function killMonster(M){
   M.dead = true; M.dying = M.boss ? 0 : M.model ? 1.0 : 0.4; if(M.model) M.model.die(); M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
   if((M.kind === 'guard' || M.kind === 'boss') && M.answered === true){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === M.total ? 2 : 1); checkLevel(M.Z.ci); syncSoon(800); }
   if(M.kind === 'guard' && M.answered !== null) txWin(M);
-  save.kills++;
+  save.kills++; eqCheck();
   const low = lowGrade();
   if(low){ floatText(M.g.position, '0 KN — ôn lớp dưới', '#ffd0a0'); if(!lowTip){ lowTip = 1; toast(`📘 Đang ôn tập Lớp ${grade} (dưới lớp của em)<br><span style="font-size:.65em">Không nhận kinh nghiệm và điểm thường xuyên — luyện ở vùng đất Lớp ${save.acct.khoi} để lên cấp</span>`, 3600); } }
   else if(M.answered === true){ const xp = Math.round((14 + M.lvl*9)*(M.kind === 'boss' ? 6 : M.kind === 'guard' ? 4 : M.kind === 'elite' ? 2 : 1)*1.5*streakMul(M.sk)*(M.rv ? 1.5 : 1));
@@ -1260,7 +1431,7 @@ function loop(t){
   // đo tốc độ khung hình: máy yếu thì tự giảm chất lượng
   perfM.t += rdt; perfM.n++; if(perfM.t >= 3){ const fps = perfM.n/perfM.t; perfM.t = 0; perfM.n = 0; if(perfM.skip > 0) perfM.skip--; else { lastFps = fps; if(save.opt.q === 'auto' && !cine && !inQuiz && fps < 30 && tierName !== 'low'){ const nt = ORDER[ORDER.indexOf(tierName) - 1]; save.opt.auto = nt; persist(); setTier(nt, false); toast('⚙ Đã giảm chất lượng hình để chơi mượt hơn', 2200); perfM.skip = 1; } } }
   if(hitStop > 0){ hitStop -= rdt; dt *= 0.08; }
-  atkCd = Math.max(0, atkCd - dt); skillCd = Math.max(0, skillCd - dt); $('skCd').style.transform = `scaleY(${skillCd/7})`;
+  atkCd = Math.max(0, atkCd - dt); skillCd = Math.max(0, skillCd - dt); $('skCd').style.transform = `scaleY(${skillCd/skMax()})`;
   if(deadT > 0){ deadT -= dt; if(deadT <= 0){ $('over').classList.add('hidden'); player.position.copy(campPos); pHp = pMaxHp(); updHud(); hero.revive(); } }
   else if(!inQuiz && !cine){
     let mx = 0, mz = 0; if(keys['w'] || keys['arrowup']) mz += 1; if(keys['s'] || keys['arrowdown']) mz -= 1; if(keys['a'] || keys['arrowleft']) mx += 1; if(keys['d'] || keys['arrowright']) mx -= 1;
@@ -1282,7 +1453,7 @@ function loop(t){
   // vùng an toàn: hồi máu
   const dCamp = player.position.distanceTo(campPos); if(dCamp < 7 && deadT <= 0 && pHp < pMaxHp()){ if(pHp < pMaxHp()*0.98 && !W._healing){ W._healing = true; W._hAcc = 0; sfx('heal'); } const hp0 = pHp; pHp = Math.min(pMaxHp(), pHp + pMaxHp()*0.25*dt); updHud();
     W._hAcc = (W._hAcc || 0) + dt; W._hSum = (W._hSum || 0) + pHp - hp0; if(Math.random() < dt*14) healSpark(); if(W._hAcc > 0.6){ W._hAcc = 0; floatText(player.position, '+' + Math.round(W._hSum), '#6dff9a'); W._hSum = 0; } }
-  else { W._healing = false; if(!target && pHp < pMaxHp() && deadT <= 0){ pHp = Math.min(pMaxHp(), pHp + pMaxHp()*0.02*dt); updHud(); } }
+  else { W._healing = false; if(!target && pHp < pMaxHp() && deadT <= 0){ pHp = Math.min(pMaxHp(), pHp + pMaxHp()*0.02*(1 + eqStat('regen')/100)*dt); updHud(); } }
   // vùng đang đứng
   let z = null; zones.forEach(Z=>{ if(Math.hypot(player.position.x - Z.x, player.position.z - Z.z) < Z.r + 2) z = Z; });
   if(z !== inZone){ inZone = z; $('zone').textContent = z ? `Khu ${z.idx + 1}: ${z.name}` : (dCamp < 9 ? '🏕 Trại xuất phát' : WORLDS[grade].name); if(z) toast(`📍 ${z.name}`, 1600); }
@@ -1316,7 +1487,7 @@ function loop(t){
       if(M.stun > 0){ M.stun -= dt; if(!M.stars){ M.stars = new THREE.Group(); for(let i = 0; i < 3; i++){ const s = new THREE.Sprite(STAR_MAT); s.scale.setScalar(0.45); M.stars.add(s); } world.add(M.stars); } M.stars.visible = true; M.stars.children.forEach((s, i)=>{ const a = M.t*5 + i*2.09; s.position.set(Math.cos(a)*0.8*M.baseScale, 0, Math.sin(a)*0.8*M.baseScale); }); M.stars.position.set(M.g.position.x, M.g.position.y + MTOP[M.type]*M.baseScale + 0.1, M.g.position.z); }
       else { if(M.stars) M.stars.visible = false;
         const reach = 2.4*M.baseScale/1.2 + 0.6;
-        if(M.wind > 0){ M.wind -= dt; if(!M.model) M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ if(!M.model) M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = Math.round(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
+        if(M.wind > 0){ M.wind -= dt; if(!M.model) M.g.rotation.x = -0.25*(1 - M.wind/0.4); if(M.wind <= 0){ if(!M.model) M.g.rotation.x = 0.2; if(d < reach + 1.2){ const dmg = pDmg(M.atk*(0.8 + Math.random()*0.4)); pHp -= dmg; floatText(player.position, '-' + dmg, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.35); updHud(); if(pHp <= 0) die(); } } }
         else { M.g.rotation.x *= 0.85;
           if(d > reach){ tmp.copy(player.position).sub(M.g.position).setY(0).normalize().multiplyScalar(5.2*dt); M.g.position.add(tmp); mv = 1; }
           else { M.cd -= dt; if(M.cd <= 0){ M.cd = M.kind === 'guard' ? 1.05 : 1.25; M.wind = 0.4; if(M.model) M.model.attack(); } } } }
