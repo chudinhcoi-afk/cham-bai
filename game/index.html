@@ -952,9 +952,9 @@ function buildTeacher(){
   aura.rotation.x = -Math.PI/2;
   return {G, legL, legR, armL, armR, aura}; }
 function spawnWB(){ const open = zones.filter(z=> !z.lock); if(!open.length) return; const Z0 = open[Math.floor(Math.random()*open.length)];
-  const T = buildTeacher(), x = Z0.x + 5, z = Z0.z + 3; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
+  const T = buildTeacher(), gA = W._gA || 0, x = Math.cos(gA)*(GATE_R + 4) + Math.sin(gA)*2.5, z = Math.sin(gA)*(GATE_R + 4) - Math.cos(gA)*2.5; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
   const lab = textSprite('👨‍🏫 Thầy Định', {screen:0.034, color:'#ffd76a'}); world.add(lab);
-  WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:3, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99}); }
+  WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:25, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99}); }
 function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position, dp = P.distanceTo(player.position);
   if(dp < 7 && !inQuiz){ W0.state = 'talk'; W0.G.rotation.y = Math.atan2(player.position.x - P.x, player.position.z - P.z); }
   else if(W0.state === 'talk'){ W0.state = 'idle'; W0.t = 2; }
@@ -1432,6 +1432,7 @@ async function enterWorld(g){
   $('avTxt').textContent = (save.name || '?').trim().split(' ').pop().slice(0,1).toUpperCase(); updHud(); cloudTxt(save.acct ? '☁ ' + save.acct.lop + ' · SBD ' + save.acct.sbd : 'Chơi tự do (không tính điểm)'); toast(`${WORLDS[g].mood} ${WORLDS[g].name}<br><span style="font-size:.6em">Lớp ${g} · ${zones.length} khu vực</span>`, 2600);
   renderer.compile(scene, camera); $('loading').classList.add('hidden');
   perfM.t = 0; perfM.n = 0; perfM.skip = 1; mus.mode = 'explore'; musStart(g);
+  if(WBo) setTimeout(()=>{ if(running && WBo) toast('👨‍🏫 Thầy Định đang đứng ngoài cổng trường — đến thách đấu nhé!<br><span style="font-size:.6em">Thầy đi lại giữa các khu; tìm chấm vàng <b>Đ</b> trên bản đồ nhỏ</span>', 3800); }, 3000);
   if(!save.tut) tutStart(); lowTip = 0; if(lowGrade()) setTimeout(()=> toast(`📘 Ôn tập Lớp ${g}: không nhận kinh nghiệm và điểm thường xuyên`, 3200), 2800);
   lastT = performance.now(); requestAnimationFrame(loop);
 }
@@ -1908,6 +1909,7 @@ function drawMini(){
   zones.forEach(Z=>{ const [x, y] = P(Z.x, Z.z); mx.strokeStyle = Z.lock ? 'rgba(154,124,255,.9)' : Z.done ? 'rgba(242,193,78,.8)' : 'rgba(255,255,255,.35)'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, Z.r*k, 0, 7); mx.stroke(); });
   { const [x, y] = P(campPos.x, campPos.z); mx.fillStyle = '#f2c14e'; mx.beginPath(); mx.arc(x, y, 7, 0, 7); mx.fill(); }
   monsters.forEach(M=>{ if(M.dead) return; const [x, y] = P(M.g.position.x, M.g.position.z); mx.fillStyle = M.kind === 'boss' ? '#c77dff' : M.kind === 'guard' ? '#9fd8ff' : M.morph ? '#ff2a2a' : M.answered ? '#4aa3ff' : '#ff8a5b'; mx.beginPath(); mx.arc(x, y, M.kind === 'boss' ? 7 : 4, 0, 7); mx.fill(); });
+  if(WBo){ const [x, y] = P(WBo.G.position.x, WBo.G.position.z), pu = 1 + 0.25*Math.sin(performance.now()*0.006); mx.fillStyle = '#ffd23a'; mx.strokeStyle = '#3a2400'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, 9*pu, 0, 7); mx.fill(); mx.stroke(); mx.fillStyle = '#3a2400'; mx.font = 'bold 12px sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('Đ', x, y + 0.5); }
   mx.restore(); mx.fillStyle = '#fff'; mx.beginPath(); mx.moveTo(R, R - 9); mx.lineTo(R - 6, R + 6); mx.lineTo(R + 6, R + 6); mx.fill();
 }
 function openBook(){
