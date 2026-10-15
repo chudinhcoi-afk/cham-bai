@@ -419,6 +419,7 @@ const addDays = (d, n)=>{ const t = new Date(d + 'T00:00:00'); t.setDate(t.getDa
 const viDate = (d, wd)=>{ const t = new Date(d + 'T00:00:00'), p2 = n=> String(n).padStart(2, '0'), s = `${p2(t.getDate())}/${p2(t.getMonth() + 1)}`; return wd ? `${t.getDay() ? 'Thứ ' + ['', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy'][t.getDay()] : 'Chủ nhật'}, ${s}/${t.getFullYear()}` : s; };
 const daysTo = d=> Math.round((new Date(d + 'T00:00:00') - new Date(today() + 'T00:00:00'))/864e5);
 function chLock(g, ci){ const A = save.acct;
+  if(TESTER && tUnl()[g + ':' + ci]) return null;
   // máy thử của thầy/cô (chơi tự do) bật "xem thử khoá chương": đã mở đến chương 3 (mở được 2 tuần), chương 4 mở sau 1 tuần, các chương sau cách nhau 2 tuần
   if(!A && TESTER && testerDemo()){ const st = demoStart(g, ci); if(!st) return null; const open = addDays(st, -DEMO_LEAD); return today() >= open ? null : {open, start:st, demo:true}; }
   if(!A || +g !== +A.khoi || !A.lich || !A.lich.d) return null;
@@ -631,6 +632,9 @@ const DEMO_LEAD = 14;
 // ngày học theo PPCT giả định cho chế độ xem thử: chương 3 bắt đầu học hôm nay (mở trong game từ 14 ngày trước)
 function demoStart(g, ci){ const pos = META && META[g] ? META[g].map((c, i)=> [c, i]).filter(([c])=> c.n).findIndex(([, i])=> i === +ci) : -1; if(pos < 0) return null;
   return pos <= 2 ? addDays(today(), -28*(2 - pos)) : addDays(today(), 7 + DEMO_LEAD + (pos - 3)*14); }
+// mở chương thủ công trên máy thử (chỉ máy này, không ảnh hưởng học sinh): {"khối:ci": 1}
+const tUnl = ()=>{ try{ return JSON.parse(localStorage.getItem('mbp_game_unlock') || '{}') || {}; }catch(e){ return {}; } };
+function tUnlSet(o){ try{ localStorage.setItem('mbp_game_unlock', JSON.stringify(o)); }catch(e){} }
 const testerDemo = ()=>{ try{ return localStorage.getItem('mbp_game_demo') === '1'; }catch(e){ return false; } };
 async function testerCheck(){ try{ const P = new URLSearchParams(location.search), k0 = P.get('thu');
     if(k0){ localStorage.setItem('mbp_game_thu', k0); P.delete('thu'); history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '')); }
@@ -645,7 +649,7 @@ function renderAcct(err){
   el.innerHTML = `<h3>🎓 Vào lớp (tính điểm chuyên cần)</h3><div class="row">${qsLop ? '' : '<input id="aMa" maxlength="10" placeholder="Mã lớp" style="max-width:130px;text-transform:uppercase">'}<input id="aSbd" inputmode="numeric" maxlength="10" placeholder="Số báo danh" style="max-width:150px"><input id="aTen" maxlength="40" placeholder="Họ và tên (có dấu)"><button class="go2" id="aGo">Vào lớp</button></div>
     ${qsLop ? `<div class="muted">Mã lớp: <b>${qsLop}</b></div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
     ${TESTER ? `<div class="muted">🧪 <b>Máy thử của thầy/cô</b> — chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"> <a href="#" onclick="testerOff();return false" style="color:#ffb0a0">tắt</a>
-      <label style="display:block;margin-top:6px;cursor:pointer"><input type="checkbox" ${testerDemo() ? 'checked' : ''} onchange="try{ localStorage.setItem('mbp_game_demo', this.checked ? '1' : '0'); }catch(e){}"> 👁 Xem thử khoá chương & Người gác chương (đã mở đến chương 3)</label></div>` : '<div class="muted">Học sinh vào lớp bằng <b>mã lớp + số báo danh + họ tên</b> (thầy/cô phát) để chơi và được tính điểm.</div>'}`;
+      <label style="display:block;margin-top:6px;cursor:pointer"><input type="checkbox" ${testerDemo() ? 'checked' : ''} onchange="try{ localStorage.setItem('mbp_game_demo', this.checked ? '1' : '0'); }catch(e){}"> 👁 Xem thử khoá chương & Người gác chương (đã mở đến chương 3)</label>${Object.keys(tUnl()).length ? ` <a href="#" onclick="localStorage.removeItem('mbp_game_unlock');this.remove();return false" style="color:#ffd76a">↺ khoá lại ${Object.keys(tUnl()).length} chương đã mở thủ công</a>` : ''}</div>` : '<div class="muted">Học sinh vào lớp bằng <b>mã lớp + số báo danh + họ tên</b> (thầy/cô phát) để chơi và được tính điểm.</div>'}`;
   $('aGo').onclick = async ()=>{ const b = $('aGo'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
     try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); chatPull(); chatLoop(); }catch(e){ renderAcct(e.message); } };
 }
@@ -923,7 +927,10 @@ function openKeeper(K){ sfx('click'); const Z = K.Z, L = Z.lock, A = save.acct |
     <p style="font-size:16px;line-height:1.55;margin:12px 0">${L.open ? `“Cánh cổng này sẽ mở vào <b style="color:var(--gold)">${viDate(L.open, true)}</b> — còn <b>${dn}</b> ngày nữa. Theo phân phối chương trình, lớp ${A.lop} bắt đầu học chương này từ ${viDate(L.start, true)}; ta mở sớm ${lead} ngày để các em kịp làm quen.”` : '“Thầy/cô chưa đặt lịch mở chương này. Khi đến lúc học, cánh cổng sẽ tự mở.”'}</p>
     <p style="font-size:14px;opacity:.85;margin:0 0 8px">Trong lúc chờ, hãy luyện thật vững các chương đã mở — <b>10 bạn đầu tiên</b> đạt điểm tối đa ở mỗi chương mới được trọn <b>10 điểm</b> thường xuyên!</p>
     <table style="width:100%;border-collapse:collapse;font-size:13.5px"><tr style="opacity:.75;text-align:left"><th>Chương</th><th>Học theo PPCT</th><th>Mở trong game</th><th>Chuyên cần</th></tr>${rows}</table>
-    <button class="ibtn" style="margin-top:12px" onclick="document.getElementById('keeper').classList.add('hidden')">Đã hiểu</button>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="ibtn" onclick="document.getElementById('keeper').classList.add('hidden')">Đã hiểu</button>
+    ${TESTER ? `<button class="ibtn" id="kOpen1" style="border-color:var(--gold)">🔓 Mở chương này</button><button class="ibtn" id="kOpenTo" style="border-color:var(--gold)">🔓 Mở đến chương này</button><span style="font-size:12px;opacity:.7;align-self:center">(chỉ trên máy thử của thầy/cô)</span>` : ''}</div>`;
+  if(TESTER){ const go = list=>{ const o = tUnl(); list.forEach(z=> o[grade + ':' + z.ci] = 1); tUnlSet(o); $('keeper').classList.add('hidden'); reopenWorld(); toast(`🔓 Đã mở ${list.length > 1 ? 'đến ' : ''}khu ${Z.idx + 1} trên máy thử`, 2400); };
+    $('kOpen1').onclick = ()=> go([Z]); $('kOpenTo').onclick = ()=> go(zones.filter(z=> z.idx <= Z.idx && z.lock)); }
   $('keeper').classList.remove('hidden'); }
 function buildWorld(g){
   clearWorld(); W = WORLDS[g];
@@ -1564,6 +1571,7 @@ $('oMus').onchange = ()=>{ save.opt.music = $('oMus').checked; persist(); auInit
 $('oFull').onchange = ()=>{ save.opt.full = $('oFull').checked; persist(); if(save.opt.full) goFull(); else if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); };
 $('oSfx').onchange = ()=>{ save.opt.sfx = $('oSfx').checked; persist(); auInit(); auVol(); sfx('click'); };
 $('oTut').onclick = ()=>{ $('opts').classList.add('hidden'); save.tut = 0; persist(); if(running) tutStart(); else toast('Hướng dẫn sẽ hiện khi vào vùng đất', 2000); };
+function reopenWorld(){ if(!running || inQuiz || cine) return; const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); sfx('lvl'); }
 function setTier(name, rebuild){ const old = tierName; tierName = name; applyTier(); if(rebuild && running && old !== name && !inQuiz && !cine){ const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); } }
 
 function nearestEnemy(range){ let best = null, bd = range; monsters.forEach(M=>{ if(M.dead) return; const d = M.g.position.distanceTo(player.position); if(d < bd){ bd = d; best = M; } }); return best; }
