@@ -1266,10 +1266,10 @@ function askQuiz(M){
 let inQuiz = false;
 async function challenge(M){
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
-  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; }
-    const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
+  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; } }
+  if(M.kind === 'guard'){ const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
   inQuiz = true; if(CHAT.open) chatClose(); keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
-  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; gkSet(grade, M.Z.ci, 0); M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); persist(); syncSoon(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
+  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); persist(); syncSoon(); } if(M.kind === 'guard'){ gkSet(grade, M.Z.ci, 0); persist(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
@@ -1443,7 +1443,7 @@ function killMonster(M){
   if((M.kind === 'guard' || M.kind === 'boss') && M.answered === true){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === M.total ? 2 : 1); checkLevel(M.Z.ci); syncSoon(800); }
   if(M.kind === 'guard' && M.answered !== null) txWin(M);
   save.kills++; eqCheck();
-  if(M.kind !== 'guard' && M.kind !== 'boss' && M.answered === true && M.Z){ const k = gkGet(grade, M.Z.ci) + 1; gkSet(grade, M.Z.ci, k); if(k === GUARD_NEED && txOn()) setTimeout(()=> toast(`🛡 Đã hạ đủ ${GUARD_NEED} quái nhỏ!<br><span style="font-size:.6em">Hộ vệ chương đã sẵn sàng nhận lời thách đấu · hệ số điểm ${fmtM(txM(txRec(grade, M.Z.ci)))}</span>`, 3000), 1800);
+  if(M.kind !== 'guard' && M.kind !== 'boss' && M.answered === true && M.Z){ const k = gkGet(grade, M.Z.ci) + 1; gkSet(grade, M.Z.ci, k); if(k === GUARD_NEED) setTimeout(()=> toast(`🛡 Đã hạ đủ ${GUARD_NEED} quái nhỏ!<br><span style="font-size:.6em">Hộ vệ chương đã sẵn sàng nhận lời thách đấu${txOn() ? ' · hệ số điểm ' + fmtM(txM(txRec(grade, M.Z.ci))) : ''}</span>`, 3000), 1800);
     if(txOn() && k > GUARD_NEED && (k - GUARD_NEED) % TXM_KILLS === 0){ const X = txRec(grade, M.Z.ci); if(txM(X) < TXM_MAX){ X.m = txM(X) + 1; persist(); syncSoon(); setTimeout(()=> toast(`📈 Hệ số điểm Hộ vệ tăng lên ${fmtM(X.m)}`, 2400), 1800); } } }
   const low = lowGrade();
   if(low){ floatText(M.g.position, '0 KN — ôn lớp dưới', '#ffd0a0'); if(!lowTip){ lowTip = 1; toast(`📘 Đang ôn tập Lớp ${grade} (dưới lớp của em)<br><span style="font-size:.65em">Không nhận kinh nghiệm và điểm thường xuyên — luyện ở vùng đất Lớp ${save.acct.khoi} để lên cấp</span>`, 3600); } }
@@ -1558,7 +1558,7 @@ function loop(t){
     M.label.position.set(M.g.position.x, top + 0.55, M.g.position.z); M.label.visible = (d < 22 || M.state === 'fight' || ((M.kind === 'boss' || M.kind === 'guard') && d < 50)) && M.spawnT >= 1;
     M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
   }
-  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near){ const gl = near.kind === 'guard' && txOn() && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
+  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near){ const gl = near.kind === 'guard' && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
   if(cine) updCine(rdt);
   // hiệu ứng
   for(let i = fx.length - 1; i >= 0; i--){ const f = fx[i]; f.life -= dt; if(f.upd) f.upd(f, dt); if(f.life <= 0){ f.parent.remove(f.obj); disposeFx(f.obj); fx.splice(i, 1); } }
@@ -1625,7 +1625,7 @@ function openBook(){
   const rows = META[grade].map((c, ci)=> c.n ? (()=>{ const R = (save.ch || {})[grade] && save.ch[grade][ci], sc = chScore(R, c);
     return `<tr><td>${c.ten}<div style="font-size:12px;opacity:.75;margin-top:3px">${sc.lv === 10 ? '🏅 Bậc thầy ' + shortCh(c.ten) : sc.need.length ? 'Để lên ' + (sc.lv ? sc.lv + 1 : 7) + ' điểm cần: ' + sc.need.join('; ') : ''}</div></td>
       <td style="text-align:center"><span class="lvchip" style="background:${sc.lv ? LVC[sc.lv] : 'rgba(255,255,255,.1)'};color:${sc.lv ? '#1a1a1a' : '#fff'}">${fmtS(sc.s)}</span></td><td style="font-size:12px">${R ? `${R.c || 0}/${R.n || 0} đúng<br>${Math.round(sc.cov*100)}% dạng` : '—'}</td>
-      <td style="text-align:center;font-size:12px">${(()=>{ const X = save.tx && save.tx[grade] && save.tx[grade][ci]; if(!X || !X.n) return '—'; return `${X.title ? '🏆 ' : ''}<b style="font-size:15px">${X.w ? fmtS(X.b) : '—'}</b><br>${X.w}/${X.n} lần thắng · hôm nay ${X.a[today()] || 0}/${TX_DAY}`; })()}${txOn() ? `<br><span style="opacity:.8">quái nhỏ ${Math.min(gkGet(grade, ci), GUARD_NEED)}/${GUARD_NEED} · hệ số ${fmtM(txM((save.tx && save.tx[grade] && save.tx[grade][ci]) || {}))}</span>` : ''}</td></tr>`; })() : '').join('');
+      <td style="text-align:center;font-size:12px">${(()=>{ const X = save.tx && save.tx[grade] && save.tx[grade][ci]; if(!X || !X.n) return '—'; return `${X.title ? '🏆 ' : ''}<b style="font-size:15px">${X.w ? fmtS(X.b) : '—'}</b><br>${X.w}/${X.n} lần thắng · hôm nay ${X.a[today()] || 0}/${TX_DAY}`; })()}<br><span style="opacity:.8">quái nhỏ ${Math.min(gkGet(grade, ci), GUARD_NEED)}/${GUARD_NEED}${txOn() ? ` · hệ số ${fmtM(txM((save.tx && save.tx[grade] && save.tx[grade][ci]) || {}))}` : ''}</span></td></tr>`; })() : '').join('');
   $('bookBox').innerHTML = `<h3 style="margin:0 0 4px">📖 Sổ tay — Lớp ${grade}${save.acct ? ' · ' + save.acct.ten : ''}</h3>
     <p style="margin:0 0 10px;opacity:.8;font-size:13px">Điểm chuyên cần từng chương: <b style="color:${LVC[7]}">7 Chiến binh</b> · <b style="color:${LVC[8]}">8 Hiệp sĩ</b> · <b style="color:${LVC[9]}">9 Dũng sĩ</b> · <b style="color:${LVC[10]}">10 Bậc thầy (danh hiệu)</b>. Tỉ lệ đúng tính trên 30 câu gần nhất; mức 9–10 cần hạ Hộ vệ chương và chơi nhiều ngày.${save.acct ? '' : ' <b>Đang chơi tự do — điểm không gửi cho thầy/cô.</b>'}</p>
     <table><tr><th>Chương</th><th>Chuyên cần</th><th>Tiến độ</th><th>Thường xuyên<br><span style="font-weight:400;font-size:11px">(thắng Hộ vệ)</span></th></tr>${rows}</table>
