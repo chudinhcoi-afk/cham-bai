@@ -419,10 +419,10 @@ const addDays = (d, n)=>{ const t = new Date(d + 'T00:00:00'); t.setDate(t.getDa
 const viDate = (d, wd)=>{ const t = new Date(d + 'T00:00:00'), p2 = n=> String(n).padStart(2, '0'), s = `${p2(t.getDate())}/${p2(t.getMonth() + 1)}`; return wd ? `${t.getDay() ? 'Thứ ' + ['', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy'][t.getDay()] : 'Chủ nhật'}, ${s}/${t.getFullYear()}` : s; };
 const daysTo = d=> Math.round((new Date(d + 'T00:00:00') - new Date(today() + 'T00:00:00'))/864e5);
 function chLock(g, ci){ const A = save.acct;
-  // máy thử của thầy/cô (chơi tự do) bật "xem thử khoá chương": khoá từ chương thứ 3, mỗi chương mở cách nhau 2 tuần
-  if(!A && TESTER && testerDemo()){ const pos = META && META[g] ? META[g].map((c, i)=> [c, i]).filter(([c])=> c.n).findIndex(([, i])=> i === +ci) : -1; if(pos < 2) return null; const open = addDays(today(), 7 + (pos - 2)*14); return {open, start:addDays(open, 10), demo:true}; }
+  // máy thử của thầy/cô (chơi tự do) bật "xem thử khoá chương": đã mở đến chương 3 (mở được 2 tuần), chương 4 mở sau 1 tuần, các chương sau cách nhau 2 tuần
+  if(!A && TESTER && testerDemo()){ const st = demoStart(g, ci); if(!st) return null; const open = addDays(st, -DEMO_LEAD); return today() >= open ? null : {open, start:st, demo:true}; }
   if(!A || +g !== +A.khoi || !A.lich || !A.lich.d) return null;
-  const st = A.lich.d[ci]; if(!st) return {open:null, start:null}; const open = addDays(st, -(A.lich.lead == null ? 10 : +A.lich.lead));
+  const st = A.lich.d[ci]; if(!st) return {open:null, start:null}; const open = addDays(st, -(A.lich.lead == null ? 14 : +A.lich.lead));
   return today() >= open ? null : {open, start:st}; }
 /* ----- trần điểm thường xuyên theo thứ tự trong lớp: 10 bạn đầu đạt điểm tối đa của chương được 10, 10 bạn tiếp theo tối đa 9,9, ...
    danh sách chung game/rank/{mã}/{khối}/{ci}/{sbd} = thời điểm (giờ máy chủ) — ai ghi trước xếp trước ----- */
@@ -627,6 +627,10 @@ let tierName = save.opt.q !== 'auto' ? save.opt.q : (save.opt.auto || (mobile ? 
    máy lưu mật khẩu, mỗi lần mở game băm SHA-256 so với dấu vân tay dưới đây (mã nguồn chỉ có dấu vân tay, không có mật khẩu). ----- */
 const TEST_H = '86b35533939844a0373b12d1f93780392a9f28e480c46426dfcbdec918684bcc';
 let TESTER = false;
+const DEMO_LEAD = 14;
+// ngày học theo PPCT giả định cho chế độ xem thử: chương 3 bắt đầu học hôm nay (mở trong game từ 14 ngày trước)
+function demoStart(g, ci){ const pos = META && META[g] ? META[g].map((c, i)=> [c, i]).filter(([c])=> c.n).findIndex(([, i])=> i === +ci) : -1; if(pos < 0) return null;
+  return pos <= 2 ? addDays(today(), -28*(2 - pos)) : addDays(today(), 7 + DEMO_LEAD + (pos - 3)*14); }
 const testerDemo = ()=>{ try{ return localStorage.getItem('mbp_game_demo') === '1'; }catch(e){ return false; } };
 async function testerCheck(){ try{ const P = new URLSearchParams(location.search), k0 = P.get('thu');
     if(k0){ localStorage.setItem('mbp_game_thu', k0); P.delete('thu'); history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '')); }
@@ -641,7 +645,7 @@ function renderAcct(err){
   el.innerHTML = `<h3>🎓 Vào lớp (tính điểm chuyên cần)</h3><div class="row">${qsLop ? '' : '<input id="aMa" maxlength="10" placeholder="Mã lớp" style="max-width:130px;text-transform:uppercase">'}<input id="aSbd" inputmode="numeric" maxlength="10" placeholder="Số báo danh" style="max-width:150px"><input id="aTen" maxlength="40" placeholder="Họ và tên (có dấu)"><button class="go2" id="aGo">Vào lớp</button></div>
     ${qsLop ? `<div class="muted">Mã lớp: <b>${qsLop}</b></div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
     ${TESTER ? `<div class="muted">🧪 <b>Máy thử của thầy/cô</b> — chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"> <a href="#" onclick="testerOff();return false" style="color:#ffb0a0">tắt</a>
-      <label style="display:block;margin-top:6px;cursor:pointer"><input type="checkbox" ${testerDemo() ? 'checked' : ''} onchange="try{ localStorage.setItem('mbp_game_demo', this.checked ? '1' : '0'); }catch(e){}"> 👁 Xem thử khoá chương & Người gác chương (khoá từ chương 3)</label></div>` : '<div class="muted">Học sinh vào lớp bằng <b>mã lớp + số báo danh + họ tên</b> (thầy/cô phát) để chơi và được tính điểm.</div>'}`;
+      <label style="display:block;margin-top:6px;cursor:pointer"><input type="checkbox" ${testerDemo() ? 'checked' : ''} onchange="try{ localStorage.setItem('mbp_game_demo', this.checked ? '1' : '0'); }catch(e){}"> 👁 Xem thử khoá chương & Người gác chương (đã mở đến chương 3)</label></div>` : '<div class="muted">Học sinh vào lớp bằng <b>mã lớp + số báo danh + họ tên</b> (thầy/cô phát) để chơi và được tính điểm.</div>'}`;
   $('aGo').onclick = async ()=>{ const b = $('aGo'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
     try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); chatPull(); chatLoop(); }catch(e){ renderAcct(e.message); } };
 }
@@ -911,7 +915,7 @@ function buildKeeper(Z, px, pz){
   const bang = textSprite('❗', {scale:0.9}); bang.position.set(kx, ky + 3.9, kz); world.add(bang);
   const tag = textSprite('🧙 Người gác chương', {screen:0.028, color:'#ffe6a3'}); tag.position.set(kx, ky + 3.35, kz); world.add(tag);
   keepers.push({keeper:true, Z, g:G, bang, base:G.rotation.y, name:'Người gác chương', greeted:false}); }
-function openKeeper(K){ sfx('click'); const Z = K.Z, L = Z.lock, A = save.acct || {lop:'thử', lich:{lead:10, d:{}}}, lead = A.lich.lead == null ? 10 : +A.lich.lead, C = META[grade];
+function openKeeper(K){ sfx('click'); const Z = K.Z, L = Z.lock, A = save.acct || {lop:'thử', lich:{lead:DEMO_LEAD, d:Object.fromEntries(zones.map(z=> [z.ci, demoStart(grade, z.ci)]))}}, lead = A.lich.lead == null ? 14 : +A.lich.lead, C = META[grade];
   const rows = zones.map(z=>{ const lk = z.lock, st = (A.lich.d && A.lich.d[z.ci]) || (lk && lk.start), sc = chScore((save.ch || {})[grade] && save.ch[grade][z.ci], C[z.ci]);
     return `<tr${z === Z ? ' style="background:rgba(242,193,78,.14)"' : ''}><td>${z.idx + 1}. ${shortCh(z.name)}</td><td>${st ? viDate(st) : '—'}</td><td>${lk ? (lk.open ? '🔒 ' + viDate(lk.open) : '🔒 chưa có lịch') : '✅ đã mở'}</td><td style="text-align:center">${lk ? '—' : fmtS(sc.s)}</td></tr>`; }).join('');
   const dn = L.open ? daysTo(L.open) : null;
