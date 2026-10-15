@@ -1460,6 +1460,13 @@ function pickQuestion(M){
   const [q, i] = cand[Math.floor(Math.random()*cand.length)]; used.add(grade + ':' + i); return Object.assign({}, q, {rv:revenge});
 }
 let quizTimer = null, curQ = null;
+/* ----- thời gian trả lời: Nhận biết 45 giây, Thông hiểu 60 giây, Vận dụng 180 giây (gấp đôi trước), có hình +20 giây;
+   bài toán có lời văn (tình huống thực tế, đề dài ≥ 25 chữ) 5 phút ----- */
+const WORD_KW = 'người|bác|anh|chị|chú|ông|bà|gia đình|công ty|cửa hàng|siêu thị|nhà máy|xí nghiệp|ô tô|xe máy|xe|máy bay|tàu|thuyền|ca nô|vòi nước|vòi|bể|thùng|bồn|giá bán|giá tiền|giá vé|tiền|nghìn đồng|triệu đồng|lãi suất|ngân hàng|tiết kiệm|sản xuất|sản phẩm|trạm|vận tốc|quãng đường|km|lít|kg|tấn|giờ|phút|dân số|vi khuẩn|nhiệt độ|khán giả|vé|đội|trận|lương|chi phí|doanh thu|lợi nhuận|ruộng|vườn|mảnh đất|khu đất|bức tường|tòa nhà|tháp|cây cầu|đường hầm|học sinh|câu lạc bộ|cuộc thi|thí sinh|xạ thủ|quả bóng|viên bi|đồng xu|xúc xắc|lực|vật';
+const WORD_RE = new RegExp('(?<![\\p{L}\\p{N}])(' + WORD_KW + ')(?![\\p{L}\\p{N}])', 'iu');
+function isWordQ(q){ if(q._w != null) return q._w; const t = String(q.q).replace(/<[^>]+>/g, ' ').replace(/\$[^$]*\$/g, ' X ').replace(/\s+/g, ' ').trim();
+  return q._w = t.split(' ').length >= 25 && WORD_RE.test(t); }
+const qSecs = (q, fig)=> isWordQ(q) ? 300 : (q.m === 'VD' ? 180 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0);
 /* ----- chống gian lận khi trả lời câu đố -----
    • rời màn hình (chuyển tab/ứng dụng, bấm sang cửa sổ khác > 1,5 giây) khi câu hỏi đang mở → câu đó tính sai
    • câu hỏi bị che mờ ngay khi cửa sổ mất tiêu điểm; chặn bôi đen/sao chép/nhấn giữ (Google Lens); hình mờ tên + SBD
@@ -1506,9 +1513,9 @@ function askQuiz(M){
   return new Promise(res=>{
     let step = 0, right = 0, rvOk = 0, offN = 0, wrong = 0, stopped = false; const tms = [], WBK = M.kind === 'wb'; const big = M.kind === 'boss' || M.kind === 'guard', total = WBK ? Infinity : M.kind === 'guard' ? 5 : big ? 3 : 1;
     const one = ()=>{
-      M._qi = step; const q = shuffleQ(pickQuestion(M)); curQ = q; const tq = Date.now(); QZ.kind = M.kind; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
+      M._qi = step; const q = shuffleQ(pickQuestion(M)); curQ = q; const tq = Date.now(); QZ.kind = M.kind; const fig = /class="fig"/.test(q.q), secs = qSecs(q, fig); let left = secs, done = false;
       $('quiz').classList.remove('hidden'); $('qFace').textContent = WBK ? '👨‍🏫' : M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
-      $('qSay').innerHTML = (WBK ? `Thầy Định hỏi em! Câu ${step + 1} <span style="font-size:15px;letter-spacing:2px">${'❤️'.repeat(WB_LIVES - wrong)}${'🤍'.repeat(wrong)}</span>` : big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!') + (q.rv ? '<span class="tag">🔁 Câu báo thù</span>' : '') + ((save.streak || 0) >= 2 ? `<span class="tag" style="background:#ffd23a">🔥 ${save.streak}</span>` : '');
+      $('qSay').innerHTML = (WBK ? `Thầy Định hỏi em! Câu ${step + 1} <span style="font-size:15px;letter-spacing:2px">${'❤️'.repeat(WB_LIVES - wrong)}${'🤍'.repeat(wrong)}</span>` : big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!') + (q.rv ? '<span class="tag">🔁 Câu báo thù</span>' : '') + (isWordQ(q) ? '<span class="tag" style="background:#7fd1ff">📝 Lời văn · 5 phút</span>' : q.m === 'VD' ? '<span class="tag" style="background:#c9b8ff">⏳ Vận dụng · 3 phút</span>' : '') + ((save.streak || 0) >= 2 ? `<span class="tag" style="background:#ffd23a">🔥 ${save.streak}</span>` : '');
       $('qMeta').innerHTML = `${M.name}${WBK ? '' : ' · Lv' + M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}<br><span style="color:#ffb0a0">🔒 Rời màn hình / chuyển tab khi đang trả lời = câu đó tính sai</span>${M.kind === 'guard' ? `<span id="qCap" style="color:#ffd76a">${QZ.cap ? '<br>' + QZ.cap : ''}</span>` : ''}`;
       let lock = fastQ() ? 0 : LOCK_S[q.m] + (fig ? 3 : 0) || 0; const lock0 = lock;
       const exam = M.kind === 'guard' || WBK; $('qText').innerHTML = (exam ? `<div class="aiw">${AI_WARN}</div>` : '') + q.q + `<div class="wm">${(wmText(exam) + ' · ').repeat(14)}</div>`; $('qRes').innerHTML = (lock ? `<div class="hint" id="qLock">🤔 Đọc kỹ đề, tự nháp — đáp án hiện sau <b id="qLockN">${lock}</b> giây<div class="lockbar"><div id="qLockB" style="width:0%"></div></div></div>` : '') + (q.rv ? '<div class="hint">🔁 Dạng bài em từng làm sai — trả lời đúng để <b>báo thù</b> và nhận thêm kinh nghiệm!</div>' : '') + (tut && tut.i <= 4 ? '<div class="hint">💡 Trả lời <b>đúng</b>: quái choáng, yếu đi một nửa và hạ được nhiều kinh nghiệm. Trả lời <b>sai</b> hoặc hết giờ: quái <b>biến hình</b> và hạ nó cũng <b>không được kinh nghiệm</b>!</div>' : '');
@@ -1534,10 +1541,10 @@ function askQuiz(M){
         if($('qStop')) $('qStop').onclick = ()=>{ if(!confirm('Dừng thử thách? Các tim còn lại tính là câu sai.')) return; stopped = true; end(); };
       };
       $('qOpts').querySelectorAll('.opt').forEach(b=> b.onclick = ()=> finish(+b.dataset.i)); QZ.fail = ()=> finish(-1, true); $('quiz').classList.remove('away'); if(document.hidden || !document.hasFocus()) qAway(document.hidden);
-      $('qTime').textContent = left; $('qTime').style.color = ''; clearInterval(quizTimer);
+      $('qTime').textContent = left >= 100 ? mmss(left) : left; $('qTime').style.color = ''; clearInterval(quizTimer);
       quizTimer = setInterval(()=>{ if(lock > 0){ lock--; const n = $('qLockN'), b = $('qLockB'); if(n) n.textContent = lock; if(b) b.style.width = (100*(lock0 - lock + 1)/lock0) + '%';
           if(lock <= 0){ $('qOpts').classList.remove('wait'); $('qOpts').querySelectorAll('.opt').forEach(b=> b.disabled = false); const L = $('qLock'); if(L) L.remove(); sfx('click'); } }
-        left--; $('qTime').textContent = left; $('qTime').style.color = left <= 10 ? '#ff6b6b' : ''; if(left <= 5 && left > 0) sfx('tick'); if(left <= 0) finish(-1); }, 1000);
+        left--; $('qTime').textContent = left >= 100 ? mmss(left) : left; $('qTime').style.color = left <= 10 ? '#ff6b6b' : ''; if(left <= 5 && left > 0) sfx('tick'); if(left <= 0) finish(-1); }, 1000);
     };
     one();
   });
