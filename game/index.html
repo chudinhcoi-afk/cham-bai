@@ -934,29 +934,29 @@ const peerMax = ()=> tierName === 'low' ? 5 : 10;
 const peerName = ()=> String(save.acct.ten || save.name || '').trim().split(/\s+/).pop().slice(0, 16);
 async function peerSend(force){ if(!running || !peersOn() || document.hidden) return; const P = player.position, L = PEER.lastPos, moved = !L || Math.hypot(P.x - L.x, P.z - L.z) > 0.4 || Math.abs(player.rotation.y - L.r) > 0.3;
   if(!force && !moved && Date.now() - PEER.lastSend < 15000) return; PEER.lastSend = Date.now(); PEER.lastPos = {x:P.x, z:P.z, r:player.rotation.y};
-  try{ const r = await fb(`game/pos/${grade}/${fbAuth.uid}`, 'PUT', {n:peerName(), l:save.acct.lop || '', c:save.char || 'boy', h:lookOf(save.char || 'boy').hair, k:lookOf(save.char || 'boy').hairColor, nh:lookOf(save.char || 'boy').noHat ? 1 : 0, x:Math.round(P.x*10)/10, z:Math.round(P.z*10)/10, r:Math.round(player.rotation.y*100)/100, t:{'.sv':'timestamp'}});
+  try{ const r = await fb(`game/pos/${grade}/${fbAuth.uid}`, 'PUT', {n:peerName(), l:save.acct.lop || '', c:save.char || 'boy', w:wbKey(save.acct), h:lookOf(save.char || 'boy').hair, k:lookOf(save.char || 'boy').hairColor, nh:lookOf(save.char || 'boy').noHat ? 1 : 0, x:Math.round(P.x*10)/10, z:Math.round(P.z*10)/10, r:Math.round(player.rotation.y*100)/100, t:{'.sv':'timestamp'}});
     if(r && typeof r.t === 'number') PEER.off = r.t - Date.now(); }catch(e){} }
 async function peerPull(){ if(!running || !peersOn() || document.hidden) return; const g = grade;
   try{ const d = await fb('game/pos/' + g) || {}, now = Date.now() + PEER.off, L = {}; if(g !== grade) return;
     for(const [u, v] of Object.entries(d)) if(u !== fbAuth.uid && v && typeof v.x === 'number' && now - (v.t || 0) < 30000) L[u] = v;
     PEER.list = L; }catch(e){} }
-function peerStart(){ peerStop(true); if(!peersOn()) return; PEER.g = grade; peerSend(true); peerPull(); PEER.timer = setInterval(()=>{ peerSend(); peerPull(); }, 4000); }
+function peerStart(){ wbRefresh(true); peerStop(true); if(!peersOn()) return; PEER.g = grade; peerSend(true); peerPull(); PEER.timer = setInterval(()=>{ peerSend(); peerPull(); wbRefresh(); }, 4000); }
 function peerStop(keep){ clearInterval(PEER.timer); PEER.timer = null; PEER.ghosts.forEach(G=> peerDrop(G)); PEER.ghosts.clear(); PEER.list = {}; PEER.lastPos = null;
   if(!keep && PEER.g != null && fbAuth && save.acct) fb(`game/pos/${PEER.g}/${fbAuth.uid}`, 'DELETE').catch(()=>{}); }
-function peerDrop(G){ world.remove(G.root, G.lab); if(G.hero) G.hero.dispose(); disposeObj(G.root); disposeObj(G.lab); }
+function peerDrop(G){ if(G.title){ world.remove(G.title); disposeObj(G.title); } world.remove(G.root, G.lab); if(G.hero) G.hero.dispose(); disposeObj(G.root); disposeObj(G.lab); }
 function peerMake(u, v){ const hero = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:v.c === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style:v.c === 'girl' ? 'girl' : 'boy', ...lookOf(v.c === 'girl' ? 'girl' : 'boy', {b:v.h, g:v.h, k:v.k, nh:v.nh})});
   const root = new THREE.Group(); root.add(hero.object); const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 24), new THREE.MeshBasicMaterial({color:0x7fd1ff, transparent:true, opacity:0.55, side:THREE.DoubleSide, depthWrite:false})); ring.rotation.x = -Math.PI/2; ring.position.y = 0.06; root.add(ring);
   root.position.set(v.x, height(v.x, v.z), v.z); root.rotation.y = v.r || 0; const lab = textSprite(`👤 ${v.n}${v.l ? ' · ' + v.l : ''}`, {screen:0.026, color:'#bfe3ff'}); world.add(root, lab);
-  return {u, hero, root, lab, c:v.c, lk:[v.h, v.k, v.nh].join('|'), tx:v.x, tz:v.z, tr:v.r || 0}; }
+  return {u, hero, root, lab, w:v.w || '', title:null, c:v.c, lk:[v.h, v.k, v.nh].join('|'), tx:v.x, tz:v.z, tr:v.r || 0}; }
 function peerUpdate(dt){ if(!PEER.timer){ return; } const P = player.position;
   const near = Object.entries(PEER.list).map(([u, v])=> [u, v, Math.hypot(v.x - P.x, v.z - P.z)]).sort((a, b)=> a[2] - b[2]).slice(0, peerMax()), keep = new Set(near.map(x=> x[0]));
   PEER.ghosts.forEach((G, u)=>{ if(!keep.has(u)){ peerDrop(G); PEER.ghosts.delete(u); } });
   let made = 0;   // mỗi khung hình dựng tối đa 1 nhân vật mới để không khựng
-  for(const [u, v] of near){ let G = PEER.ghosts.get(u); if(G && (G.c !== v.c || G.lk !== [v.h, v.k, v.nh].join('|'))){ peerDrop(G); PEER.ghosts.delete(u); G = null; } if(!G){ if(made++) continue; G = peerMake(u, v); PEER.ghosts.set(u, G); }
+  for(const [u, v] of near){ let G = PEER.ghosts.get(u); if(G && (G.c !== v.c || G.lk !== [v.h, v.k, v.nh].join('|'))){ peerDrop(G); PEER.ghosts.delete(u); G = null; } if(!G){ if(made++) continue; G = peerMake(u, v); PEER.ghosts.set(u, G); peerTitle(G); }
     G.tx = v.x; G.tz = v.z; G.tr = v.r || 0; const R = G.root.position, dx = G.tx - R.x, dz = G.tz - R.z, d = Math.hypot(dx, dz);
     if(d > 25){ R.x = G.tx; R.z = G.tz; } else if(d > 0.05){ const step = Math.min(d, Math.max(d*dt*1.2, 4.5*dt)); R.x += dx/d*step; R.z += dz/d*step; }
     R.y = height(R.x, R.z); const moving = d > 0.3; if(moving) G.root.rotation.y = Math.atan2(dx, dz); else { let a = G.tr - G.root.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); G.root.rotation.y += a*Math.min(1, dt*5); }
-    G.hero.setMove(moving ? Math.min(1, d/3) : 0); G.hero.update(dt); G.lab.position.set(R.x, R.y + 3.3, R.z); G.lab.visible = Math.hypot(R.x - P.x, R.z - P.z) < 30; }
+    G.hero.setMove(moving ? Math.min(1, d/3) : 0); G.hero.update(dt); G.lab.position.set(R.x, R.y + 3.3, R.z); G.lab.visible = Math.hypot(R.x - P.x, R.z - P.z) < 30; if(G.title){ titleAnim(G.title, R.x, R.y + 3.85, R.z, performance.now()); G.title.visible = G.lab.visible; } }
   const n = Object.keys(PEER.list).length, el = $('peerN'); if(el) el.textContent = n ? `👥 ${n} bạn cùng vùng đất` : ''; }
 addEventListener('pagehide', ()=>{ try{ if(PEER.g != null && fbAuth && fbAuth.id && save.acct) fetch(`${FB.db}/game/pos/${PEER.g}/${fbAuth.uid}.json?auth=${encodeURIComponent(fbAuth.id)}`, {method:'DELETE', keepalive:true}); }catch(e){} });
 /* ======================= BOSS THẾ GIỚI: THẦY ĐỊNH =======================
@@ -969,6 +969,37 @@ let WBo = null;
 const wbAcc = x=> x.t ? x.r/x.t : 0;
 const wbBetter = (a, b)=> !b || wbAcc(a) > wbAcc(b) + 1e-9 || (Math.abs(wbAcc(a) - wbAcc(b)) < 1e-9 && (a.a < b.a - 1e-9 || (Math.abs(a.a - b.a) < 1e-9 && a.r > b.r)));
 const wbSort = L=> L.slice().sort((a, b)=> wbBetter(a, b) ? -1 : wbBetter(b, a) ? 1 : 0);
+/* ----- danh hiệu theo hạng thử thách Thầy Định trong khối, hiện nổi bật trên tên nhân vật -----
+   hạng lấy từ bảng vinh danh trên máy chủ (game/wb/{khối}) chứ không do máy người chơi tự khai */
+const WB_TITLES = [
+  {max:1, n:'Bá Khí Toán Học', ic:'👑', g:['#fff4b0', '#f2b33d', '#c97a10'], t:'#3a2000', glow:'#ffd23a', pulse:true},
+  {max:2, n:'Chiến Thần Đại Số', ic:'🐉', g:['#f4fbff', '#b8d4ea', '#7f9fbf'], t:'#10243a', glow:'#bfe8ff'},
+  {max:3, n:'Thiên Tài Giải Tích', ic:'⚡', g:['#ffe2c4', '#e8945a', '#a85a28'], t:'#2e1200', glow:'#ffb070'},
+  {max:10, n:'Cao Thủ Toán Học', ic:'🌟', g:['#ead8ff', '#a77bff', '#6a3fd0'], t:'#ffffff', glow:'#c9a8ff'},
+  {max:20, n:'Tinh Anh Toán Học', ic:'🔥', g:['#d6ecff', '#4aa3ff', '#2a5fc0'], t:'#ffffff', glow:'#8fd0ff'},
+  {max:30, n:'Ngôi Sao Toán Học', ic:'✨', g:['#d4fff3', '#3ccfb0', '#1f8a78'], t:'#ffffff', glow:'#8fffe0'}];
+const titleOf = rank=> rank ? WB_TITLES.find(T=> rank <= T.max) || null : null;
+let WB_RANK = {}, WB_BOARD_T = 0;
+function titleSprite(T){ const fs = 40, c = document.createElement('canvas'), x = c.getContext('2d'), txt = `${T.ic} ${T.n.toUpperCase()} ${T.ic}`; x.font = `900 ${fs}px Segoe UI, Arial`;
+  const w = Math.ceil(x.measureText(txt).width + 70), h = 84; c.width = w; c.height = h;
+  x.shadowColor = T.glow; x.shadowBlur = 18; const g = x.createLinearGradient(0, 10, 0, h - 10); g.addColorStop(0, T.g[0]); g.addColorStop(0.5, T.g[1]); g.addColorStop(1, T.g[2]);
+  x.fillStyle = g; x.beginPath(); x.roundRect(14, 14, w - 28, h - 28, 22); x.fill(); x.shadowBlur = 0;
+  x.lineWidth = 3; x.strokeStyle = 'rgba(255,255,255,.85)'; x.stroke();
+  x.font = `900 ${fs}px Segoe UI, Arial`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = T.t; x.fillText(txt, w/2, h/2 + 2);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, fog:false, sizeAttenuation:false, depthTest:true})); const k = T.pulse ? 0.044 : T.max <= 3 ? 0.038 : 0.032; sp.scale.set(w/h*k, k, 1); sp.renderOrder = 6; sp.userData = {k, w, h, T}; return sp; }
+const wbKey = A=> A ? A.ma + '_' + A.sbd : '';
+let myTitle = null, myRank = 0;
+function setMyTitle(){ const r = WB_RANK[wbKey(save.acct)] || 0, T = titleOf(r);
+  if(myTitle && (!T || myTitle.userData.T !== T)){ scene.remove(myTitle); disposeObj(myTitle); myTitle = null; }
+  if(T && !myTitle){ myTitle = titleSprite(T); scene.add(myTitle); }
+  if(T && save.wbT !== T.n && (!save.wbT || WB_TITLES.findIndex(x=> x.n === save.wbT) > WB_TITLES.indexOf(T) || WB_TITLES.findIndex(x=> x.n === save.wbT) < 0)) setTimeout(()=> toast(`🏆 Danh hiệu mới: <b>${T.ic} ${T.n}</b><br><span style="font-size:.6em">Hạng ${r} thử thách Thầy Định khối ${save.acct.khoi}</span>`, 4200, true), 800);
+  if((T ? T.n : '') !== (save.wbT || '')){ save.wbT = T ? T.n : ''; persist(); }
+  myRank = r; updHud(); }
+async function wbRefresh(force){ if(!save.acct || (!force && Date.now() - WB_BOARD_T < 55000)) return; WB_BOARD_T = Date.now();
+  try{ const L = await wbBoard(), R = {}; L.slice(0, WB_TOP).forEach((x, i)=> R[x.ma + '_' + x.s] = i + 1); WB_RANK = R; setMyTitle(); PEER.ghosts.forEach(G=> peerTitle(G)); }catch(e){} }
+function peerTitle(G){ const T = titleOf(WB_RANK[G.w] || 0); if(G.title && (!T || G.title.userData.T !== T)){ world.remove(G.title); disposeObj(G.title); G.title = null; } if(T && !G.title){ G.title = titleSprite(T); world.add(G.title); } }
+function titleAnim(sp, x, y, z, now){ if(!sp) return; sp.position.set(x, y, z); const T = sp.userData.T, k = sp.userData.k*(T.pulse ? 1 + 0.06*Math.sin(now*0.005) : 1); sp.scale.set(sp.userData.w/sp.userData.h*k, k, 1); }
 function buildTeacher(){
   const NAVY = 0x1f3157, NAVY2 = 0x15213d, SKIN = 0xf0c49c, SKIN2 = 0xe2ae86, HAIR = 0x1c130e, WHITE = 0xf7f6f2, TIE = 0xa81f2a, GOLD = 0xe2b850, DARK = 0x141414, SHOE = 0x2a1810;
   const mk = (parts, t = 0.02)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x1e1a16})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
@@ -1033,7 +1064,7 @@ function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position
 // hộp thoại: luật chơi + bảng vinh danh 30 em
 async function openWB(){ sfx('click'); const A = save.acct, on = txOn(), my = (save.wb || {})[grade];
   $('wbBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:50px">👨‍🏫</div><div><b style="color:var(--gold);font-size:20px">Thầy Định</b><div style="font-size:13px;opacity:.8">${WORLDS[grade].mood} ${WORLDS[grade].name} · khối ${grade}</div></div></div>
-    <p style="font-size:15px;line-height:1.55;margin:10px 0">“Câu hỏi của thầy <b>không bao giờ hết</b> — lấy ngẫu nhiên từ mọi chương đã mở. Em có <b>${WB_LIVES} ❤️</b>: sai, hết giờ hay rời màn hình là mất một tim. Thầy xếp hạng theo <b>tỷ lệ trả lời đúng</b>, bằng nhau thì ai <b>nhanh hơn</b> đứng trên. <b>${WB_TOP} em giỏi nhất khối</b> được vinh danh!”</p>
+    <p style="font-size:15px;line-height:1.55;margin:10px 0">“Câu hỏi của thầy <b>không bao giờ hết</b> — lấy ngẫu nhiên từ mọi chương đã mở. Em có <b>${WB_LIVES} ❤️</b>: sai, hết giờ hay rời màn hình là mất một tim. Thầy xếp hạng theo <b>tỷ lệ trả lời đúng</b>, bằng nhau thì ai <b>nhanh hơn</b> đứng trên. <b>${WB_TOP} em giỏi nhất khối</b> được vinh danh và mang <b>danh hiệu</b> trên đầu: 👑 Bá Khí Toán Học (hạng 1) · 🐉 Chiến Thần Đại Số (2) · ⚡ Thiên Tài Giải Tích (3) · 🌟 Cao Thủ (4–10) · 🔥 Tinh Anh (11–20) · ✨ Ngôi Sao (21–30)!”</p>
     ${my ? `<p style="margin:0 0 8px;font-size:14px">🏅 Thành tích tốt nhất của em: <b>${my.r}/${my.t}</b> câu đúng (${Math.round(wbAcc(my)*100)}%) · ${fmtS(my.a.toFixed(1))} giây/câu</p>` : ''}
     <div id="wbList" style="max-height:42vh;overflow:auto;font-size:13.5px">${on ? 'Đang tải bảng vinh danh…' : `<i style="opacity:.75">${A ? 'Bảng vinh danh chỉ tính ở vùng đất đúng khối của lớp em.' : 'Đang chơi thử — thành tích không vào bảng vinh danh.'}</i>`}</div>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="go2" id="wbGo" style="flex:1">🎓 Bắt đầu thử thách</button><button class="ibtn" onclick="document.getElementById('wb').classList.add('hidden')">Để sau</button></div>`;
@@ -1044,7 +1075,7 @@ function wbRenderList(L, hiKey){ const el = $('wbList'); if(!el) return; const A
   if(!L.length){ el.innerHTML = '<i style="opacity:.75">Chưa có ai thử thách — hãy là người đầu tiên!</i>'; return; }
   const myIdx = L.findIndex(x=> x.ma + '_' + x.s === me), M = ['🥇', '🥈', '🥉'];
   el.innerHTML = `<table style="width:100%;border-collapse:collapse"><tr style="opacity:.7;text-align:left"><th>Hạng</th><th>Học sinh</th><th>Lớp</th><th style="text-align:center">Đúng</th><th style="text-align:center">Tỷ lệ</th><th style="text-align:center">Giây/câu</th></tr>
-    ${L.slice(0, WB_TOP).map((x, i)=> `<tr style="${x.ma + '_' + x.s === me ? 'background:rgba(242,193,78,.18);font-weight:700' : ''}border-top:1px solid var(--line)"><td>${M[i] || i + 1}</td><td>${escHtml(x.n)}</td><td>${escHtml(x.l || '')}</td><td style="text-align:center">${x.r}/${x.t}</td><td style="text-align:center">${Math.round(wbAcc(x)*100)}%</td><td style="text-align:center">${fmtS((+x.a).toFixed(1))}</td></tr>`).join('')}</table>
+    ${L.slice(0, WB_TOP).map((x, i)=> `<tr style="${x.ma + '_' + x.s === me ? 'background:rgba(242,193,78,.18);font-weight:700' : ''}border-top:1px solid var(--line)"><td>${M[i] || i + 1}</td><td>${escHtml(x.n)}${titleOf(i + 1) ? `<div style="font-size:11px;font-weight:800;color:${titleOf(i + 1).g[1]}">${titleOf(i + 1).ic} ${titleOf(i + 1).n}</div>` : ''}</td><td>${escHtml(x.l || '')}</td><td style="text-align:center">${x.r}/${x.t}</td><td style="text-align:center">${Math.round(wbAcc(x)*100)}%</td><td style="text-align:center">${fmtS((+x.a).toFixed(1))}</td></tr>`).join('')}</table>
     ${myIdx >= WB_TOP ? `<p style="margin:8px 0 0">Em đang đứng thứ <b>${myIdx + 1}</b>/${L.length} — vào top ${WB_TOP} để được vinh danh!</p>` : ''}`; }
 const escHtml = s=> String(s == null ? '' : s).replace(/[&<>"]/g, c=> ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'})[c]);
 async function startWB(){ const M = WBo; if(!M || inQuiz) return; M.seen = new Set();
@@ -1059,7 +1090,7 @@ async function startWB(){ const M = WBo; if(!M || inQuiz) return; M.seen = new S
     try{ await fb(`game/wb/${A.khoi}/${A.ma}_${A.sbd}`, 'PUT', {ma:A.ma, s:A.sbd, n:A.ten, l:A.lop, r:B.r, t:B.t, a:B.a, ts:{'.sv':'timestamp'}}); }catch(e){ rank = '<br><span style="font-size:.6em">⚠ Chưa gửi được lên bảng vinh danh (mạng / quy tắc máy chủ)</span>'; } }
   toast(`👨‍🏫 Kết quả: <b>${run.r}/${run.t}</b> câu đúng (${Math.round(wbAcc(run)*100)}%) · ${fmtS(run.a.toFixed(1))} giây/câu${better ? '<br><span style="font-size:.62em">🏅 Kỷ lục mới của em!</span>' : ''}${rank}`, 4200, true);
   if(better && run.r >= 5){ pillar(player.position, 0xffd23a); burst(player.position, 0xffd23a, 2, 26); sfx('lvl'); }
-  if(txOn()) setTimeout(()=> openWB(), 2600); }
+  if(txOn()){ wbRefresh(true); setTimeout(()=> openWB(), 2600); } }
 /* ----- Người gác chương: đứng trước khu vực chưa mở, báo ngày mở theo phân phối chương trình ----- */
 let keepers = [];
 const lockTxt = L=> L.open ? `Mở ngày ${viDate(L.open)}` : 'Chưa có lịch mở';
@@ -1500,7 +1531,7 @@ async function enterWorld(g){
   lastT = performance.now(); requestAnimationFrame(loop); peerStart();
 }
 function updHud(){
-  const sk = save.streak || 0; $('hudName').textContent = `${save.name} · Cấp ${save.lv}` + (sk >= 2 ? ` · 🔥${sk} (KN ×${streakMul(sk).toFixed(1)})` : '');
+  const sk = save.streak || 0; $('hudName').textContent = (titleOf(myRank) ? titleOf(myRank).ic + ' ' : '') + `${save.name} · Cấp ${save.lv}` + (sk >= 2 ? ` · 🔥${sk} (KN ×${streakMul(sk).toFixed(1)})` : '');
   $('hpBar').style.width = Math.max(0, 100*pHp/pMaxHp()) + '%'; $('hpTxt').textContent = `${Math.max(0, Math.ceil(pHp))}/${pMaxHp()}`;
   const need = xpNeed(save.lv); $('xpBar').style.width = Math.min(100, 100*save.xp/need) + '%'; $('xpTxt').textContent = `KN ${save.xp}/${need}`;
 }
@@ -1959,7 +1990,7 @@ function loop(t){
   if(water && water.material.map){ water.material.map.offset.x = (t*(W.lava ? 0.000012 : 0.00002)) % 1; water.material.map.offset.y = (t*0.000013) % 1; }
   clouds.forEach(c=>{ c.position.x += dt*1.5; if(c.position.x - player.position.x > 160) c.position.x -= 320; if(c.position.x - player.position.x < -160) c.position.x += 320; if(c.position.z - player.position.z > 160) c.position.z -= 320; if(c.position.z - player.position.z < -160) c.position.z += 320; });
   updAmbient(dt, t);
-  nameTag.position.set(player.position.x, player.position.y + 3.5, player.position.z);
+  nameTag.position.set(player.position.x, player.position.y + 3.5, player.position.z); if(myTitle){ myTitle.visible = running; titleAnim(myTitle, player.position.x, player.position.y + 4.05, player.position.z, t); }
   // mũi tên chỉ đường (khi hướng dẫn)
   tutUpd(rdt);
   const gT = tut && TUT[tut.i].guide ? zones[0] : null; guide.visible = !!gT && !cine;
