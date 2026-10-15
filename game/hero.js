@@ -8,6 +8,8 @@ export function createHero(THREE, opts = {}){
   const GIRL = opts.style === 'girl', ANI = {}; let api_texs = [];
   const C = Object.assign(GIRL ? {skin:0xffe9da, hair:0x7a4630, coat:0xff8cc6, coat2:0xff6fb3, pants:0xffffff, boots:0xff5fa2, cape:0xffc4e2, hat:0xff4f9a, gold:0xffd36a, white:0xfff4fa, blade:0xffe27a, dark:0x3a1d2c, cheek:0xff8fb4, ribbon:0xff4f9a, iris:0xa04a8a}
     : {skin:0xffd6b0, hair:0x3a2618, coat:0x2f6fe0, coat2:0x2457b8, pants:0x2a2f4a, boots:0x6b3f22, cape:0xd9363e, hat:0x2b2f6b, gold:0xf2c14e, white:0xf4f1e6, blade:0x9ff3ff, dark:0x15151c, cheek:0xff9a9a}, opts.colors || {});
+  if(opts.hairColor != null) C.hair = opts.hairColor;
+  const HS = opts.hair || (GIRL ? 'g0' : 'b0'), HATON = GIRL || !opts.noHat;   // kiểu tóc, có đội mũ không
   const merge = opts.merge, mat = opts.material, glow = opts.glowMaterial, addOutline = opts.outline || (()=>{});
   const M4 = (x = 0, y = 0, z = 0, sx = 1, sy = sx, sz = sx, rx = 0, ry = 0, rz = 0)=> new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
   const Sp = (r, a = 14, b = 10)=> new THREE.SphereGeometry(r, a, b), Cy = (rt, rb, h, s = 12)=> new THREE.CylinderGeometry(rt, rb, h, s), Ca = (r, l, s = 10)=> new THREE.CapsuleGeometry(r, l, 4, s), Bx = (x, y, z)=> new THREE.BoxGeometry(x, y, z), Co = (r, h, s = 12)=> new THREE.ConeGeometry(r, h, s), To = (r, t, a = 8, b = 16)=> new THREE.TorusGeometry(r, t, a, b);
@@ -33,10 +35,21 @@ export function createHero(THREE, opts = {}){
   // đầu: to tròn kiểu chibi, tóc, tai, má hồng, miệng
   skin('head', [
     {g:Sp(0.44, 22, 16), m:M4(0, 0.36, 0.02), c:C.skin},
-    {g:new THREE.SphereGeometry(0.47, 20, 12, 0, Math.PI*2, 0, Math.PI*0.55), m:M4(0, 0.4, -0.05, 1, 1, 1, -0.35, 0, 0), c:C.hair},
-    {g:Co(0.12, 0.28, 6), m:M4(-0.18, 0.62, 0.34, 1, 1, 1, 2.6, 0, 0.3), c:C.hair}, {g:Co(0.13, 0.3, 6), m:M4(0.02, 0.66, 0.38, 1, 1, 1, 2.7, 0, 0), c:C.hair}, {g:Co(0.11, 0.26, 6), m:M4(0.2, 0.62, 0.33, 1, 1, 1, 2.6, 0, -0.3), c:C.hair},
     {g:Sp(0.09, 8, 6), m:M4(0.43, 0.34, 0, 0.6, 1, 1), c:C.skin}, {g:Sp(0.09, 8, 6), m:M4(-0.43, 0.34, 0, 0.6, 1, 1), c:C.skin},
     {g:Sp(0.07, 8, 6), m:M4(0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek}, {g:Sp(0.07, 8, 6), m:M4(-0.26, 0.24, 0.37, 1, 0.6, 0.3), c:C.cheek}]);
+  // tóc theo kiểu học sinh chọn (b0…b6); phần chóp tóc bị mũ che khi đội mũ
+  { const H = C.hair, HD = new THREE.Color(H).multiplyScalar(0.78).getHex(), cap = {g:new THREE.SphereGeometry(0.47, 20, 12, 0, Math.PI*2, 0, Math.PI*0.55), m:M4(0, 0.4, -0.05, 1, 1, 1, -0.35, 0, 0), c:H};
+    const front = [{g:Co(0.12, 0.28, 6), m:M4(-0.18, 0.62, 0.34, 1, 1, 1, 2.6, 0, 0.3), c:H}, {g:Co(0.13, 0.3, 6), m:M4(0.02, 0.66, 0.38, 1, 1, 1, 2.7, 0, 0), c:H}, {g:Co(0.11, 0.26, 6), m:M4(0.2, 0.62, 0.33, 1, 1, 1, 2.6, 0, -0.3), c:H}];
+    const onTop = (n, f)=>{ const out = []; for(let i = 0; i < n; i++) out.push(f(i, i/n*Math.PI*2)); return out; };
+    const P = {
+      b0:[cap, ...front],
+      b1:[cap, ...onTop(9, (i, a)=>{ const r = i % 2 ? 0.3 : 0.2, x = Math.sin(a)*r, z = Math.cos(a)*r - 0.04; return {g:Co(0.12, 0.38, 6), m:M4(x, 0.78 - r*0.35, z, 1, 1, 1, Math.cos(a)*0.55*r/0.25, 0, -Math.sin(a)*0.55*r/0.25), c:i % 3 ? H : HD}; }), {g:Co(0.13, 0.42, 6), m:M4(0, 0.86, 0), c:H}],
+      b2:[cap, {g:new THREE.SphereGeometry(0.485, 26, 10, Math.PI/2 - 1.15, 2.3, 0.2*Math.PI, 0.22*Math.PI), m:M4(0, 0.38, 0.02), c:H}, {g:Sp(0.16, 10, 8), m:M4(-0.38, 0.32, 0.02, 0.5, 1.2, 0.9), c:H}, {g:Sp(0.16, 10, 8), m:M4(0.38, 0.32, 0.02, 0.5, 1.2, 0.9), c:H}],
+      b3:[{g:new THREE.SphereGeometry(0.465, 20, 12, 0, Math.PI*2, 0, Math.PI*0.5), m:M4(0, 0.38, -0.06, 1, 0.95, 1, -0.3, 0, 0), c:H}, {g:Sp(0.22, 14, 10), m:M4(0.02, 0.78, 0.16, 1.55, 0.75, 1.15, 0.35, 0, 0), c:H}, {g:Co(0.16, 0.3, 8), m:M4(0.03, 0.84, 0.36, 1.3, 1, 0.7, 1.9, 0, 0), c:HD}],
+      b4:[cap, ...onTop(14, (i, a)=>{ const ring = i < 9 ? 0 : 1, aa = ring ? a*9/5 : a, r = ring ? 0.17 : 0.36, y = ring ? 0.82 : 0.66; return {g:Sp(0.13, 10, 8), m:M4(Math.sin(aa)*r, y, Math.cos(aa)*r - 0.04), c:i % 2 ? H : HD}; })],
+      b5:[cap, ...front, {g:Sp(0.15, 12, 10), m:M4(0, 0.86, -0.22), c:H}, {g:Cy(0.09, 0.11, 0.06, 10), m:M4(0, 0.76, -0.2, 1, 1, 1, -0.4, 0, 0), c:C.cape}],
+      b6:[cap, ...front, {g:Sp(0.42, 16, 12), m:M4(0, 0.18, -0.16, 1.05, 1.3, 0.75), c:H}, {g:Sp(0.14, 10, 8), m:M4(-0.36, 0.1, -0.02, 0.6, 1.6, 0.9), c:H}, {g:Sp(0.14, 10, 8), m:M4(0.36, 0.1, -0.02, 0.6, 1.6, 0.9), c:H}]};
+    skin('head', P[HS] || P.b0, mat, 0.03); }
   // mắt to, có điểm sáng — đặt trên xương riêng để chớp mắt
   skin('eyes', [
     {g:Sp(0.075, 10, 8), m:M4(0.15, 0, 0, 0.9, 1.35, 0.5), c:C.dark}, {g:Sp(0.075, 10, 8), m:M4(-0.15, 0, 0, 0.9, 1.35, 0.5), c:C.dark},
@@ -73,12 +86,22 @@ export function createHero(THREE, opts = {}){
     {g:strand([surf(d*84, 36, 0.5), surf(d*94, 5, 0.5), surf(d*96, -24, 0.48)], 0.075, 0.45), c:HD}); });
   // hai bím tóc dài, mượt, cong ra ngoài rồi rủ xuống, buộc nơ hồng
   const tails = [];
-  [-1, 1].forEach(d=>{ const r0 = [d*0.48, 0.6, -0.12];
+  if(HS === 'g0') [-1, 1].forEach(d=>{ const r0 = [d*0.48, 0.6, -0.12];
     tails.push({g:strand([r0, [d*0.66, 0.56, -0.16], [d*0.8, 0.32, -0.16], [d*0.8, 0.04, -0.12], [d*0.72, -0.22, -0.1], [d*0.76, -0.46, -0.08], [d*0.7, -0.66, -0.06]], 0.17, 0.75, 30, 12, 0.9), c:C.hair},
       {g:strand([[d*0.5, 0.62, -0.1], [d*0.62, 0.6, -0.05], [d*0.74, 0.38, -0.05], [d*0.76, 0.1, -0.02], [d*0.68, -0.14, 0.0], [d*0.72, -0.38, 0.0], [d*0.66, -0.56, 0.02]], 0.1, 0.7, 28, 10, 0.9), c:HD},
       {g:strand([[d*0.5, 0.6, -0.16], [d*0.7, 0.5, -0.24], [d*0.84, 0.22, -0.24], [d*0.82, -0.08, -0.2], [d*0.78, -0.34, -0.18], [d*0.8, -0.54, -0.16]], 0.1, 0.7, 26, 10, 0.9), c:HL},
       {g:Sp(0.11, 16, 12), m:M4(d*0.5, 0.6, -0.1, 1, 1, 0.9), c:C.hair},
       {g:Sp(0.1, 14, 10), m:M4(d*0.54, 0.7, -0.0, 1.5, 0.85, 0.5, 0, d*0.3, d*0.45), c:C.ribbon}, {g:Sp(0.1, 14, 10), m:M4(d*0.62, 0.53, 0.0, 1.5, 0.85, 0.5, 0, d*0.3, d*1.5), c:C.ribbon}, {g:Sp(0.05, 10, 8), m:M4(d*0.58, 0.62, 0.05), c:0xff7fb6}, {g:Bx(0.05, 0.26, 0.02), m:M4(d*0.62, 0.44, 0.06, 1, 1, 1, 0, 0, d*0.35), c:C.ribbon}, {g:Bx(0.05, 0.22, 0.02), m:M4(d*0.54, 0.46, 0.07, 1, 1, 1, 0, 0, -d*0.2), c:C.ribbon}); });
+  // các kiểu khác: bob, đuôi ngựa, xõa dài, búi hai bên, búi cao
+  if(HS === 'g1'){ tails.push({g:Sp(0.5, 32, 22), m:M4(0, 0.24, -0.1, 1.1, 0.92, 0.95), c:C.hair});
+    for(let i = 0; i < 11; i++){ const a = 95 + i*17; tails.push({g:strand([surf(a, 30, 0.5), surf(a, -5, 0.53), surf(a + 3, -30, 0.5)], 0.12, 0.45, 14, 10, 0.6), c:i % 3 === 1 ? HD : C.hair}); } }
+  if(HS === 'g2'){ tails.push({g:Sp(0.12, 14, 10), m:M4(0, 0.66, -0.44), c:C.hair}, {g:Cy(0.1, 0.1, 0.06, 12), m:M4(0, 0.62, -0.48, 1, 1, 1, 1.2, 0, 0), c:C.ribbon},
+      {g:strand([[0, 0.64, -0.46], [0, 0.6, -0.68], [0, 0.32, -0.74], [0.02, 0.0, -0.7], [-0.02, -0.3, -0.64], [0, -0.55, -0.6]], 0.17, 0.75, 30, 12, 0.9), c:C.hair},
+      {g:strand([[0.03, 0.62, -0.5], [0.05, 0.5, -0.74], [0.06, 0.2, -0.78], [0.04, -0.1, -0.72], [0.06, -0.4, -0.66]], 0.09, 0.7, 24, 10, 0.9), c:HL}); }
+  if(HS === 'g3') for(let i = 0; i < 9; i++){ const a = (110 + i*17.5)*D, x = Math.sin(a), z = Math.cos(a);
+      tails.push({g:strand([[x*0.46, 0.5, z*0.46 - 0.06], [x*0.58, 0.2, z*0.58 - 0.1], [x*0.6, -0.15, z*0.58 - 0.1], [x*0.56, -0.5, z*0.54 - 0.08], [x*0.52, -0.68, z*0.5 - 0.06]], 0.16, 0.55, 26, 10, 0.8), c:i % 3 === 1 ? HD : i % 4 === 2 ? HL : C.hair}); }
+  if(HS === 'g4') [-1, 1].forEach(d=> tails.push({g:Sp(0.17, 16, 12), m:M4(d*0.34, 0.8, -0.06), c:C.hair}, {g:Sp(0.06, 8, 6), m:M4(d*0.4, 0.88, 0.06), c:HL}, {g:Sp(0.075, 10, 8), m:M4(d*0.24, 0.72, 0.06, 1.4, 0.8, 0.5, 0, 0, d*0.5), c:C.ribbon}));
+  if(HS === 'g5') tails.push({g:Sp(0.19, 16, 12), m:M4(0, 0.96, -0.12), c:C.hair}, {g:Sp(0.07, 8, 6), m:M4(0.05, 1.05, -0.02), c:HL}, {g:Cy(0.13, 0.15, 0.06, 14), m:M4(0, 0.82, -0.1), c:C.ribbon});
   const hm = new THREE.Mesh(merge([...hair, ...tails]), mat); hm.castShadow = true; B.head.add(hm); meshes.push(hm); addOutline(hm, 0.02);
   // vỏ bám mặt có vân UV phẳng: lớp mắt (gắn xương mắt để chớp) + lớp nét mặt vẽ tay (lông mày, mũi, miệng, má, nước mắt) — vẽ khi cần lần đầu
   function shell(x0, x1, y0, y1, nx = 26, ny = 14, lift = 0.006){
@@ -200,11 +223,11 @@ export function createHero(THREE, opts = {}){
     EYES.normal.scale.setScalar(e[5] || 1); browL.position.y = browR.position.y = BY + e[2]; browL.rotation.z = -0.15 + e[3]; browR.rotation.z = 0.15 - e[3]; sweat.visible = !!e[4]; }
   showEmo('neutral');
   if(!GIRL){
-  // mũ học giả: vành, dải vàng, chóp gập, huy hiệu π
-  skin('hat', [
+  // mũ học giả: vành, dải vàng, chóp gập, huy hiệu π (bỏ mũ được để khoe kiểu tóc)
+  if(HATON) skin('hat', [
     {g:Cy(0.66, 0.66, 0.06, 20), m:M4(0, 0, 0), c:C.hat}, {g:Cy(0.42, 0.46, 0.14, 18), m:M4(0, 0.09, 0), c:C.gold}, {g:Co(0.44, 0.5, 18), m:M4(0, 0.4, 0), c:C.hat},
     {g:Bx(0.035, 0.12, 0.03), m:M4(-0.05, 0.1, 0.45), c:C.hat}, {g:Bx(0.035, 0.12, 0.03), m:M4(0.05, 0.1, 0.45), c:C.hat}, {g:Bx(0.17, 0.03, 0.03), m:M4(0, 0.16, 0.45), c:C.hat}]);
-  skin('hatTip', [{g:Co(0.22, 0.42, 12), m:M4(0, 0.16, 0), c:C.hat}, {g:Sp(0.07, 8, 6), m:M4(0, 0.38, 0), c:C.gold}]);
+  if(HATON) skin('hatTip', [{g:Co(0.22, 0.42, 12), m:M4(0, 0.16, 0), c:C.hat}, {g:Sp(0.07, 8, 6), m:M4(0, 0.38, 0), c:C.gold}]);
   // thân: áo khoác có cổ, khăn quàng, nút vàng, dây đeo chéo
   skin('chest', [
     {g:Cy(0.34, 0.38, 0.46, 14), m:M4(0, 0, 0), c:C.coat}, {g:Sp(0.34, 14, 8), m:M4(0, 0.2, 0, 1, 0.45, 0.9), c:C.coat},

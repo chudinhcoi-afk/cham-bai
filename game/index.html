@@ -366,6 +366,7 @@ async function login(ma, sbd, ten){
   if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
   if(!save.char && kq.prof && kq.prof.char) save.char = kq.prof.char;
   if(!save.eq && kq.prof && kq.prof.eq) save.eq = kq.prof.eq;
+  if(!save.look && kq.prof && kq.prof.look) save.look = kq.prof.look;
   if(kq.prof && kq.prof.rv > (save.reviveAt || 0)) save.reviveAt = kq.prof.rv;
   if(kq.qd) save.qd = Object.assign({}, kq.qd, save.qd || {}); if(kq.wq > (save.wq || 0)) save.wq = kq.wq;
   if(kq.ac && (!save.ac || (kq.ac.off || 0) + (kq.ac.cp || 0) > (save.ac.off || 0) + (save.ac.cp || 0))) save.ac = kq.ac;
@@ -385,7 +386,7 @@ function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
 function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
-  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, wb:save.wb || null, qd:save.qd || null, wq:save.wq || 0, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, look:save.look || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, wb:save.wb || null, qd:save.qd || null, wq:save.wq || 0, sc}); cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
 addEventListener('online', ()=> syncSoon(500));
 
@@ -484,6 +485,12 @@ const LOCK_S = {NB:3, TH:5, VD:8};
 const fastQ = ()=> !!(window.G && window.G.fast);
 const xpNeed = lv=> Math.round(60*Math.pow(lv, 1.45));
 /* ----- trang bị: 5 ô (vũ khí, mũ, áo, giày, bùa), mở khoá bằng thành tích học tập — không mua bán, không rơi ngẫu nhiên ----- */
+/* ----- kiểu tóc & màu tóc: học sinh tự chọn, không cần mở khoá (save.look = {b:'b0', g:'g0', k:màu, nh:bỏ mũ}) ----- */
+const HAIR_STYLES = {boy:[['b0', 'Gọn gàng', '🙂'], ['b1', 'Dựng ngược', '⚡'], ['b2', 'Mái bằng', '🍄'], ['b3', 'Vuốt ngược', '🌊'], ['b4', 'Xoăn', '🌀'], ['b5', 'Búi samurai', '🥷'], ['b6', 'Dài ngang vai', '🎸']],
+  girl:[['g0', 'Hai bím', '🎀'], ['g1', 'Tóc bob', '💇'], ['g2', 'Đuôi ngựa', '🐎'], ['g3', 'Xõa dài', '🌸'], ['g4', 'Búi hai bên', '🐼'], ['g5', 'Búi cao', '🍡']]};
+const HAIR_COLORS = [[null, 'Mặc định'], [0x1c1410, 'Đen'], [0x3a2618, 'Nâu đậm'], [0x7a4630, 'Nâu'], [0xb07a40, 'Nâu vàng'], [0xf0c860, 'Vàng'], [0xa83a2a, 'Đỏ'], [0xf08cb4, 'Hồng'], [0x4a7ad8, 'Xanh'], [0x8a5ad0, 'Tím'], [0xd8dce4, 'Bạc']];
+const lookOf = (ch, L)=>{ L = L || save.look || {}; const girl = ch === 'girl', h = girl ? L.g : L.b, ok = (HAIR_STYLES[girl ? 'girl' : 'boy']).some(x=> x[0] === h);
+  return {hair:ok ? h : (girl ? 'g0' : 'b0'), hairColor:typeof L.k === 'number' ? L.k : null, noHat:!girl && !!L.nh}; };
 const EQ_SLOTS = [['weapon', 'Vũ khí', '⚔'], ['hat', 'Mũ', '🎩'], ['armor', 'Áo giáp', '🛡'], ['boots', 'Giày', '👢'], ['charm', 'Áo choàng', '🧣'], ['acc', 'Phụ kiện', '⌛']];
 const EQ_RAR = [null, {n:'Thường', c:'#aab3c8'}, {n:'Hiếm', c:'#4aa3ff'}, {n:'Sử thi', c:'#c77dff'}, {n:'Huyền thoại', c:'#f2c14e'}];
 const EQ_ST = {atk:['Tấn công', '%'], hp:['Máu tối đa', '%'], crit:['Chí mạng', '%'], def:['Giảm sát thương', '%'], cd:['Hồi tuyệt chiêu nhanh', '%'], regen:['Hồi máu', '%'], time:['Thời gian suy nghĩ', '%']};
@@ -681,8 +688,9 @@ async function showMenu(){
   $('pinfo').innerHTML = `<div>⭐ Cấp <b>${save.lv}</b></div><div>🧠 ${save.stars} câu đúng</div><div>👾 ${save.kills} quái</div>${nTitle ? `<div>🏆 ${nTitle} danh hiệu</div>` : ''}`;
   eqCheck(); eqBadge(); if(rvLeft() > 0) $('pinfo').insertAdjacentHTML('beforeend', `<div style="color:#ff8a8a">💀 Hồi sinh sau <b class="rvM">${mmss(rvLeft())}</b></div>`);
   makeHero(save.char || 'boy'); const ch = save.char || 'boy';
-  $('charPick').innerHTML = `<div class="lb">Chọn nhân vật</div>` + [['boy', 'Hiệp sĩ'], ['girl', 'Tiểu thư']].map(([k, n])=> `<button data-c="${k}" class="${ch === k ? 'on' : ''}"><img src="icons/char-${k}.png" alt="">${n}</button>`).join('');
-  $('charPick').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ auInit(); sfx('click'); save.char = b.dataset.c; persist(); makeHero(save.char); $('charPick').querySelectorAll('button').forEach(x=> x.classList.toggle('on', x === b)); });
+  $('charPick').innerHTML = `<div class="lb">Chọn nhân vật</div>` + [['boy', 'Hiệp sĩ'], ['girl', 'Tiểu thư']].map(([k, n])=> `<button data-c="${k}" class="${ch === k ? 'on' : ''}"><img src="icons/char-${k}.png" alt="">${n}</button>`).join('') + `<button id="hairBtn" style="justify-content:center;font-size:30px;min-width:70px">💇<span style="font-size:12px">Kiểu tóc</span></button>`;
+  $('hairBtn').onclick = ()=> openEquip('hair');
+  $('charPick').querySelectorAll('button[data-c]').forEach(b=> b.onclick = ()=>{ auInit(); sfx('click'); save.char = b.dataset.c; persist(); makeHero(save.char); $('charPick').querySelectorAll('button[data-c]').forEach(x=> x.classList.toggle('on', x === b)); });
   const acc = save.acct, mg = maxGrade();
   if(acc) refreshKhoi().then(ch=>{ if(ch && !$('menu').classList.contains('hidden')) showMenu(); });
   const meta = await loadMeta();
@@ -926,7 +934,7 @@ const peerMax = ()=> tierName === 'low' ? 5 : 10;
 const peerName = ()=> String(save.acct.ten || save.name || '').trim().split(/\s+/).pop().slice(0, 16);
 async function peerSend(force){ if(!running || !peersOn() || document.hidden) return; const P = player.position, L = PEER.lastPos, moved = !L || Math.hypot(P.x - L.x, P.z - L.z) > 0.4 || Math.abs(player.rotation.y - L.r) > 0.3;
   if(!force && !moved && Date.now() - PEER.lastSend < 15000) return; PEER.lastSend = Date.now(); PEER.lastPos = {x:P.x, z:P.z, r:player.rotation.y};
-  try{ const r = await fb(`game/pos/${grade}/${fbAuth.uid}`, 'PUT', {n:peerName(), l:save.acct.lop || '', c:save.char || 'boy', x:Math.round(P.x*10)/10, z:Math.round(P.z*10)/10, r:Math.round(player.rotation.y*100)/100, t:{'.sv':'timestamp'}});
+  try{ const r = await fb(`game/pos/${grade}/${fbAuth.uid}`, 'PUT', {n:peerName(), l:save.acct.lop || '', c:save.char || 'boy', h:lookOf(save.char || 'boy').hair, k:lookOf(save.char || 'boy').hairColor, nh:lookOf(save.char || 'boy').noHat ? 1 : 0, x:Math.round(P.x*10)/10, z:Math.round(P.z*10)/10, r:Math.round(player.rotation.y*100)/100, t:{'.sv':'timestamp'}});
     if(r && typeof r.t === 'number') PEER.off = r.t - Date.now(); }catch(e){} }
 async function peerPull(){ if(!running || !peersOn() || document.hidden) return; const g = grade;
   try{ const d = await fb('game/pos/' + g) || {}, now = Date.now() + PEER.off, L = {}; if(g !== grade) return;
@@ -936,15 +944,15 @@ function peerStart(){ peerStop(true); if(!peersOn()) return; PEER.g = grade; pee
 function peerStop(keep){ clearInterval(PEER.timer); PEER.timer = null; PEER.ghosts.forEach(G=> peerDrop(G)); PEER.ghosts.clear(); PEER.list = {}; PEER.lastPos = null;
   if(!keep && PEER.g != null && fbAuth && save.acct) fb(`game/pos/${PEER.g}/${fbAuth.uid}`, 'DELETE').catch(()=>{}); }
 function peerDrop(G){ world.remove(G.root, G.lab); if(G.hero) G.hero.dispose(); disposeObj(G.root); disposeObj(G.lab); }
-function peerMake(u, v){ const hero = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:v.c === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style:v.c === 'girl' ? 'girl' : 'boy'});
+function peerMake(u, v){ const hero = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:v.c === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style:v.c === 'girl' ? 'girl' : 'boy', ...lookOf(v.c === 'girl' ? 'girl' : 'boy', {b:v.h, g:v.h, k:v.k, nh:v.nh})});
   const root = new THREE.Group(); root.add(hero.object); const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 24), new THREE.MeshBasicMaterial({color:0x7fd1ff, transparent:true, opacity:0.55, side:THREE.DoubleSide, depthWrite:false})); ring.rotation.x = -Math.PI/2; ring.position.y = 0.06; root.add(ring);
   root.position.set(v.x, height(v.x, v.z), v.z); root.rotation.y = v.r || 0; const lab = textSprite(`👤 ${v.n}${v.l ? ' · ' + v.l : ''}`, {screen:0.026, color:'#bfe3ff'}); world.add(root, lab);
-  return {u, hero, root, lab, c:v.c, tx:v.x, tz:v.z, tr:v.r || 0}; }
+  return {u, hero, root, lab, c:v.c, lk:[v.h, v.k, v.nh].join('|'), tx:v.x, tz:v.z, tr:v.r || 0}; }
 function peerUpdate(dt){ if(!PEER.timer){ return; } const P = player.position;
   const near = Object.entries(PEER.list).map(([u, v])=> [u, v, Math.hypot(v.x - P.x, v.z - P.z)]).sort((a, b)=> a[2] - b[2]).slice(0, peerMax()), keep = new Set(near.map(x=> x[0]));
   PEER.ghosts.forEach((G, u)=>{ if(!keep.has(u)){ peerDrop(G); PEER.ghosts.delete(u); } });
   let made = 0;   // mỗi khung hình dựng tối đa 1 nhân vật mới để không khựng
-  for(const [u, v] of near){ let G = PEER.ghosts.get(u); if(G && G.c !== v.c){ peerDrop(G); PEER.ghosts.delete(u); G = null; } if(!G){ if(made++) continue; G = peerMake(u, v); PEER.ghosts.set(u, G); }
+  for(const [u, v] of near){ let G = PEER.ghosts.get(u); if(G && (G.c !== v.c || G.lk !== [v.h, v.k, v.nh].join('|'))){ peerDrop(G); PEER.ghosts.delete(u); G = null; } if(!G){ if(made++) continue; G = peerMake(u, v); PEER.ghosts.set(u, G); }
     G.tx = v.x; G.tz = v.z; G.tr = v.r || 0; const R = G.root.position, dx = G.tx - R.x, dz = G.tz - R.z, d = Math.hypot(dx, dz);
     if(d > 25){ R.x = G.tx; R.z = G.tz; } else if(d > 0.05){ const step = Math.min(d, Math.max(d*dt*1.2, 4.5*dt)); R.x += dx/d*step; R.z += dz/d*step; }
     R.y = height(R.x, R.z); const moving = d > 0.3; if(moving) G.root.rotation.y = Math.atan2(dx, dz); else { let a = G.tr - G.root.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); G.root.rotation.y += a*Math.min(1, dt*5); }
@@ -1354,9 +1362,9 @@ const player = new THREE.Group(); scene.add(player);
 // chọn nhân vật: 'boy' Hiệp sĩ áo xanh / 'girl' Tiểu thư váy hồng — đổi được bất cứ lúc nào ở màn hình chính
 const heroCB = []; let heroImpl = null, heroStyle = '';
 const hero = new Proxy({}, {get:(t, k)=> k === 'on' ? (ev, fn)=>{ heroCB.push([ev, fn]); heroImpl.on(ev, fn); return hero; } : heroImpl[k]});
-function makeHero(style){ const colors = eqCol(), sig = style + JSON.stringify(colors); if(sig === heroStyle && heroImpl) return; const rot = player.rotation.y;
+function makeHero(style){ const colors = eqCol(), look = lookOf(style), sig = style + JSON.stringify(colors) + JSON.stringify(look); if(sig === heroStyle && heroImpl) return; const rot = player.rotation.y;
   if(heroImpl){ player.remove(heroImpl.object); heroImpl.dispose(); }
-  heroImpl = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:style === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style, colors});
+  heroImpl = createHero(THREE, {merge, material:toon({vertexColors:true}), glowMaterial:toon({vertexColors:true, emissive:style === 'girl' ? 0x7a2a58 : 0x1a6a80}), outline:(m, t)=> outline(m, t, true), style, colors, ...look});
   heroStyle = sig; player.add(heroImpl.object); player.rotation.y = rot; heroCB.forEach(([e, f])=> heroImpl.on(e, f)); }
 makeHero(save.char || 'boy');
 const pShadow = blob(1.8); scene.add(pShadow);
@@ -1680,8 +1688,9 @@ function eqRender(){
     <div><span>✨ Hồi tuyệt chiêu</span><b>${fmtS(skMax().toFixed(1))} giây${P('cd')}</b></div><div><span>💚 Hồi máu</span><b>×${fmtS((1 + eqStat('regen')/100).toFixed(1))}</b></div><div><span>⌛ Thời gian suy nghĩ</span><b>+${eqStat('time')}%</b></div>
     <div class="note">Trang bị mở khoá bằng <b>thành tích học tập</b> (cấp, câu đúng, chuỗi đúng, điểm chuyên cần, danh hiệu) — không mua, không rơi ngẫu nhiên.</div>`;
   // thẻ ô đang chọn
-  $('eqTabs').innerHTML = EQ_SLOTS.map(([s, n, ic])=>{ const nn = news.filter(id=> eqItem(id).s === s).length; return `<button data-s="${s}" class="${s === eqTab ? 'on' : ''}">${ic} ${n}${nn ? `<span class="new">${nn}</span>` : ''}</button>`; }).join('');
+  $('eqTabs').innerHTML = [...EQ_SLOTS, ['hair', 'Kiểu tóc', '💇']].map(([s, n, ic])=>{ if(s === 'hair') return `<button data-s="hair" class="${eqTab === 'hair' ? 'on' : ''}">💇 Kiểu tóc</button>`; const nn = news.filter(id=> eqItem(id).s === s).length; return `<button data-s="${s}" class="${s === eqTab ? 'on' : ''}">${ic} ${n}${nn ? `<span class="new">${nn}</span>` : ''}</button>`; }).join('');
   $('eqTabs').querySelectorAll('button').forEach(b=> b.onclick = ()=> eqSetTab(b.dataset.s));
+  if(eqTab === 'hair'){ $('eqTabs').querySelectorAll('button').forEach(b=> b.onclick = ()=> eqSetTab(b.dataset.s)); hairRender(); return; }
   const cur = on[EQ_SLOTS.findIndex(x=> x[0] === eqTab)], list = EQ.filter(x=> x.s === eqTab); if(!eqSel || eqItem(eqSel).s !== eqTab) eqSel = cur.id;
   $('eqGrid').innerHTML = list.map(x=>{ const ok = eqOwn(x), [v, need, txt] = x.req ? eqProg(x.req) : [1, 1, ''], R = EQ_RAR[x.r];
     return `<button class="ecard${ok ? '' : ' lock'}${x.id === eqSel ? ' sel' : ''}" data-id="${x.id}" style="border-color:${x.id === eqSel ? R.c : 'var(--line)'}">
@@ -1699,6 +1708,15 @@ function eqRender(){
     <button class="go" id="eqGo" ${ok && !worn ? '' : 'disabled'}>${worn ? '✓ Đang mặc' : ok ? 'Trang bị' : '🔒 Chưa mở khoá'}</button></div>`;
   $('eqGo').onclick = ()=> eqWear(x);
 }
+function hairRender(){ const ch = save.char || 'boy', L = lookOf(ch), hx = c=> c == null ? 'linear-gradient(135deg,#3a2618,#7a4630)' : hex(c);
+  $('eqGrid').innerHTML = HAIR_STYLES[ch].map(([id, n, ic])=> `<button class="ecard${id === L.hair ? ' sel' : ''}" data-h="${id}" style="border-color:${id === L.hair ? 'var(--gold)' : 'var(--line)'}"><div class="ic" style="background:rgba(255,255,255,.07);border:2px solid var(--line);font-size:26px">${ic}</div>${id === L.hair ? '<span class="wear">Đang để</span>' : ''}<div class="nm">${n}</div><div class="rr">${ch === 'girl' ? 'Tiểu thư' : 'Hiệp sĩ'}</div></button>`).join('');
+  $('eqDet').innerHTML = `<div class="edet" style="display:block"><b>🎨 Màu tóc</b><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${HAIR_COLORS.map(([c, n])=> `<button data-k="${c == null ? '' : c}" title="${n}" style="width:38px;height:38px;border-radius:50%;cursor:pointer;background:${hx(c)};border:3px solid ${c === L.hairColor ? 'var(--gold)' : 'rgba(255,255,255,.25)'};box-shadow:${c === L.hairColor ? '0 0 0 3px rgba(242,193,78,.35)' : 'none'};color:#fff;font-size:10px">${c == null ? 'Gốc' : ''}</button>`).join('')}</div>
+    ${ch === 'boy' ? `<label class="tog" style="margin-top:12px"><input type="checkbox" id="hNoHat" ${L.noHat ? 'checked' : ''}> 🎓 Bỏ mũ để khoe kiểu tóc</label>` : ''}
+    <p style="font-size:13px;opacity:.8;margin:8px 0 0">Đổi kiểu tóc miễn phí bất cứ lúc nào — các bạn trong lớp cũng thấy kiểu tóc mới của em.</p></div>`;
+  const setL = f=>{ const o = Object.assign({}, save.look || {}); f(o); save.look = o; persist(); syncSoon(); makeHero(ch); sfx('click'); hairRender(); pvBuild(null, true); if(PEER.lastPos) PEER.lastPos = null; };
+  $('eqGrid').querySelectorAll('[data-h]').forEach(b=> b.onclick = ()=> setL(o=> o[ch === 'girl' ? 'g' : 'b'] = b.dataset.h));
+  $('eqDet').querySelectorAll('[data-k]').forEach(b=> b.onclick = ()=> setL(o=>{ if(b.dataset.k === '') delete o.k; else o.k = +b.dataset.k; }));
+  if($('hNoHat')) $('hNoHat').onchange = ()=> setL(o=> o.nh = $('hNoHat').checked); }
 function eqSetTab(s){ if(s === eqTab) return; sfx('click'); eqSeenSlot(eqTab); eqTab = s; eqSel = null; eqRender(); pvBuild(); }
 function eqWear(x){ if(!eqOwn(x)) return; const r = pHp/pMaxHp(); save.eq = save.eq || {}; save.eq[x.s] = x.id; eqDirty(); persist(); syncSoon();
   pHp = Math.max(1, Math.round(r*pMaxHp())); if(running) updHud(); makeHero(save.char || 'boy'); sfx('ok'); eqRender(); pvBuild(null, true); }
@@ -1726,7 +1744,7 @@ function pvBuild(tryItem, cheer){
   if(!PV.r) return; if(PV.h){ PV.sc.remove(PV.h.object); PV.h.dispose(); PV.mats.forEach(m=> m.dispose()); }
   const col = eqCol(); if(tryItem && tryItem.col) Object.assign(col, tryItem.col); const st = save.char || 'boy';
   PV.mats = [toon({vertexColors:true}), toon({vertexColors:true, emissive:st === 'girl' ? 0x7a2a58 : 0x1a6a80})];
-  PV.h = createHero(THREE, {merge, material:PV.mats[0], glowMaterial:PV.mats[1], outline:pvOl, style:st, colors:col}); PV.sc.add(PV.h.object);
+  PV.h = createHero(THREE, {merge, material:PV.mats[0], glowMaterial:PV.mats[1], outline:pvOl, style:st, colors:col, ...lookOf(st, PV.tryLook)}); PV.sc.add(PV.h.object);
   if(cheer) setTimeout(()=> PV.h && PV.h.victory(), 50); }
 function pvStop(){ if(!PV.r) return; cancelAnimationFrame(PV.raf); if(PV.h){ PV.h.dispose(); PV.mats.forEach(m=> m.dispose()); } PV.r.dispose(); try{ PV.r.forceContextLoss(); }catch(e){} PV.cv.remove(); Object.keys(PV).forEach(k=> delete PV[k]); }
 $('bEq').onclick = ()=> openEquip(); $('menuEq').onclick = ()=> openEquip(); $('eqX').onclick = closeEquip;
