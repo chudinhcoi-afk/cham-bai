@@ -223,6 +223,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div>🔒 <b>Vào lớp</b> bằng SBD thì chỉ mở vùng đất từ lớp của em trở xuống. Ôn ở <b>lớp dưới</b> không có kinh nghiệm và không tính điểm. Lên lớp mới (năm học sau) sẽ mở thêm vùng đất mới.</div>
     <div>🛡 <b>Hộ vệ chương</b> đố 5 câu. Hạ được Hộ vệ thì nhận <b>danh hiệu</b> và <b>điểm thường xuyên</b> = số câu đúng × hệ số, gửi cho thầy/cô. Lượt đầu hệ số <b>×2</b>, mỗi lượt sau giảm 0,1 (×1,9; ×1,8…); muốn tăng lại phải <b>luyện thêm quái nhỏ</b> (5 con = +0,1). Mỗi chương tối đa 3 lượt/ngày; trước <b>mỗi lượt</b> phải hạ <b>10 quái nhỏ</b> của chương đó (trả lời đúng).</div>
     <div>🔒 <b>Trung thực:</b> khi đang trả lời câu đố, <b>rời màn hình / chuyển tab / mở ứng dụng khác</b> thì câu đó tính <b>sai</b> và được ghi lại cho thầy/cô. Không sao chép được đề; đáp án được xáo trộn cho mỗi bạn; câu của <b>Hộ vệ</b> có các con số mờ luân phiên (nhìn vài giây là đọc đủ, nhưng chụp ảnh sẽ thiếu số liệu). <b>Nghiêm cấm dùng AI.</b></div>
+    <div>📅 <b>Chương mở theo lịch học:</b> mỗi chương mở trước khi học trên lớp khoảng 1–2 tuần. Khu chưa mở có 🧙 <b>Người gác chương</b> báo ngày mở. 🏁 <b>10 bạn đầu tiên</b> của lớp đạt điểm tối đa một chương được trọn 10 điểm thường xuyên; cứ 10 bạn sau, điểm tối đa giảm 0,1.</div>
     <div>💀 <b>Bị Hộ vệ hoặc Trùm hạ gục</b> thì phải chờ <b>30 phút</b> mới hồi sinh — chuẩn bị kỹ rồi hãy thách đấu! Gục trước quái nhỏ thì hồi sinh ngay ở trại.</div>
     <div>🎒 <b>Trang bị</b> (phím I): 5 ô vũ khí, mũ, áo giáp, giày, áo choàng — tăng tấn công, máu, chí mạng… và đổi màu nhân vật. Mở khoá bằng <b>thành tích học tập</b>: lên cấp, trả lời đúng, chuỗi đúng, điểm chuyên cần, danh hiệu.</div>
     <div>💬 <b>Kênh chat</b> theo khối: trao đổi với các bạn cùng khối (cần vào lớp). Lịch sự, không nói tục — thầy/cô đọc được và có thể khoá chat.</div>
@@ -251,6 +252,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   <div id="qRes"></div>
 </div></div>
 <div id="book" class="modal hidden"><div class="box" id="bookBox"></div></div>
+<div id="keeper" class="modal hidden"><div class="box" id="keeperBox" style="width:min(560px,100%)"></div></div>
 <div id="equip" class="modal hidden"><div class="box">
   <div class="ehd"><h3>🎒 Trang bị</h3><span class="pw" id="eqPw"></span><button class="ibtn" id="eqX" style="padding:4px 10px">✕</button></div>
   <div class="ebody"><div class="left"><div class="doll" id="eqDoll"></div><div class="estats" id="eqStats"></div></div>
@@ -353,7 +355,7 @@ async function login(ma, sbd, ten){
   if(!cl) await fb(`game/claim/${ma}/${sbd}`, 'PUT', fbAuth.uid);
   const kq = await fb(`game/kq/${ma}/${sbd}`) || {};
   switchSave(`${SAVE_KEY}:${ma}:${sbd}`);
-  save.name = hs.ten; save.acct = {ma, sbd, ten:hs.ten, lop:lop.ten || ma, khoi:+lop.khoi || null};
+  save.name = hs.ten; save.acct = {ma, sbd, ten:hs.ten, lop:lop.ten || ma, khoi:+lop.khoi || null, lich:lop.lich || null};
   // gộp với bản trên máy chủ (lấy bản làm nhiều hơn)
   if(kq.ch) Object.keys(kq.ch).forEach(g=>{ save.ch = save.ch || {}; save.ch[g] = save.ch[g] || {}; Object.keys(kq.ch[g]).forEach(ci=>{ const a = save.ch[g][ci], b = kq.ch[g][ci]; if(!a || (b.n || 0) > (a.n || 0)) save.ch[g][ci] = Object.assign({d:{}, days:{}, r:''}, b); }); });
   if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
@@ -370,7 +372,7 @@ async function login(ma, sbd, ten){
 const maxGrade = ()=> save.acct && save.acct.khoi ? save.acct.khoi : 99;
 let khoiChecked = 0;
 async function refreshKhoi(){ const A = save.acct; if(!A || Date.now() - khoiChecked < 60000) return false; khoiChecked = Date.now();
-  try{ const lop = await fb('game/lop/' + A.ma); if(lop && (+lop.khoi || null) !== A.khoi){ A.khoi = +lop.khoi || null; A.lop = lop.ten || A.lop; persist(); return true; } }catch(e){} return false; }
+  try{ const lop = await fb('game/lop/' + A.ma); if(!lop) return false; const lc = JSON.stringify(lop.lich || null) !== JSON.stringify(A.lich || null); if(lc){ A.lich = lop.lich || null; persist(); } if((+lop.khoi || null) !== A.khoi){ A.khoi = +lop.khoi || null; A.lop = lop.ten || A.lop; persist(); return true; } return lc; }catch(e){} return false; }
 function logout(){ switchSave(SAVE_KEY); renderAcct(); showMenu(); }
 let syncT = null;
 function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
@@ -410,6 +412,29 @@ function checkLevel(ci){ const R = chRec(grade, ci), C = META[grade][ci], sc = c
 const TX_DAY = 3;
 // thách đấu Hộ vệ (có tính điểm) phải hạ đủ quái nhỏ của chương đó (trả lời đúng) kể từ lần thách đấu trước
 const GUARD_NEED = 10;
+/* ----- lịch mở chương theo phân phối chương trình (thầy/cô đặt trong MathBankPro: game/lop/{mã}/lich = {lead, d:{ci:'YYYY-MM-DD'}})
+   d[ci] = ngày bắt đầu dạy chương theo PPCT; trong game chương mở sớm hơn `lead` ngày (mặc định 10). Lớp chưa đặt lịch: mở hết.
+   Chỉ áp dụng ở vùng đất đúng khối của lớp; chơi tự do / ôn lớp dưới vẫn mở hết. ----- */
+const addDays = (d, n)=>{ const t = new Date(d + 'T00:00:00'); t.setDate(t.getDate() + n); return t.toLocaleDateString('sv'); };
+const viDate = (d, wd)=>{ const t = new Date(d + 'T00:00:00'), p2 = n=> String(n).padStart(2, '0'), s = `${p2(t.getDate())}/${p2(t.getMonth() + 1)}`; return wd ? `${t.getDay() ? 'Thứ ' + ['', 'Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy'][t.getDay()] : 'Chủ nhật'}, ${s}/${t.getFullYear()}` : s; };
+const daysTo = d=> Math.round((new Date(d + 'T00:00:00') - new Date(today() + 'T00:00:00'))/864e5);
+function chLock(g, ci){ const A = save.acct; if(!A || +g !== +A.khoi || !A.lich || !A.lich.d) return null;
+  const st = A.lich.d[ci]; if(!st) return {open:null, start:null}; const open = addDays(st, -(A.lich.lead == null ? 10 : +A.lich.lead));
+  return today() >= open ? null : {open, start:st}; }
+/* ----- trần điểm thường xuyên theo thứ tự trong lớp: 10 bạn đầu đạt điểm tối đa của chương được 10, 10 bạn tiếp theo tối đa 9,9, ...
+   danh sách chung game/rank/{mã}/{khối}/{ci}/{sbd} = thời điểm (giờ máy chủ) — ai ghi trước xếp trước ----- */
+const capOf = n=> Math.max(1, Math.round((10 - 0.1*Math.floor(n/10))*10)/10);
+async function rankCap(M, raw){ const A = save.acct, X = txRec(grade, M.Z.ci), path = `game/rank/${A.ma}/${grade}/${M.Z.ci}`;
+  if(X.rk) return Math.min(raw, X.cap);                       // đã có suất: giữ trần cũ
+  try{ const L = await fb(path) || {}, n = Object.keys(L).filter(k=> k !== A.sbd).length, cap0 = capOf(n); X.capSeen = cap0;
+    if(raw < cap0) return raw;                                  // chưa chạm trần: không chiếm suất
+    await fb(`${path}/${A.sbd}`, 'PUT', {'.sv':'timestamp'});
+    const L2 = await fb(path) || {}, order = Object.entries(L2).sort((a, b)=> a[1] - b[1] || (a[0] < b[0] ? -1 : 1)).map(e=> e[0]), r = Math.max(0, order.indexOf(A.sbd));
+    X.rk = r + 1; X.cap = capOf(r); return Math.min(raw, X.cap); }
+  catch(e){ return Math.min(raw, X.capSeen || 10); } }
+function rankPeek(M){ QZ.cap = ''; const A = save.acct; if(!A || !txOn()) return; const X = txRec(grade, M.Z.ci);
+  fb(`game/rank/${A.ma}/${grade}/${M.Z.ci}`).then(L=>{ const n = Object.keys(L || {}).length, cap = X.rk ? X.cap : capOf(n); X.capSeen = cap;
+    QZ.cap = `🏁 ${n} bạn trong lớp đã đạt điểm tối đa · ` + (X.rk ? `em giữ suất thứ ${X.rk}, trần ${fmtS(X.cap)}` : `trần hiện tại <b>${fmtS(cap)}</b>, còn ${10 - n % 10} suất ở mức này`); const el = $('qCap'); if(el) el.innerHTML = '<br>' + QZ.cap; }).catch(()=>{}); }
 // hệ số điểm thường xuyên mỗi chương (lưu theo phần mười): lượt đầu ×2, mỗi lượt sau giảm 0,1 (thấp nhất ×1);
 // luyện thêm quái nhỏ ngoài 10 con bắt buộc: cứ TXM_KILLS con (trả lời đúng) thì hệ số tăng lại 0,1 (tối đa ×2)
 const TXM_MAX = 20, TXM_MIN = 10, TXM_KILLS = 5;
@@ -427,15 +452,16 @@ const txOn = ()=> !!(save.acct && save.acct.khoi && +grade === +save.acct.khoi);
 const lowGrade = ()=> !!(save.acct && save.acct.khoi && +grade < +save.acct.khoi);
 let lowTip = 0;
 function txRec(g, ci){ save.tx = save.tx || {}; const G = save.tx[g] = save.tx[g] || {}; const X = G[ci] = G[ci] || {}; X.b = X.b || 0; X.n = X.n || 0; X.w = X.w || 0; X.a = X.a || {}; X.h = X.h || []; return X; }
-function txWin(M){
+async function txWin(M){
   if(!txOn()){ if(lowGrade()) toast('🛡 Đã hạ Hộ vệ (ôn tập lớp dưới — không tính điểm)', 2600); else if(!save.acct) toast('🛡 Đã hạ Hộ vệ chương! (chơi tự do — vào lớp để được chấm điểm)', 2800); return; }
-  const X = txRec(grade, M.Z.ci), m = M.txm || TXM_MAX, sc = Math.min(10, Math.round((M.right || 0)*m)/10), t = today(), C = META[grade][M.Z.ci];
+  const X = txRec(grade, M.Z.ci), m = M.txm || TXM_MAX, raw = Math.min(10, Math.round((M.right || 0)*m)/10), t = today(), C = META[grade][M.Z.ci];
+  const rk0 = X.rk, sc = await rankCap(M, raw), capTxt = sc < raw ? ` · trần điểm thứ tự: ${fmtS(sc)}` : '', rkTxt = X.rk && !rk0 ? `<br>🥇 Em là người thứ <b>${X.rk}</b> của lớp đạt điểm tối đa chương này` : '';
   X.w++; X.h.push(sc + '@' + t); X.h = X.h.slice(-8); if(sc > X.b){ X.b = sc; X.d = t; }
   const title = M.answered === true && !X.title; if(M.answered === true) X.title = X.title || t;
   // dọn số lượt các ngày cũ
   Object.keys(X.a).sort().slice(0, -7).forEach(k=> delete X.a[k]);
   persist(); syncNow(); eqCheck();
-  setTimeout(()=> toast((title ? `🏆 DANH HIỆU MỚI: Khắc tinh Hộ vệ<br><span style="font-size:.62em">${shortCh(C.ten)}</span><br>` : `🛡 Hạ Hộ vệ chương!<br>`) + `<span style="font-size:.62em">Điểm thường xuyên lần này: <b>${fmtS(sc)}</b> (${M.right}/${M.total} câu ${fmtM(m)}) · cao nhất: <b>${fmtS(X.b)}</b> — đã gửi cho thầy/cô</span>`, 5200, true), 1600);
+  setTimeout(()=> toast((title ? `🏆 DANH HIỆU MỚI: Khắc tinh Hộ vệ<br><span style="font-size:.62em">${shortCh(C.ten)}</span><br>` : `🛡 Hạ Hộ vệ chương!<br>`) + `<span style="font-size:.62em">Điểm thường xuyên lần này: <b>${fmtS(sc)}</b> (${M.right}/${M.total} câu ${fmtM(m)}) · cao nhất: <b>${fmtS(X.b)}</b>${capTxt} — đã gửi cho thầy/cô${rkTxt}</span>`, 5600, true), 1600);
   if(title){ hero.victory(); pillar(player.position, 0xffd23a); burst(player.position, 0xffd23a, 2, 30); sfx('lvl'); }
 }
 function recAnswer(q, ok){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
@@ -768,7 +794,7 @@ function textSprite(text, opt = {}){
   if(opt.screen) s.scale.set(c.width/c.height*opt.screen*lines.length, opt.screen*lines.length, 1); else { const k = (opt.scale || 1)/90; s.scale.set(c.width*k, c.height*k, 1); } s.renderOrder = 5; return s;
 }
 function disposeObj(o){ o.traverse(n=>{ if(n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); if(n.material){ (Array.isArray(n.material) ? n.material : [n.material]).forEach(m=>{ if(m.userData.keep) return; if(m.map && m.map !== DOT_TEX && m.map !== SHADOW_TEX) m.map.dispose(); m.dispose(); }); } }); }
-function clearWorld(){ while(world.children.length){ const o = world.children.pop(); disposeObj(o); } monsters = []; zones = []; clouds = []; water = null; amb = null; campLight = null; fireMeshes = []; if(stars){ scene.remove(stars); disposeObj(stars); stars = null; } }
+function clearWorld(){ while(world.children.length){ const o = world.children.pop(); disposeObj(o); } monsters = []; zones = []; keepers = []; clouds = []; water = null; amb = null; campLight = null; fireMeshes = []; if(stars){ scene.remove(stars); disposeObj(stars); stars = null; } }
 
 /* ---------- cây cỏ riêng từng vùng đất (gộp khối + vẽ hàng loạt) ---------- */
 const Cy = (rt, rb, h, s = 6)=> new THREE.CylinderGeometry(rt, rb, h, s), Co = (r, h, s = 7)=> new THREE.ConeGeometry(r, h, s), Ic = (r, d = 0)=> new THREE.IcosahedronGeometry(r, d), Oc = r=> new THREE.OctahedronGeometry(r, 0), Do = r=> new THREE.DodecahedronGeometry(r, 0), Sp = (r, a = 10, b = 8)=> new THREE.SphereGeometry(r, a, b);
@@ -845,6 +871,41 @@ function updAmbient(dt, t){
 }
 
 /* ---------- dựng cả vùng đất ---------- */
+/* ----- Người gác chương: đứng trước khu vực chưa mở, báo ngày mở theo phân phối chương trình ----- */
+let keepers = [];
+const lockTxt = L=> L.open ? `Mở ngày ${viDate(L.open)}` : 'Chưa có lịch mở';
+function buildKeeper(Z, px, pz){
+  const y = height(Z.x, Z.z);
+  // vòng chắn phát sáng quanh khu vực
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(Z.r, Z.r, 7, 64, 1, true), new THREE.MeshBasicMaterial({color:0x9a7cff, transparent:true, opacity:0.16, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending}));
+  wall.position.set(Z.x, y + 3.2, Z.z); world.add(wall); Z.wall = wall;
+  Z.lab.visible = false; const lab = textSprite(`🔒 Khu ${Z.idx + 1}: ${shortCh(Z.name)}\n${lockTxt(Z.lock)}`, {screen:0.03, color:'#d8c8ff'}); lab.position.copy(Z.lab.position); world.add(lab); Z.lab = lab;
+  Z.flagMat.color.set(0x8a8a9a); Z.mark.material.color.set(0x9a7cff);
+  // ông đồ gác cổng: áo dài tím, râu bạc, mũ, gậy treo đèn lồng
+  const dx = px - Z.x, dz = pz - Z.z, L = Math.hypot(dx, dz) || 1, kx = Z.x + dx/L*(Z.r + 2.2), kz = Z.z + dz/L*(Z.r + 2.2), ky = height(kx, kz);
+  const ROBE = 0x6b3fa0, ROBE2 = 0x4e2c7a, SKIN = 0xffd6b0, BEARD = 0xf4f1ea, GOLD = 0xf2c14e;
+  const P = [{g:Co(0.85, 2.0, 10), m:M4(0, 1.0, 0), c:ROBE}, {g:Cy(0.42, 0.62, 0.5, 10), m:M4(0, 1.75, 0), c:ROBE2}, {g:Cy(0.66, 0.66, 0.12, 12), m:M4(0, 1.32, 0), c:GOLD},
+    {g:Sp(0.42, 12, 10), m:M4(0, 2.3, 0), c:SKIN}, {g:Co(0.3, 0.75, 8), m:M4(0, 1.92, 0.24, 1, 1, 0.7, Math.PI, 0, 0), c:BEARD}, {g:Sp(0.1, 6, 4), m:M4(-0.15, 2.4, 0.37), c:0x2a1a10}, {g:Sp(0.1, 6, 4), m:M4(0.15, 2.4, 0.37), c:0x2a1a10},
+    {g:Sp(0.11, 6, 4), m:M4(-0.17, 2.52, 0.33, 1.6, 0.5, 1), c:BEARD}, {g:Sp(0.11, 6, 4), m:M4(0.17, 2.52, 0.33, 1.6, 0.5, 1), c:BEARD},
+    {g:Cy(0.62, 0.62, 0.06, 14), m:M4(0, 2.62, 0), c:ROBE2}, {g:Cy(0.32, 0.4, 0.42, 10), m:M4(0, 2.85, 0), c:ROBE2}, {g:Cy(0.41, 0.41, 0.08, 10), m:M4(0, 2.7, 0), c:GOLD},
+    {g:new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), m:M4(-0.62, 1.55, 0.15, 1, 1, 1, 0.4, 0, 0.5), c:ROBE}, {g:new THREE.CapsuleGeometry(0.13, 0.55, 4, 8), m:M4(0.62, 1.6, 0.2, 1, 1, 1, -0.5, 0, -0.5), c:ROBE},
+    {g:Sp(0.13, 8, 6), m:M4(0.82, 1.45, 0.42), c:SKIN}, {g:Cy(0.05, 0.05, 3.0, 6), m:M4(0.85, 1.5, 0.45), c:0x6b4a2b}, {g:Cy(0.03, 0.03, 0.35, 4), m:M4(0.85, 2.95, 0.58, 1, 1, 1, 0.7, 0, 0), c:0x3a2a20}];
+  const body = new THREE.Mesh(merge(P), toon({vertexColors:true, flatShading:true})); outline(body, 0.035, true); body.castShadow = tier.shadow;
+  const lantern = new THREE.Mesh(Oc(0.2).scale(1, 1.3, 1), toon({color:0xffc04a, emissive:0xff9a1a, emissiveIntensity:0.9})); lantern.position.set(0.85, 2.85, 0.78); outline(lantern, 0.03);
+  const G = new THREE.Group(); G.add(body, lantern); G.position.set(kx, ky, kz); G.rotation.y = Math.atan2(dx, dz); world.add(G);
+  const bang = textSprite('❗', {scale:0.9}); bang.position.set(kx, ky + 3.9, kz); world.add(bang);
+  const tag = textSprite('🧙 Người gác chương', {screen:0.028, color:'#ffe6a3'}); tag.position.set(kx, ky + 3.35, kz); world.add(tag);
+  keepers.push({keeper:true, Z, g:G, bang, base:G.rotation.y, name:'Người gác chương', greeted:false}); }
+function openKeeper(K){ sfx('click'); const Z = K.Z, L = Z.lock, A = save.acct, lead = A.lich.lead == null ? 10 : +A.lich.lead, C = META[grade];
+  const rows = zones.map(z=>{ const lk = z.lock, st = A.lich.d && A.lich.d[z.ci], sc = chScore((save.ch || {})[grade] && save.ch[grade][z.ci], C[z.ci]);
+    return `<tr${z === Z ? ' style="background:rgba(242,193,78,.14)"' : ''}><td>${z.idx + 1}. ${shortCh(z.name)}</td><td>${st ? viDate(st) : '—'}</td><td>${lk ? (lk.open ? '🔒 ' + viDate(lk.open) : '🔒 chưa có lịch') : '✅ đã mở'}</td><td style="text-align:center">${lk ? '—' : fmtS(sc.s)}</td></tr>`; }).join('');
+  const dn = L.open ? daysTo(L.open) : null;
+  $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">🧙</div><div><b style="color:var(--gold);font-size:18px">Người gác chương</b><div style="font-size:13px;opacity:.8">Khu ${Z.idx + 1}: ${Z.name}</div></div></div>
+    <p style="font-size:16px;line-height:1.55;margin:12px 0">${L.open ? `“Cánh cổng này sẽ mở vào <b style="color:var(--gold)">${viDate(L.open, true)}</b> — còn <b>${dn}</b> ngày nữa. Theo phân phối chương trình, lớp ${A.lop} bắt đầu học chương này từ ${viDate(L.start, true)}; ta mở sớm ${lead} ngày để các em kịp làm quen.”` : '“Thầy/cô chưa đặt lịch mở chương này. Khi đến lúc học, cánh cổng sẽ tự mở.”'}</p>
+    <p style="font-size:14px;opacity:.85;margin:0 0 8px">Trong lúc chờ, hãy luyện thật vững các chương đã mở — <b>10 bạn đầu tiên</b> đạt điểm tối đa ở mỗi chương mới được trọn <b>10 điểm</b> thường xuyên!</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px"><tr style="opacity:.75;text-align:left"><th>Chương</th><th>Học theo PPCT</th><th>Mở trong game</th><th>Chuyên cần</th></tr>${rows}</table>
+    <button class="ibtn" style="margin-top:12px" onclick="document.getElementById('keeper').classList.add('hidden')">Đã hiểu</button>`;
+  $('keeper').classList.remove('hidden'); }
 function buildWorld(g){
   clearWorld(); W = WORLDS[g];
   // màu trời, sương, ánh sáng
@@ -957,18 +1018,19 @@ function buildWorld(g){
     const post = new THREE.Mesh(Cy(0.12, 0.15, 4.2, 6), toon({color:0x6b4a2b})); post.position.set(x, y + 2.1, z); outline(post, 0.04); world.add(post);
     Z.flagMat = toon({color:0xd94f3a, side:THREE.DoubleSide}); const flag = new THREE.Mesh(flagGeo.clone(), Z.flagMat); flag.position.set(x, y + 3.6, z); world.add(flag); Z.flag = flag; Z.flagBase = flag.geometry.attributes.position.array.slice();
     const lab = textSprite(`Khu ${i + 1}: ${c.ten.replace(/^Chương [IVXL]+\. /, '')}\nQuái cấp ${Z.lvl}–${Z.lvl + 2}`, {screen:0.03, color:'#ffe6a3'}); lab.position.set(x, y + 6, z); world.add(lab); Z.lab = lab;
-    zones.push(Z);
+    zones.push(Z); Z.lock = chLock(g, c.ci);
+    if(Z.lock){ const [px, pz] = i ? zc[i - 1] : [0, 0]; buildKeeper(Z, px, pz); return; }
     const n = tier.mons; for(let k = 0; k < n; k++) spawnMonster(Z, k === 0 ? 'elite' : 'normal');
     if(i < chs.length - 1) spawnMonster(Z, 'guard');
   });
   refreshFlags();
-  const lastZ = zones[zones.length - 1]; if(lastZ){ bossZone = lastZ; spawnMonster(lastZ, 'boss'); }
+  const lastZ = zones[zones.length - 1]; if(lastZ && !lastZ.lock){ bossZone = lastZ; spawnMonster(lastZ, 'boss'); }
   makeAmbient(g);
   // trả lại ánh sáng gốc cho các cảnh biến hình
   W._hemi = W.hemi; W._sun = W.sun;
   applyTier();
 }
-function refreshFlags(){ zones.forEach(Z=>{ const sc = chScore((save.ch || {})[grade] && save.ch[grade][Z.ci], META[grade][Z.ci]); Z.done = sc.lv >= 7; const col = new THREE.Color(LVC[sc.lv] || LVC[0]); Z.flagMat.color.copy(col); Z.mark.material.color.copy(sc.lv ? col : new THREE.Color(0xffffff));
+function refreshFlags(){ zones.forEach(Z=>{ if(Z.lock) return; const sc = chScore((save.ch || {})[grade] && save.ch[grade][Z.ci], META[grade][Z.ci]); Z.done = sc.lv >= 7; const col = new THREE.Color(LVC[sc.lv] || LVC[0]); Z.flagMat.color.copy(col); Z.mark.material.color.copy(sc.lv ? col : new THREE.Color(0xffffff));
   const key = sc.s + '|' + sc.lv; if(Z.lab && Z.labKey !== key){ Z.labKey = key; const p = Z.lab.position.clone(), vis = Z.lab.visible; world.remove(Z.lab); disposeObj(Z.lab); Z.lab = textSprite(`Khu ${Z.idx + 1}: ${shortCh(Z.name)}\n${sc.lv === 10 ? '🏅 Danh hiệu · 10 điểm' : sc.lv ? `★ ${LVN[sc.lv]} · ${sc.lv} điểm` : `Điểm chuyên cần: ${fmtS(sc.s)}`}`, {screen:0.03, color:sc.lv ? LVC[sc.lv] : '#ffe6a3'}); Z.lab.position.copy(p); Z.lab.visible = vis; world.add(Z.lab); } }); }
 
 /* ======================= QUÁI VẬT ======================= */
@@ -1312,7 +1374,7 @@ function askQuiz(M){
       M._qi = step; const q = shuffleQ(pickQuestion(M)); curQ = q; const tq = Date.now(); QZ.kind = M.kind; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
       $('quiz').classList.remove('hidden'); $('qFace').textContent = M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
       $('qSay').innerHTML = (big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!') + (q.rv ? '<span class="tag">🔁 Câu báo thù</span>' : '') + ((save.streak || 0) >= 2 ? `<span class="tag" style="background:#ffd23a">🔥 ${save.streak}</span>` : '');
-      $('qMeta').innerHTML = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}<br><span style="color:#ffb0a0">🔒 Rời màn hình / chuyển tab khi đang trả lời = câu đó tính sai</span>`;
+      $('qMeta').innerHTML = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}<br><span style="color:#ffb0a0">🔒 Rời màn hình / chuyển tab khi đang trả lời = câu đó tính sai</span>${M.kind === 'guard' ? `<span id="qCap" style="color:#ffd76a">${QZ.cap ? '<br>' + QZ.cap : ''}</span>` : ''}`;
       let lock = fastQ() ? 0 : LOCK_S[q.m] + (fig ? 3 : 0) || 0; const lock0 = lock;
       const exam = M.kind === 'guard'; $('qText').innerHTML = (exam ? `<div class="aiw">${AI_WARN}</div>` : '') + q.q + `<div class="wm">${(wmText(exam) + ' · ').repeat(14)}</div>`; $('qRes').innerHTML = (lock ? `<div class="hint" id="qLock">🤔 Đọc kỹ đề, tự nháp — đáp án hiện sau <b id="qLockN">${lock}</b> giây<div class="lockbar"><div id="qLockB" style="width:0%"></div></div></div>` : '') + (q.rv ? '<div class="hint">🔁 Dạng bài em từng làm sai — trả lời đúng để <b>báo thù</b> và nhận thêm kinh nghiệm!</div>' : '') + (tut && tut.i <= 4 ? '<div class="hint">💡 Trả lời <b>đúng</b>: quái choáng, yếu đi một nửa và hạ được nhiều kinh nghiệm. Trả lời <b>sai</b> hoặc hết giờ: quái <b>biến hình</b> và hạ nó cũng <b>không được kinh nghiệm</b>!</div>' : '');
       $('qOpts').innerHTML = q.o.map((o, i)=> `<button class="opt" data-i="${i}"${lock ? ' disabled' : ''}><b>${'ABCD'[i]}</b><span>${String(o).replace(/\.\s*$/, '')}</span></button>`).join('');
@@ -1345,9 +1407,11 @@ function askQuiz(M){
 }
 let inQuiz = false;
 async function challenge(M){
+  if(M && M.keeper){ if(!inQuiz && !cine) openKeeper(M); return; }
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
   if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; } }
   if(M.kind === 'guard'){ const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
+  if(M.kind === 'guard') rankPeek(M);
   inQuiz = true; if(CHAT.open) chatClose(); keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
   if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); persist(); syncSoon(); } if(M.kind === 'guard'){ gkSet(grade, M.Z.ci, 0); persist(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
@@ -1584,8 +1648,12 @@ function loop(t){
     W._hAcc = (W._hAcc || 0) + dt; W._hSum = (W._hSum || 0) + pHp - hp0; if(Math.random() < dt*14) healSpark(); if(W._hAcc > 0.6){ W._hAcc = 0; floatText(player.position, '+' + Math.round(W._hSum), '#6dff9a'); W._hSum = 0; } }
   else { W._healing = false; if(!target && pHp < pMaxHp() && deadT <= 0){ pHp = Math.min(pMaxHp(), pHp + pMaxHp()*0.02*(1 + eqStat('regen')/100)*dt); updHud(); } }
   // vùng đang đứng
+  zones.forEach(Z=>{ if(!Z.lock) return; let dx = player.position.x - Z.x, dz = player.position.z - Z.z, d = Math.hypot(dx, dz); if(d < Z.r + 0.6){ if(d < 0.01){ dx = -Z.x; dz = -Z.z; d = Math.hypot(dx, dz) || 1; } const k = (Z.r + 0.6)/d; player.position.x = Z.x + dx*k; player.position.z = Z.z + dz*k; player.position.y = height(player.position.x, player.position.z);
+    if(!Z._bumpT || performance.now() - Z._bumpT > 4000){ Z._bumpT = performance.now(); sfx('warn'); toast(`🔒 Khu ${Z.idx + 1} chưa mở — ${lockTxt(Z.lock)}<br><span style="font-size:.62em">Hỏi 🧙 Người gác chương để biết thêm</span>`, 2600); } } });
+  keepers.forEach(K=>{ const d = K.g.position.distanceTo(player.position); K.bang.position.y = K.g.position.y + 3.9 + Math.sin(t*0.004)*0.15; K.g.rotation.y = d < 12 ? Math.atan2(player.position.x - K.g.position.x, player.position.z - K.g.position.z) : K.base;
+    if(d < 10 && !K.greeted){ K.greeted = true; toast(`🧙 “Khu ${K.Z.idx + 1} đang khoá — ${lockTxt(K.Z.lock).toLowerCase()}. Lại đây ta kể cho!”`, 3000); } });
   let z = null; zones.forEach(Z=>{ if(Math.hypot(player.position.x - Z.x, player.position.z - Z.z) < Z.r + 2) z = Z; });
-  if(z !== inZone){ inZone = z; $('zone').textContent = z ? `Khu ${z.idx + 1}: ${z.name}` : (dCamp < 9 ? '🏕 Trại xuất phát' : WORLDS[grade].name); if(z) toast(`📍 ${z.name}`, 1600); }
+  if(z !== inZone){ inZone = z; $('zone').textContent = z ? (z.lock ? '🔒 ' : '') + `Khu ${z.idx + 1}: ${z.name}` + (z.lock ? ` — ${lockTxt(z.lock).toLowerCase()}` : '') : (dCamp < 9 ? '🏕 Trại xuất phát' : WORLDS[grade].name); if(z && !z.lock) toast(`📍 ${z.name}`, 1600); }
   // quái vật
   near = null; let nd = 6;
   for(const M of monsters.slice()){
@@ -1638,7 +1706,8 @@ function loop(t){
     M.label.position.set(M.g.position.x, top + 0.55, M.g.position.z); M.label.visible = (d < 22 || M.state === 'fight' || ((M.kind === 'boss' || M.kind === 'guard') && d < 50)) && M.spawnT >= 1;
     M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
   }
-  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near){ const gl = near.kind === 'guard' && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
+  if(!near) for(const K of keepers) if(K.g.position.distanceTo(player.position) < 5.5) near = K;
+  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near && near.keeper) $('challenge').textContent = '💬 Hỏi Người gác chương' + (mobile ? '' : ' (E)'); else if(near){ const gl = near.kind === 'guard' && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
   if(cine) updCine(rdt);
   // hiệu ứng
   for(let i = fx.length - 1; i >= 0; i--){ const f = fx[i]; f.life -= dt; if(f.upd) f.upd(f, dt); if(f.life <= 0){ f.parent.remove(f.obj); disposeFx(f.obj); fx.splice(i, 1); } }
@@ -1696,14 +1765,14 @@ function drawMini(){
   mx.fillStyle = 'rgba(20,28,58,.75)'; mx.fillRect(0, 0, Wd, Wd); mx.translate(R, R); mx.rotate(yaw + Math.PI);
   const P = (x, z)=> [(x - player.position.x)*k*-1, (z - player.position.z)*k];
   mx.strokeStyle = 'rgba(242,193,78,.35)'; mx.lineWidth = 3; mx.beginPath(); PATH.forEach(([x, z], i)=>{ const [a, b] = P(x, z); if(i) mx.lineTo(a, b); else mx.moveTo(a, b); }); mx.stroke();
-  zones.forEach(Z=>{ const [x, y] = P(Z.x, Z.z); mx.strokeStyle = Z.done ? 'rgba(242,193,78,.8)' : 'rgba(255,255,255,.35)'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, Z.r*k, 0, 7); mx.stroke(); });
+  zones.forEach(Z=>{ const [x, y] = P(Z.x, Z.z); mx.strokeStyle = Z.lock ? 'rgba(154,124,255,.9)' : Z.done ? 'rgba(242,193,78,.8)' : 'rgba(255,255,255,.35)'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, Z.r*k, 0, 7); mx.stroke(); });
   { const [x, y] = P(campPos.x, campPos.z); mx.fillStyle = '#f2c14e'; mx.beginPath(); mx.arc(x, y, 7, 0, 7); mx.fill(); }
   monsters.forEach(M=>{ if(M.dead) return; const [x, y] = P(M.g.position.x, M.g.position.z); mx.fillStyle = M.kind === 'boss' ? '#c77dff' : M.kind === 'guard' ? '#9fd8ff' : M.morph ? '#ff2a2a' : M.answered ? '#4aa3ff' : '#ff8a5b'; mx.beginPath(); mx.arc(x, y, M.kind === 'boss' ? 7 : 4, 0, 7); mx.fill(); });
   mx.restore(); mx.fillStyle = '#fff'; mx.beginPath(); mx.moveTo(R, R - 9); mx.lineTo(R - 6, R + 6); mx.lineTo(R + 6, R + 6); mx.fill();
 }
 function openBook(){
   const rows = META[grade].map((c, ci)=> c.n ? (()=>{ const R = (save.ch || {})[grade] && save.ch[grade][ci], sc = chScore(R, c);
-    return `<tr><td>${c.ten}<div style="font-size:12px;opacity:.75;margin-top:3px">${sc.lv === 10 ? '🏅 Bậc thầy ' + shortCh(c.ten) : sc.need.length ? 'Để lên ' + (sc.lv ? sc.lv + 1 : 7) + ' điểm cần: ' + sc.need.join('; ') : ''}</div></td>
+    const lk = chLock(grade, ci); return `<tr${lk ? ' style="opacity:.6"' : ''}><td>${lk ? '🔒 ' : ''}${c.ten}${lk ? `<div style="font-size:12px;color:#c9b8ff;margin-top:3px">${lockTxt(lk)} (theo phân phối chương trình)</div>` : ''}<div style="font-size:12px;opacity:.75;margin-top:3px">${sc.lv === 10 ? '🏅 Bậc thầy ' + shortCh(c.ten) : sc.need.length ? 'Để lên ' + (sc.lv ? sc.lv + 1 : 7) + ' điểm cần: ' + sc.need.join('; ') : ''}</div></td>
       <td style="text-align:center"><span class="lvchip" style="background:${sc.lv ? LVC[sc.lv] : 'rgba(255,255,255,.1)'};color:${sc.lv ? '#1a1a1a' : '#fff'}">${fmtS(sc.s)}</span></td><td style="font-size:12px">${R ? `${R.c || 0}/${R.n || 0} đúng<br>${Math.round(sc.cov*100)}% dạng` : '—'}</td>
       <td style="text-align:center;font-size:12px">${(()=>{ const X = save.tx && save.tx[grade] && save.tx[grade][ci]; if(!X || !X.n) return '—'; return `${X.title ? '🏆 ' : ''}<b style="font-size:15px">${X.w ? fmtS(X.b) : '—'}</b><br>${X.w}/${X.n} lần thắng · hôm nay ${X.a[today()] || 0}/${TX_DAY}`; })()}<br><span style="opacity:.8">quái nhỏ ${Math.min(gkGet(grade, ci), GUARD_NEED)}/${GUARD_NEED}${txOn() ? ` · hệ số ${fmtM(txM((save.tx && save.tx[grade] && save.tx[grade][ci]) || {}))}` : ''}</span></td></tr>`; })() : '').join('');
   $('bookBox').innerHTML = `<h3 style="margin:0 0 4px">📖 Sổ tay — Lớp ${grade}${save.acct ? ' · ' + save.acct.ten : ''}</h3>
@@ -1713,7 +1782,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
