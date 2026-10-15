@@ -105,7 +105,10 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 #quiz .say{font-weight:800;color:var(--gold);font-size:18px}
 #quiz .meta{font-size:12px;opacity:.75}
 #quiz .tm{margin-left:auto;font-weight:800;font-size:20px;min-width:52px;text-align:center;border-radius:12px;padding:4px 8px;background:rgba(255,255,255,.08)}
-#quiz .q{background:#f7f3e8;color:#1b1b1b;border-radius:14px;padding:14px 16px;font-size:17px;line-height:1.6;user-select:text}
+#quiz .q{background:#f7f3e8;color:#1b1b1b;border-radius:14px;padding:14px 16px;font-size:17px;line-height:1.6;position:relative;overflow:hidden}
+#quiz,#quiz *{user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}#quiz img,#quiz svg{pointer-events:none}
+#quiz .wm{position:absolute;inset:-40% -20%;transform:rotate(-18deg);font-size:12px;line-height:34px;color:#1b1b1b;opacity:.07;pointer-events:none;word-spacing:6px;white-space:normal;z-index:2}
+#quiz.away .box>*{filter:blur(16px)}#quiz.away .box{position:relative}#quiz.away .box::after{content:'⚠ Quay lại màn hình trò chơi ngay! Rời màn hình khi đang trả lời thì câu này tính sai.';position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;font-size:20px;font-weight:800;color:#ffd0a0;background:rgba(10,12,30,.55);border-radius:20px}
 #quiz .q .fig{margin-top:8px;overflow:hidden;--ink:#16213e;--paper-card:#fff;--paper:#fff;--line:#c9c9c9;color:#16213e}
 #quiz .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 #quiz .opt{background:#26305e;border:2px solid #3a4682;color:var(--ink);border-radius:14px;padding:12px 14px;font-size:16px;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center;min-height:54px}
@@ -114,7 +117,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 #quiz .opt.ok{background:#1f6b45;border-color:var(--green)}#quiz .opt.bad{background:#7a2328;border-color:var(--red)}
 #quiz .res{margin-top:12px;border-radius:14px;padding:12px 14px;font-size:15px;line-height:1.55}
 #quiz .res.ok{background:rgba(60,207,122,.15);border:1px solid rgba(60,207,122,.5)}#quiz .res.bad{background:rgba(229,72,77,.15);border:1px solid rgba(229,72,77,.5)}
-#quiz .sol{background:#f7f3e8;color:#222;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px;user-select:text}
+#quiz .sol{background:#f7f3e8;color:#222;border-radius:12px;padding:10px 12px;margin-top:8px;font-size:14px}
 #quiz .go{margin-top:12px;width:100%;padding:14px;border-radius:14px;border:none;font-weight:800;font-size:17px;cursor:pointer;background:linear-gradient(180deg,#ffd76a,#f2a93b);color:#2b1a00}
 #quiz .hint{margin-top:10px;font-size:13px;opacity:.85;background:rgba(242,193,78,.12);border:1px dashed rgba(242,193,78,.5);border-radius:10px;padding:6px 10px}
 .bbt-c{position:absolute;white-space:nowrap;font-size:14px;line-height:1.1;font-family:"Iowan Old Style",Georgia,serif}
@@ -217,6 +220,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div>🔥 <b>Chuỗi đúng</b> liên tiếp nhân kinh nghiệm (tới ×2). 🔁 <b>Câu báo thù:</b> dạng bài em từng sai sẽ quay lại — trả lời đúng được thưởng thêm.</div>
     <div>🔒 <b>Vào lớp</b> bằng SBD thì chỉ mở vùng đất từ lớp của em trở xuống. Ôn ở <b>lớp dưới</b> không có kinh nghiệm và không tính điểm. Lên lớp mới (năm học sau) sẽ mở thêm vùng đất mới.</div>
     <div>🛡 <b>Hộ vệ chương</b> đố 5 câu. Hạ được Hộ vệ thì nhận <b>danh hiệu</b> và <b>điểm thường xuyên</b> = số câu đúng × hệ số, gửi cho thầy/cô. Lượt đầu hệ số <b>×2</b>, mỗi lượt sau giảm 0,1 (×1,9; ×1,8…); muốn tăng lại phải <b>luyện thêm quái nhỏ</b> (5 con = +0,1). Mỗi chương tối đa 3 lượt/ngày; trước <b>mỗi lượt</b> phải hạ <b>10 quái nhỏ</b> của chương đó (trả lời đúng).</div>
+    <div>🔒 <b>Trung thực:</b> khi đang trả lời câu đố, <b>rời màn hình / chuyển tab / mở ứng dụng khác</b> thì câu đó tính <b>sai</b> và được ghi lại cho thầy/cô. Không sao chép được đề; đáp án được xáo trộn cho mỗi bạn.</div>
     <div>💀 <b>Bị Hộ vệ hoặc Trùm hạ gục</b> thì phải chờ <b>30 phút</b> mới hồi sinh — chuẩn bị kỹ rồi hãy thách đấu! Gục trước quái nhỏ thì hồi sinh ngay ở trại.</div>
     <div>🎒 <b>Trang bị</b> (phím I): 5 ô vũ khí, mũ, áo giáp, giày, áo choàng — tăng tấn công, máu, chí mạng… và đổi màu nhân vật. Mở khoá bằng <b>thành tích học tập</b>: lên cấp, trả lời đúng, chuỗi đúng, điểm chuyên cần, danh hiệu.</div>
     <div>💬 <b>Kênh chat</b> theo khối: trao đổi với các bạn cùng khối (cần vào lớp). Lịch sự, không nói tục — thầy/cô đọc được và có thể khoá chat.</div>
@@ -354,6 +358,7 @@ async function login(ma, sbd, ten){
   if(!save.char && kq.prof && kq.prof.char) save.char = kq.prof.char;
   if(!save.eq && kq.prof && kq.prof.eq) save.eq = kq.prof.eq;
   if(kq.prof && kq.prof.rv > (save.reviveAt || 0)) save.reviveAt = kq.prof.rv;
+  if(kq.ac && (!save.ac || (kq.ac.off || 0) + (kq.ac.cp || 0) > (save.ac.off || 0) + (save.ac.cp || 0))) save.ac = kq.ac;
   if(kq.gk) Object.keys(kq.gk).forEach(g=> Object.keys(kq.gk[g]).forEach(ci=> gkSet(g, ci, Math.max(gkGet(g, ci), kq.gk[g][ci] || 0))));
   eqDirty(); makeHero(save.char || 'boy');
   if(kq.tx) Object.keys(kq.tx).forEach(g=> Object.keys(kq.tx[g]).forEach(ci=>{ const a = txRec(g, ci), b = kq.tx[g][ci] || {}; if((b.n || 0) > a.n || (b.b || 0) > a.b) Object.assign(a, b, {b:Math.max(a.b, b.b || 0), a:Object.assign({}, b.a || {}, a.a)}); }));
@@ -370,7 +375,7 @@ function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
 function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
-  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, sc}); cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
 addEventListener('online', ()=> syncSoon(500));
 
@@ -1200,23 +1205,40 @@ function pickQuestion(M){
   const [q, i] = cand[Math.floor(Math.random()*cand.length)]; used.add(grade + ':' + i); return Object.assign({}, q, {rv:revenge});
 }
 let quizTimer = null, curQ = null;
+/* ----- chống gian lận khi trả lời câu đố -----
+   • rời màn hình (chuyển tab/ứng dụng, bấm sang cửa sổ khác > 1,5 giây) khi câu hỏi đang mở → câu đó tính sai
+   • câu hỏi bị che mờ ngay khi cửa sổ mất tiêu điểm; chặn bôi đen/sao chép/nhấn giữ (Google Lens); hình mờ tên + SBD
+   • đáp án xáo trộn mỗi lần hỏi; khoá chat khi đang trả lời; nhật ký gửi thầy/cô (save.ac) */
+const QZ = {fail:null, kind:'', away:0, t:0};
+function acLog(k, extra){ const A = save.ac = save.ac || {off:0, offG:0, cp:0, ev:[]}; if(k === 'off'){ A.off++; if(QZ.kind === 'guard' || QZ.kind === 'boss') A.offG++; } if(k === 'copy') A.cp++;
+  A.ev.push(Object.assign({t:Date.now(), k, g:grade, w:QZ.kind}, extra || {})); A.ev = A.ev.slice(-30); persist(); syncSoon(); }
+function qAway(hard){ if(!QZ.fail) return; $('quiz').classList.add('away'); clearTimeout(QZ.t);
+  if(hard) QZ.fail(); else QZ.t = setTimeout(()=>{ if(QZ.fail && !document.hasFocus()) QZ.fail(); }, 1500); }
+function qBack(){ clearTimeout(QZ.t); if(!document.hidden && document.hasFocus()) $('quiz').classList.remove('away'); }
+document.addEventListener('visibilitychange', ()=> document.hidden ? qAway(true) : qBack());
+addEventListener('blur', ()=> qAway(false)); addEventListener('focus', qBack);
+['copy', 'cut', 'contextmenu', 'dragstart', 'selectstart'].forEach(ev=> $('quiz').addEventListener(ev, e=>{ e.preventDefault(); if(ev === 'copy' || ev === 'cut'){ if(QZ.fail) acLog('copy', {c:curQ && curQ.c}); toast('🚫 Không sao chép câu hỏi được — hãy tự suy nghĩ nhé!', 2200); } }));
+// xáo thứ tự đáp án (lời giải không nhắc tới chữ A/B/C/D nên xáo an toàn)
+function shuffleQ(q){ if(!q || !Array.isArray(q.o) || q.o.length < 2) return q; const P = q.o.map((_, i)=> i); for(let i = P.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i + 1)); [P[i], P[j]] = [P[j], P[i]]; }
+  return Object.assign({}, q, {o:P.map(i=> q.o[i]), a:P.indexOf(q.a)}); }
+const wmText = ()=>{ const A = save.acct, d = new Date(); return (A ? `${A.ten} · SBD ${A.sbd} · ${A.lop}` : save.name || '') + ' · ' + d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}); };
 function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement(el, {delimiters:[{left:'$$', right:'$$', display:true}, {left:'$', right:'$', display:false}], throwOnError:false}); }catch(e){} }
 // hình vẽ (bảng biến thiên, đồ thị, hình không gian) co lại cho vừa màn hình điện thoại
 function fitFigs(root){ root.querySelectorAll('.fig').forEach(f=>{ const inner = f.firstElementChild; if(!inner) return; inner.style.zoom = ''; const w = Math.max(inner.scrollWidth, inner.firstElementChild ? inner.firstElementChild.scrollWidth : 0), avail = f.clientWidth; if(w > avail && avail > 0) inner.style.zoom = (avail/w).toFixed(3); }); }
 function askQuiz(M){
   return new Promise(res=>{
-    let step = 0, right = 0, rvOk = 0; const big = M.kind === 'boss' || M.kind === 'guard', total = M.kind === 'guard' ? 5 : big ? 3 : 1;
+    let step = 0, right = 0, rvOk = 0, offN = 0; const tms = []; const big = M.kind === 'boss' || M.kind === 'guard', total = M.kind === 'guard' ? 5 : big ? 3 : 1;
     const one = ()=>{
-      M._qi = step; const q = pickQuestion(M); curQ = q; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
+      M._qi = step; const q = shuffleQ(pickQuestion(M)); curQ = q; const tq = Date.now(); QZ.kind = M.kind; const fig = /class="fig"/.test(q.q), secs = (q.m === 'VD' ? 90 : q.m === 'TH' ? 60 : 45) + (fig ? 20 : 0); let left = secs, done = false;
       $('quiz').classList.remove('hidden'); $('qFace').textContent = M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
       $('qSay').innerHTML = (big ? `${M.kind === 'guard' ? 'Hộ vệ chương' : 'Trùm'} đố bạn! (câu ${step + 1}/${total})` : 'Quái vật đố bạn!') + (q.rv ? '<span class="tag">🔁 Câu báo thù</span>' : '') + ((save.streak || 0) >= 2 ? `<span class="tag" style="background:#ffd23a">🔥 ${save.streak}</span>` : '');
-      $('qMeta').textContent = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}`;
+      $('qMeta').innerHTML = `${M.name} · Lv${M.lvl} · ${META[grade][q.c].ten} · ${({NB:'Nhận biết', TH:'Thông hiểu', VD:'Vận dụng'})[q.m] || ''}<br><span style="color:#ffb0a0">🔒 Rời màn hình / chuyển tab khi đang trả lời = câu đó tính sai</span>`;
       let lock = fastQ() ? 0 : LOCK_S[q.m] + (fig ? 3 : 0) || 0; const lock0 = lock;
-      $('qText').innerHTML = q.q; $('qRes').innerHTML = (lock ? `<div class="hint" id="qLock">🤔 Đọc kỹ đề, tự nháp — đáp án hiện sau <b id="qLockN">${lock}</b> giây<div class="lockbar"><div id="qLockB" style="width:0%"></div></div></div>` : '') + (q.rv ? '<div class="hint">🔁 Dạng bài em từng làm sai — trả lời đúng để <b>báo thù</b> và nhận thêm kinh nghiệm!</div>' : '') + (tut && tut.i <= 4 ? '<div class="hint">💡 Trả lời <b>đúng</b>: quái choáng, yếu đi một nửa và hạ được nhiều kinh nghiệm. Trả lời <b>sai</b> hoặc hết giờ: quái <b>biến hình</b> và hạ nó cũng <b>không được kinh nghiệm</b>!</div>' : '');
+      $('qText').innerHTML = q.q + `<div class="wm">${(wmText() + ' · ').repeat(14)}</div>`; $('qRes').innerHTML = (lock ? `<div class="hint" id="qLock">🤔 Đọc kỹ đề, tự nháp — đáp án hiện sau <b id="qLockN">${lock}</b> giây<div class="lockbar"><div id="qLockB" style="width:0%"></div></div></div>` : '') + (q.rv ? '<div class="hint">🔁 Dạng bài em từng làm sai — trả lời đúng để <b>báo thù</b> và nhận thêm kinh nghiệm!</div>' : '') + (tut && tut.i <= 4 ? '<div class="hint">💡 Trả lời <b>đúng</b>: quái choáng, yếu đi một nửa và hạ được nhiều kinh nghiệm. Trả lời <b>sai</b> hoặc hết giờ: quái <b>biến hình</b> và hạ nó cũng <b>không được kinh nghiệm</b>!</div>' : '');
       $('qOpts').innerHTML = q.o.map((o, i)=> `<button class="opt" data-i="${i}"${lock ? ' disabled' : ''}><b>${'ABCD'[i]}</b><span>${String(o).replace(/\.\s*$/, '')}</span></button>`).join('');
       $('qOpts').classList.toggle('wait', lock > 0); if(lock) requestAnimationFrame(()=>{ const b = $('qLockB'); if(b) b.style.width = (100/lock0) + '%'; });
       renderMath($('qText')); renderMath($('qOpts')); requestAnimationFrame(()=> fitFigs($('qText')));
-      const finish = (i)=>{ if(done) return; done = true; clearInterval(quizTimer); const ok = i === q.a; sfx(ok ? 'ok' : 'bad');
+      const finish = (i, away)=>{ if(done) return; done = true; QZ.fail = null; clearTimeout(QZ.t); tms.push(Math.round((Date.now() - tq)/1000)); if(away){ offN++; acLog('off', {c:q.c, m:q.m}); } clearInterval(quizTimer); const ok = i === q.a; sfx(ok ? 'ok' : 'bad');
         $('qOpts').querySelectorAll('.opt').forEach((b, j)=>{ b.disabled = true; if(j === q.a) b.classList.add('ok'); else if(j === i) b.classList.add('bad'); });
         const st = save.stat[grade] = save.stat[grade] || {}; const k = q.c; st[k] = st[k] || [0, 0]; st[k][1]++; if(ok){ st[k][0]++; save.stars++; right++; } recAnswer(q, ok);
         const R = chRec(grade, q.c); R.retry = R.retry || []; let rvTxt = '';
@@ -1225,14 +1247,14 @@ function askQuiz(M){
         hero.emote(ok ? 'happy' : 'sad', ok ? 1.8 : 2.4); persist(); refreshFlags(); updHud();
         step++; const more = step < total;
         const sk = save.streak || 0, fin = M.kind === 'guard' ? right >= 3 : big ? right >= 2 : right === 1;
-        $('qRes').innerHTML = `<div class="res ${ok ? 'ok' : 'bad'}">${ok ? '✅ <b>Chính xác!</b> ' + (more ? 'Tiếp câu sau…' : big ? '' : 'Quái vật choáng váng và yếu đi một nửa — hạ nó nhanh lên!') + rvTxt + (sk >= 2 ? `<br>🔥 Chuỗi đúng <b>${sk}</b> — kinh nghiệm ×${streakMul(sk).toFixed(1)}` : '') : (i < 0 ? '⏰ <b>Hết giờ!</b> ' : '❌ <b>Sai rồi!</b> ') + (more ? 'Chuỗi đúng bị mất.' : 'Quái vật nổi giận và <b>biến hình</b>!') + (!more && !fin ? '<br>⚠ Hạ nó cũng <b>không được kinh nghiệm</b> — dạng này sẽ quay lại làm <b>câu báo thù</b>.' : '')}
+        $('qRes').innerHTML = (away ? '<div class="res bad" style="margin-bottom:8px">⚠ <b>Em đã rời màn hình trò chơi khi đang trả lời</b> — câu này tính <b>sai</b> và đã được ghi lại cho thầy/cô.</div>' : '') + `<div class="res ${ok ? 'ok' : 'bad'}">${ok ? '✅ <b>Chính xác!</b> ' + (more ? 'Tiếp câu sau…' : big ? '' : 'Quái vật choáng váng và yếu đi một nửa — hạ nó nhanh lên!') + rvTxt + (sk >= 2 ? `<br>🔥 Chuỗi đúng <b>${sk}</b> — kinh nghiệm ×${streakMul(sk).toFixed(1)}` : '') : (i < 0 ? '⏰ <b>Hết giờ!</b> ' : '❌ <b>Sai rồi!</b> ') + (more ? 'Chuỗi đúng bị mất.' : 'Quái vật nổi giận và <b>biến hình</b>!') + (!more && !fin ? '<br>⚠ Hạ nó cũng <b>không được kinh nghiệm</b> — dạng này sẽ quay lại làm <b>câu báo thù</b>.' : '')}
           ${!ok && q.s ? `<div class="sol"><b>Lời giải:</b> ${q.s}</div>` : ''}</div><button class="go">${more ? 'Câu tiếp theo ➜' : '⚔ Vào trận!'}</button>`;
         renderMath($('qRes'));
         const go = $('qRes').querySelector('.go'), lbl = go.textContent; let wait = ok || fastQ() ? 0 : (q.s ? 6 : 3);
         if(wait){ go.disabled = true; const tk = ()=>{ if(wait <= 0){ go.disabled = false; go.textContent = lbl; return; } go.textContent = `📖 Đọc lời giải… (${wait})`; wait--; go._t = setTimeout(tk, 1000); }; tk(); }
-        go.onclick = ()=>{ if(go.disabled) return; sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk, total}); } };
+        go.onclick = ()=>{ if(go.disabled) return; sfx('click'); if(more) one(); else { $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk, total, tm:tms, off:offN}); } };
       };
-      $('qOpts').querySelectorAll('.opt').forEach(b=> b.onclick = ()=> finish(+b.dataset.i));
+      $('qOpts').querySelectorAll('.opt').forEach(b=> b.onclick = ()=> finish(+b.dataset.i)); QZ.fail = ()=> finish(-1, true); $('quiz').classList.remove('away'); if(document.hidden || !document.hasFocus()) qAway(document.hidden);
       $('qTime').textContent = left; $('qTime').style.color = ''; clearInterval(quizTimer);
       quizTimer = setInterval(()=>{ if(lock > 0){ lock--; const n = $('qLockN'), b = $('qLockB'); if(n) n.textContent = lock; if(b) b.style.width = (100*(lock0 - lock + 1)/lock0) + '%';
           if(lock <= 0){ $('qOpts').classList.remove('wait'); $('qOpts').querySelectorAll('.opt').forEach(b=> b.disabled = false); const L = $('qLock'); if(L) L.remove(); sfx('click'); } }
@@ -1246,8 +1268,8 @@ async function challenge(M){
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
   if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; }
     const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
-  inQuiz = true; keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
-  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; gkSet(grade, M.Z.ci, 0); M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); persist(); syncSoon(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
+  inQuiz = true; if(CHAT.open) chatClose(); keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
+  if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; gkSet(grade, M.Z.ci, 0); M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); persist(); syncSoon(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
@@ -1639,7 +1661,7 @@ async function chatPull(){ const k = chatK(); if(!k) return; await ensureWho();
   catch(e){ if(CHAT.open) $('chatNote').textContent = e.message === 'DENIED' ? '⚠ Kênh chat chưa mở — báo thầy/cô cập nhật quy tắc máy chủ.' : '⚠ Chưa tải được tin nhắn, sẽ thử lại.'; }
   if(CHAT.open){ chatRender(); try{ localStorage.setItem(CHAT.seenKey + k, String(Date.now())); }catch(e){} } chatBadge(); }
 function chatLoop(){ clearTimeout(CHAT.timer); CHAT.timer = setTimeout(async ()=>{ if(!document.hidden && chatK()) await chatPull(); chatLoop(); }, CHAT.open ? 4000 : 45000); }
-function chatOpen(){ CHAT.open = true; $('chat').classList.remove('hidden'); $('chatTitle').textContent = chatK() ? `💬 Kênh chat Khối ${chatK()}` : '💬 Kênh chat'; chatRender(); chatPull(); chatLoop(); if(!mobile) setTimeout(()=> $('chatIn').focus(), 50); }
+function chatOpen(){ if(inQuiz){ toast('🔒 Không mở chat khi đang trả lời câu đố', 2200); return; } CHAT.open = true; $('chat').classList.remove('hidden'); $('chatTitle').textContent = chatK() ? `💬 Kênh chat Khối ${chatK()}` : '💬 Kênh chat'; chatRender(); chatPull(); chatLoop(); if(!mobile) setTimeout(()=> $('chatIn').focus(), 50); }
 function chatClose(){ CHAT.open = false; $('chat').classList.add('hidden'); chatBadge(); chatLoop(); }
 async function chatSend(){ const k = chatK(), inp = $('chatIn'), t = inp.value.trim(); if(!t) return; if(!k){ toast('Vào lớp để chat với các bạn cùng khối', 2200); return; }
   if(Date.now() - CHAT.sent < 5000){ toast('Chờ vài giây rồi gửi tiếp nhé', 1500); return; }
