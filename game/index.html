@@ -224,7 +224,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div>🛡 <b>Hộ vệ chương</b> đố 5 câu. Hạ được Hộ vệ thì nhận <b>danh hiệu</b> và <b>điểm thường xuyên</b> = số câu đúng × hệ số, gửi cho thầy/cô. Lượt đầu hệ số <b>×2</b>, mỗi lượt sau giảm 0,1 (×1,9; ×1,8…); muốn tăng lại phải <b>luyện thêm quái nhỏ</b> (5 con = +0,1). Mỗi chương tối đa 3 lượt/ngày; trước <b>mỗi lượt</b> phải hạ <b>10 quái nhỏ</b> của chương đó (trả lời đúng).</div>
     <div>🔒 <b>Trung thực:</b> khi đang trả lời câu đố, <b>rời màn hình / chuyển tab / mở ứng dụng khác</b> thì câu đó tính <b>sai</b> và được ghi lại cho thầy/cô. Không sao chép được đề; đáp án được xáo trộn cho mỗi bạn; câu của <b>Hộ vệ</b> có các con số mờ luân phiên (nhìn vài giây là đọc đủ, nhưng chụp ảnh sẽ thiếu số liệu). <b>Nghiêm cấm dùng AI.</b></div>
     <div>📅 <b>Chương mở theo lịch học:</b> mỗi chương mở trước khi học trên lớp khoảng 1–2 tuần. Khu chưa mở có 🧙 <b>Người gác chương</b> báo ngày mở. 🏁 <b>10 bạn đầu tiên</b> của lớp đạt điểm tối đa một chương được trọn 10 điểm thường xuyên; cứ 10 bạn sau, điểm tối đa giảm 0,1.</div>
-    <div>👨‍🏫 <b>Boss thế giới Thầy Định</b> đi lại giữa các chương: thử thách câu hỏi vô hạn với 3 tim. Xếp hạng theo tỷ lệ đúng rồi đến tốc độ — <b>30 em giỏi nhất khối</b> được vinh danh.</div>
+    <div>👨‍🏫 <b>Thầy Định</b> đi lại giữa các chương: thử thách câu hỏi vô hạn với 3 tim. Xếp hạng theo tỷ lệ đúng rồi đến tốc độ — <b>30 em giỏi nhất khối</b> được vinh danh.</div>
     <div>💀 <b>Bị Hộ vệ hoặc Trùm hạ gục</b> thì phải chờ <b>30 phút</b> mới hồi sinh — chuẩn bị kỹ rồi hãy thách đấu! Gục trước quái nhỏ thì hồi sinh ngay ở trại.</div>
     <div>🎒 <b>Trang bị</b> (phím I): 5 ô vũ khí, mũ, áo giáp, giày, áo choàng — tăng tấn công, máu, chí mạng… và đổi màu nhân vật. Mở khoá bằng <b>thành tích học tập</b>: lên cấp, trả lời đúng, chuỗi đúng, điểm chuyên cần, danh hiệu.</div>
     <div>💬 <b>Kênh chat</b> theo khối: trao đổi với các bạn cùng khối (cần vào lớp). Lịch sự, không nói tục — thầy/cô đọc được và có thể khoá chat.</div>
@@ -907,30 +907,45 @@ const wbAcc = x=> x.t ? x.r/x.t : 0;
 const wbBetter = (a, b)=> !b || wbAcc(a) > wbAcc(b) + 1e-9 || (Math.abs(wbAcc(a) - wbAcc(b)) < 1e-9 && (a.a < b.a - 1e-9 || (Math.abs(a.a - b.a) < 1e-9 && a.r > b.r)));
 const wbSort = L=> L.slice().sort((a, b)=> wbBetter(a, b) ? -1 : wbBetter(b, a) ? 1 : 0);
 function buildTeacher(){
-  const NAVY = 0x22345c, NAVY2 = 0x17233f, SKIN = 0xf2c9a5, HAIR = 0x231812, WHITE = 0xf6f4ee, TIE = 0xb3262e, GOLD = 0xe8c060, DARK = 0x161616, SHOE = 0x3a2416;
-  const mk = (parts, t = 0.02)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
+  const NAVY = 0x1f3157, NAVY2 = 0x15213d, SKIN = 0xf0c49c, SKIN2 = 0xe2ae86, HAIR = 0x1c130e, WHITE = 0xf7f6f2, TIE = 0xa81f2a, GOLD = 0xe2b850, DARK = 0x141414, SHOE = 0x2a1810;
+  const mk = (parts, t = 0.02)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x1e1a16})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
+  const B = (x, y, z)=> new THREE.BoxGeometry(x, y, z);
   const body = mk([
-    {g:Cy(0.27, 0.24, 0.64, 14), m:M4(0, 1.28, 0), c:NAVY}, {g:new THREE.BoxGeometry(0.68, 0.14, 0.32), m:M4(0, 1.57, 0), c:NAVY},
-    {g:new THREE.BoxGeometry(0.15, 0.27, 0.03), m:M4(0, 1.45, 0.235), c:WHITE}, {g:new THREE.BoxGeometry(0.065, 0.3, 0.03), m:M4(0, 1.38, 0.255), c:TIE}, {g:new THREE.BoxGeometry(0.085, 0.06, 0.04), m:M4(0, 1.545, 0.255), c:TIE},
-    {g:Co(0.045, 0.08, 4), m:M4(0, 1.215, 0.255, 1, 1, 0.4, Math.PI, Math.PI/4, 0), c:TIE},
-    {g:new THREE.BoxGeometry(0.075, 0.32, 0.03), m:M4(-0.095, 1.44, 0.25, 1, 1, 1, 0, 0, -0.38), c:NAVY2}, {g:new THREE.BoxGeometry(0.075, 0.32, 0.03), m:M4(0.095, 1.44, 0.25, 1, 1, 1, 0, 0, 0.38), c:NAVY2},
-    {g:new THREE.BoxGeometry(0.08, 0.05, 0.02), m:M4(0.17, 1.43, 0.255), c:WHITE}, {g:Sp(0.022, 6, 4), m:M4(0.03, 1.2, 0.25), c:GOLD}, {g:Sp(0.022, 6, 4), m:M4(0.03, 1.1, 0.245), c:GOLD}, {g:Sp(0.02, 6, 4), m:M4(-0.15, 1.5, 0.24), c:GOLD},
-    {g:new THREE.BoxGeometry(0.22, 0.05, 0.2), m:M4(0, 1.63, 0.02), c:WHITE}, {g:Cy(0.07, 0.08, 0.12, 10), m:M4(0, 1.68, 0), c:SKIN},
-    {g:Sp(0.2, 16, 12), m:M4(0, 1.87, 0, 1, 1.08, 1), c:SKIN}, {g:Sp(0.05, 8, 6), m:M4(-0.2, 1.86, 0), c:SKIN}, {g:Sp(0.05, 8, 6), m:M4(0.2, 1.86, 0), c:SKIN},
-    {g:Sp(0.215, 16, 10), m:M4(0, 1.94, -0.025, 1.03, 0.72, 1.03), c:HAIR}, {g:new THREE.BoxGeometry(0.3, 0.09, 0.15), m:M4(0.02, 2.06, 0.1, 1, 1, 1, 0.25, 0, 0.12), c:HAIR},
-    {g:new THREE.BoxGeometry(0.035, 0.1, 0.06), m:M4(-0.195, 1.88, 0.03), c:HAIR}, {g:new THREE.BoxGeometry(0.035, 0.1, 0.06), m:M4(0.195, 1.88, 0.03), c:HAIR},
-    {g:Sp(0.022, 6, 4), m:M4(-0.072, 1.885, 0.185), c:DARK}, {g:Sp(0.022, 6, 4), m:M4(0.072, 1.885, 0.185), c:DARK},
-    {g:new THREE.BoxGeometry(0.08, 0.018, 0.02), m:M4(-0.072, 1.94, 0.19, 1, 1, 1, 0, 0, 0.08), c:HAIR}, {g:new THREE.BoxGeometry(0.08, 0.018, 0.02), m:M4(0.072, 1.94, 0.19, 1, 1, 1, 0, 0, -0.08), c:HAIR},
-    {g:new THREE.TorusGeometry(0.056, 0.01, 6, 18), m:M4(-0.075, 1.885, 0.2), c:DARK}, {g:new THREE.TorusGeometry(0.056, 0.01, 6, 18), m:M4(0.075, 1.885, 0.2), c:DARK},
-    {g:new THREE.BoxGeometry(0.04, 0.012, 0.012), m:M4(0, 1.89, 0.205), c:DARK}, {g:new THREE.BoxGeometry(0.012, 0.012, 0.2), m:M4(-0.135, 1.89, 0.1), c:DARK}, {g:new THREE.BoxGeometry(0.012, 0.012, 0.2), m:M4(0.135, 1.89, 0.1), c:DARK},
-    {g:Co(0.026, 0.07, 6), m:M4(0, 1.85, 0.205, 1, 1, 1, Math.PI/2, 0, 0), c:0xe8b892},
-    {g:new THREE.TorusGeometry(0.042, 0.008, 4, 12, Math.PI), m:M4(0, 1.81, 0.188, 1, 1, 1, 0, 0, Math.PI), c:0x8a3a2a}], 0.02);
-  const limb = (parts, x, y)=>{ const G = new THREE.Group(); G.position.set(x, y, 0); G.add(mk(parts, 0.018)); return G; };
-  const leg = x=> limb([{g:Cy(0.1, 0.09, 0.86, 10), m:M4(0, -0.43, 0), c:NAVY2}, {g:new THREE.BoxGeometry(0.17, 0.11, 0.32), m:M4(0, -0.9, 0.05), c:SHOE}], x, 0.98);
-  const arm = (x, extra)=> limb([{g:Cy(0.078, 0.066, 0.55, 10), m:M4(0, -0.28, 0), c:NAVY}, {g:Cy(0.07, 0.07, 0.045, 10), m:M4(0, -0.57, 0), c:WHITE}, {g:Sp(0.065, 10, 8), m:M4(0, -0.63, 0), c:SKIN}, ...extra], x, 1.55);
-  const legL = leg(-0.13), legR = leg(0.13);
-  const armL = arm(-0.34, [{g:new THREE.BoxGeometry(0.05, 0.27, 0.21), m:M4(-0.02, -0.66, 0.1), c:0x1f4fa8}, {g:new THREE.BoxGeometry(0.055, 0.04, 0.215), m:M4(-0.02, -0.6, 0.1), c:GOLD}, {g:new THREE.BoxGeometry(0.045, 0.25, 0.012), m:M4(-0.005, -0.66, 0.205), c:WHITE}]);
-  const armR = arm(0.34, [{g:Cy(0.011, 0.011, 0.62, 5), m:M4(0, -0.63, 0.25, 1, 1, 1, Math.PI/2.4, 0, 0), c:0x6b4a2b}, {g:Sp(0.02, 6, 4), m:M4(0, -0.5, 0.55), c:0xffffff}]);
+    // áo vest dáng chữ V: vai rộng, eo gọn, vạt áo hơi loe
+    {g:Cy(0.3, 0.225, 0.62, 16), m:M4(0, 1.32, 0), c:NAVY}, {g:Cy(0.228, 0.25, 0.12, 16), m:M4(0, 0.98, 0), c:NAVY}, {g:B(0.66, 0.13, 0.3), m:M4(0, 1.6, 0), c:NAVY},
+    {g:Sp(0.085, 10, 8), m:M4(-0.33, 1.6, 0), c:NAVY}, {g:Sp(0.085, 10, 8), m:M4(0.33, 1.6, 0), c:NAVY},
+    {g:B(0.15, 0.3, 0.03), m:M4(0, 1.46, 0.27), c:WHITE}, {g:B(0.06, 0.32, 0.03), m:M4(0, 1.4, 0.288), c:TIE}, {g:B(0.08, 0.055, 0.04), m:M4(0, 1.585, 0.28), c:TIE},
+    {g:Co(0.042, 0.08, 4), m:M4(0, 1.225, 0.288, 1, 1, 0.4, Math.PI, Math.PI/4, 0), c:TIE}, {g:B(0.02, 0.012, 0.035), m:M4(0, 1.43, 0.3), c:GOLD},
+    {g:B(0.08, 0.34, 0.03), m:M4(-0.1, 1.46, 0.282, 1, 1, 1, 0, 0, -0.36), c:NAVY2}, {g:B(0.08, 0.34, 0.03), m:M4(0.1, 1.46, 0.282, 1, 1, 1, 0, 0, 0.36), c:NAVY2},
+    {g:Co(0.045, 0.06, 3), m:M4(0.18, 1.465, 0.28), c:WHITE}, {g:B(0.09, 0.012, 0.02), m:M4(0.18, 1.44, 0.282), c:NAVY2},
+    {g:Sp(0.022, 6, 4), m:M4(0, 1.2, 0.262), c:GOLD}, {g:Sp(0.022, 6, 4), m:M4(0, 1.1, 0.25), c:GOLD},
+    // cổ, cổ áo, đầu: hàm gọn, cằm rõ
+    {g:B(0.24, 0.06, 0.2), m:M4(0, 1.665, 0.02), c:WHITE}, {g:Cy(0.072, 0.082, 0.13, 10), m:M4(0, 1.71, 0), c:SKIN},
+    {g:Sp(0.18, 18, 14), m:M4(0, 1.92, 0, 0.95, 1.1, 1), c:SKIN}, {g:Sp(0.15, 14, 10), m:M4(0, 1.82, 0.03, 0.95, 0.72, 0.95), c:SKIN}, {g:Sp(0.055, 8, 6), m:M4(0, 1.755, 0.115, 1, 0.8, 0.9), c:SKIN},
+    {g:Sp(0.045, 8, 6), m:M4(-0.172, 1.9, 0, 0.6, 1, 0.9), c:SKIN2}, {g:Sp(0.045, 8, 6), m:M4(0.172, 1.9, 0, 0.6, 1, 0.9), c:SKIN2},
+    // tóc vuốt: phồng đỉnh, mái hất, gáy gọn
+    {g:Sp(0.195, 16, 12), m:M4(0, 1.985, -0.02, 1.02, 0.72, 1.04), c:HAIR}, {g:Sp(0.12, 12, 8), m:M4(0.035, 2.09, 0.06, 1.45, 0.62, 1.15), c:HAIR},
+    {g:B(0.22, 0.075, 0.09), m:M4(0.03, 2.085, 0.15, 1, 1, 1, 0.45, 0, 0.12), c:HAIR}, {g:Sp(0.17, 12, 8), m:M4(0, 1.9, -0.075, 1.02, 0.95, 0.75), c:HAIR},
+    {g:B(0.03, 0.09, 0.06), m:M4(-0.18, 1.925, 0.04), c:HAIR}, {g:B(0.03, 0.09, 0.06), m:M4(0.18, 1.925, 0.04), c:HAIR}], 0.018);
+  // nét mặt (mắt, mày, mũi, miệng, kính) không viền đen để khuôn mặt sáng sủa
+  const face = new THREE.Mesh(merge([
+    // mắt: lòng trắng, tròng nâu, đốm sáng
+    {g:Sp(0.032, 10, 8), m:M4(-0.066, 1.915, 0.163, 1.25, 0.8, 0.5), c:WHITE}, {g:Sp(0.032, 10, 8), m:M4(0.066, 1.915, 0.163, 1.25, 0.8, 0.5), c:WHITE},
+    {g:Sp(0.019, 8, 6), m:M4(-0.064, 1.914, 0.176), c:0x3a2414}, {g:Sp(0.019, 8, 6), m:M4(0.064, 1.914, 0.176), c:0x3a2414},
+    {g:Sp(0.006, 4, 3), m:M4(-0.058, 1.921, 0.192), c:0xffffff}, {g:Sp(0.006, 4, 3), m:M4(0.07, 1.921, 0.192), c:0xffffff},
+    {g:B(0.085, 0.022, 0.02), m:M4(-0.068, 1.968, 0.172, 1, 1, 1, 0, 0, 0.14), c:HAIR}, {g:B(0.085, 0.022, 0.02), m:M4(0.068, 1.968, 0.172, 1, 1, 1, 0, 0, -0.14), c:HAIR},
+    {g:Co(0.024, 0.075, 6), m:M4(0, 1.875, 0.18, 1, 1, 1, Math.PI/2 + 0.3, 0, 0), c:SKIN2},
+    {g:new THREE.TorusGeometry(0.036, 0.007, 4, 12, Math.PI), m:M4(0, 1.825, 0.168, 1, 1, 1, 0.15, 0, Math.PI), c:0x8a3a2a},
+    // kính nửa gọng mảnh
+    {g:B(0.092, 0.013, 0.012), m:M4(-0.068, 1.94, 0.192), c:DARK}, {g:B(0.092, 0.013, 0.012), m:M4(0.068, 1.94, 0.192), c:DARK},
+    {g:B(0.01, 0.045, 0.01), m:M4(-0.113, 1.92, 0.19), c:DARK}, {g:B(0.01, 0.045, 0.01), m:M4(0.113, 1.92, 0.19), c:DARK}, {g:B(0.01, 0.045, 0.01), m:M4(-0.022, 1.92, 0.192), c:DARK}, {g:B(0.01, 0.045, 0.01), m:M4(0.022, 1.92, 0.192), c:DARK},
+    {g:B(0.045, 0.01, 0.01), m:M4(0, 1.935, 0.195), c:DARK}, {g:B(0.01, 0.01, 0.19), m:M4(-0.122, 1.935, 0.1), c:DARK}, {g:B(0.01, 0.01, 0.19), m:M4(0.122, 1.935, 0.1), c:DARK}]), toon({vertexColors:true, emissive:0x1e1a16})); body.add(face);
+  const limb = (parts, x, y)=>{ const G = new THREE.Group(); G.position.set(x, y, 0); G.add(mk(parts, 0.016)); return G; };
+  const leg = x=> limb([{g:Cy(0.105, 0.085, 0.9, 10), m:M4(0, -0.45, 0), c:NAVY2}, {g:B(0.012, 0.8, 0.012), m:M4(0, -0.45, 0.1), c:0x24325a}, {g:B(0.16, 0.1, 0.33), m:M4(0, -0.94, 0.06), c:SHOE}, {g:B(0.14, 0.03, 0.12), m:M4(0, -0.88, 0.14), c:0x4a2c1a}], x, 1.0);
+  const arm = (x, extra)=> limb([{g:Cy(0.08, 0.066, 0.56, 10), m:M4(0, -0.28, 0), c:NAVY}, {g:Cy(0.069, 0.069, 0.045, 10), m:M4(0, -0.575, 0), c:WHITE}, {g:Sp(0.062, 10, 8), m:M4(0, -0.635, 0, 0.9, 1.1, 0.8), c:SKIN}, ...extra], x, 1.58);
+  const legL = leg(-0.125), legR = leg(0.125);
+  const armL = arm(-0.37, [{g:Cy(0.074, 0.074, 0.035, 12), m:M4(0, -0.535, 0), c:GOLD}, {g:B(0.05, 0.27, 0.21), m:M4(-0.02, -0.66, 0.1), c:0x1f4fa8}, {g:B(0.055, 0.04, 0.215), m:M4(-0.02, -0.6, 0.1), c:GOLD}, {g:B(0.045, 0.25, 0.012), m:M4(-0.005, -0.66, 0.205), c:WHITE}]);
+  const armR = arm(0.37, [{g:Cy(0.01, 0.01, 0.6, 5), m:M4(0, -0.63, 0.25, 1, 1, 1, Math.PI/2.4, 0, 0), c:0x6b4a2b}, {g:Sp(0.018, 6, 4), m:M4(0, -0.5, 0.54), c:0xffffff}]);
   armL.rotation.set(-0.5, 0, 0.12); armR.rotation.set(-0.25, 0, -0.1);
   const G = new THREE.Group(); G.add(body, legL, legR, armL, armR); G.scale.setScalar(1.45);
   const aura = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.55, 40), new THREE.MeshBasicMaterial({color:0xffd23a, transparent:true, opacity:0.5, side:THREE.DoubleSide, depthWrite:false, blending:THREE.AdditiveBlending}));
@@ -938,7 +953,7 @@ function buildTeacher(){
   return {G, legL, legR, armL, armR, aura}; }
 function spawnWB(){ const open = zones.filter(z=> !z.lock); if(!open.length) return; const Z0 = open[Math.floor(Math.random()*open.length)];
   const T = buildTeacher(), x = Z0.x + 5, z = Z0.z + 3; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
-  const lab = textSprite('👨‍🏫 Thầy Định · Boss Thế Giới', {screen:0.034, color:'#ffd76a'}); world.add(lab);
+  const lab = textSprite('👨‍🏫 Thầy Định', {screen:0.034, color:'#ffd76a'}); world.add(lab);
   WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:3, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99}); }
 function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position, dp = P.distanceTo(player.position);
   if(dp < 7 && !inQuiz){ W0.state = 'talk'; W0.G.rotation.y = Math.atan2(player.position.x - P.x, player.position.z - P.z); }
@@ -954,7 +969,7 @@ function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position
   W0.lab.position.set(P.x, P.y + 3.55, P.z); W0.lab.visible = dp < 45; }
 // hộp thoại: luật chơi + bảng vinh danh 30 em
 async function openWB(){ sfx('click'); const A = save.acct, on = txOn(), my = (save.wb || {})[grade];
-  $('wbBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:50px">👨‍🏫</div><div><b style="color:var(--gold);font-size:20px">Thầy Định — Boss Thế Giới</b><div style="font-size:13px;opacity:.8">${WORLDS[grade].mood} ${WORLDS[grade].name} · khối ${grade}</div></div></div>
+  $('wbBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:50px">👨‍🏫</div><div><b style="color:var(--gold);font-size:20px">Thầy Định</b><div style="font-size:13px;opacity:.8">${WORLDS[grade].mood} ${WORLDS[grade].name} · khối ${grade}</div></div></div>
     <p style="font-size:15px;line-height:1.55;margin:10px 0">“Câu hỏi của thầy <b>không bao giờ hết</b> — lấy ngẫu nhiên từ mọi chương đã mở. Em có <b>${WB_LIVES} ❤️</b>: sai, hết giờ hay rời màn hình là mất một tim. Thầy xếp hạng theo <b>tỷ lệ trả lời đúng</b>, bằng nhau thì ai <b>nhanh hơn</b> đứng trên. <b>${WB_TOP} em giỏi nhất khối</b> được vinh danh!”</p>
     ${my ? `<p style="margin:0 0 8px;font-size:14px">🏅 Thành tích tốt nhất của em: <b>${my.r}/${my.t}</b> câu đúng (${Math.round(wbAcc(my)*100)}%) · ${fmtS(my.a.toFixed(1))} giây/câu</p>` : ''}
     <div id="wbList" style="max-height:42vh;overflow:auto;font-size:13.5px">${on ? 'Đang tải bảng vinh danh…' : `<i style="opacity:.75">${A ? 'Bảng vinh danh chỉ tính ở vùng đất đúng khối của lớp em.' : 'Đang chơi thử — thành tích không vào bảng vinh danh.'}</i>`}</div>
