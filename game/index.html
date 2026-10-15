@@ -704,14 +704,15 @@ let zones = [], monsters = [], grade = 6, campPos = new THREE.Vector3(0, 0, 0), 
 // (bìa trắng, gáy xanh), 2 vòm nâu trên biển, 2 cổng phụ thấp có cửa xếp, tường rào trắng hai bên.
 // Đặt trên đường mòn ngay ngoài cổng trại, mặt biển quay ra ngoài đón người chơi đi vào.
 const GATE_R = 12.5;
-function signTex(back){ return canvasTex(1024, 192, (x, w, h)=>{
+// vẽ gấp đôi độ phân giải + lọc dị hướng để dấu tiếng Việt (ˆ ˀ ˜) không bị nhoè khi nhìn xa/nghiêng
+function signTex(back){ const t = canvasTex(2048, 384, (x)=>{ x.scale(2, 2); const w = 1024, h = 192;
   const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#9a2222'); g.addColorStop(1, '#6e1414'); x.fillStyle = g; x.fillRect(0, 0, w, h);
   x.strokeStyle = '#e8c46a'; x.lineWidth = 6; x.strokeRect(8, 8, w - 16, h - 16);
   x.fillStyle = '#ffe9b0'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.font = '600 22px "Segoe UI",Arial,sans-serif'; x.textAlign = 'left'; x.fillText('UBND TỈNH THÁI NGUYÊN', 26, 34); x.fillText('SỞ GIÁO DỤC VÀ ĐÀO TẠO', 26, 60);
-  x.textAlign = 'center'; x.font = '800 60px "Segoe UI",Arial,sans-serif'; x.fillStyle = '#ffd65a'; x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 6; x.shadowOffsetY = 3;
-  x.fillText(back ? 'HỌC — HỌC NỮA — HỌC MÃI' : 'TRƯỜNG TRUNG HỌC PHỔ THÔNG VÕ NHAI', w/2, h/2 + 12, w - 60);
-  x.shadowBlur = 0; x.shadowOffsetY = 0; x.font = '600 20px "Segoe UI",Arial,sans-serif'; x.fillStyle = '#ffe9b0'; x.textAlign = 'right'; x.fillText('Xã Lâu Thượng, huyện Võ Nhai, tỉnh Thái Nguyên', w - 26, h - 28); }); }
+  x.textAlign = 'center'; x.font = '800 70px "Segoe UI",Arial,sans-serif'; x.fillStyle = '#ffd65a'; x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 6; x.shadowOffsetY = 3;
+  const T = back ? 'HỌC — HỌC NỮA — HỌC MÃI' : 'TRƯỜNG TRUNG HỌC PHỔ THÔNG VÕ NHAI'; x.fillText(T, w/2, h/2 + 18, w - 50); x.shadowBlur = 0; x.shadowOffsetY = 0; x.strokeStyle = '#ffd65a'; x.lineWidth = 2.6; x.lineJoin = 'round'; x.strokeText(T, w/2, h/2 + 18, w - 50);
+  x.shadowBlur = 0; x.shadowOffsetY = 0; }); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; }
 function buildSchoolGate(gA){
   const cx = Math.cos(gA)*GATE_R, cz = Math.sin(gA)*GATE_R, gy = height(cx, cz), rot = Math.atan2(Math.cos(gA), Math.sin(gA));
   const G = new THREE.Group(); G.position.set(cx, gy, cz); G.rotation.y = rot; W._gate = {x:cx, z:cz};
