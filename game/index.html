@@ -620,13 +620,23 @@ const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
 let tierName = save.opt.q !== 'auto' ? save.opt.q : (save.opt.auto || (mobile ? 'mid' : 'high')), tier = TIERS[tierName];
 
 /* ======================= MÀN HÌNH CHỌN VÙNG ĐẤT ======================= */
+/* ----- chơi tự do chỉ dành cho máy của thầy/cô (để thử game). Mở khoá một lần bằng link riêng ?thu=<mật khẩu>;
+   máy lưu mật khẩu, mỗi lần mở game băm SHA-256 so với dấu vân tay dưới đây (mã nguồn chỉ có dấu vân tay, không có mật khẩu). ----- */
+const TEST_H = '86b35533939844a0373b12d1f93780392a9f28e480c46426dfcbdec918684bcc';
+let TESTER = false;
+async function testerCheck(){ try{ const P = new URLSearchParams(location.search), k0 = P.get('thu');
+    if(k0){ localStorage.setItem('mbp_game_thu', k0); P.delete('thu'); history.replaceState(null, '', location.pathname + (P.toString() ? '?' + P : '')); }
+    const k = localStorage.getItem('mbp_game_thu'); if(!k) return false;
+    const h = [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(k)))].map(b=> b.toString(16).padStart(2, '0')).join('');
+    if(h === TEST_H) return true; localStorage.removeItem('mbp_game_thu'); return false; }catch(e){ return false; } }
+function testerOff(){ if(!confirm('Tắt chế độ chơi thử trên máy này? Muốn bật lại phải mở link thử riêng.')) return; try{ localStorage.removeItem('mbp_game_thu'); }catch(e){} TESTER = false; renderAcct(); }
 function renderAcct(err){
   const el = $('acct'), A = save.acct;
   if(A){ el.innerHTML = `<div class="me"><div style="font-size:28px">🎓</div><div style="flex:1"><b>${A.ten}</b> · SBD ${A.sbd}<div class="muted" style="margin:2px 0 0">Lớp ${A.lop}${A.khoi ? ' · khối ' + A.khoi : ''} — điểm chuyên cần được gửi cho thầy/cô</div></div><button class="ibtn" id="aOut">Đổi người chơi</button></div>`;
     $('aOut').onclick = ()=>{ if(confirm('Thoát tài khoản ' + A.ten + '? Tiến độ vẫn được lưu.')) logout(); }; return; }
   el.innerHTML = `<h3>🎓 Vào lớp (tính điểm chuyên cần)</h3><div class="row">${qsLop ? '' : '<input id="aMa" maxlength="10" placeholder="Mã lớp" style="max-width:130px;text-transform:uppercase">'}<input id="aSbd" inputmode="numeric" maxlength="10" placeholder="Số báo danh" style="max-width:150px"><input id="aTen" maxlength="40" placeholder="Họ và tên (có dấu)"><button class="go2" id="aGo">Vào lớp</button></div>
     ${qsLop ? `<div class="muted">Mã lớp: <b>${qsLop}</b></div>` : ''}${err ? `<div class="err">${err}</div>` : ''}
-    <div class="muted">Hoặc chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"></div>`;
+    ${TESTER ? `<div class="muted">🧪 <b>Máy thử của thầy/cô</b> — chơi tự do (không tính điểm): <input id="pname" maxlength="20" placeholder="Tên nhân vật" style="max-width:200px;padding:7px 10px;font-size:14px" value="${(save.name || '').replace(/"/g, '')}"> <a href="#" onclick="testerOff();return false" style="color:#ffb0a0">tắt</a></div>` : '<div class="muted">Học sinh vào lớp bằng <b>mã lớp + số báo danh + họ tên</b> (thầy/cô phát) để chơi và được tính điểm.</div>'}`;
   $('aGo').onclick = async ()=>{ const b = $('aGo'); b.disabled = true; b.textContent = 'Đang kiểm tra…';
     try{ await login(qsLop || $('aMa').value, $('aSbd').value, $('aTen').value); renderAcct(); showMenu(); chatPull(); chatLoop(); }catch(e){ renderAcct(e.message); } };
 }
@@ -649,7 +659,7 @@ async function showMenu(){
     return `<div class="world${lk ? ' locked' : ''}" data-g="${g}" style="background:linear-gradient(160deg, ${css(W.ground[0])} 0%, ${css(W.sky)} 55%, ${css(W.fog)} 100%);color:${g>=11?'#fff':'#1a1a1a'}">
       <span class="lv">${W.mood} Lớp ${g}</span>${save.badges && save.badges[g] ? ' <span class="lv" title="Đã hạ Ma Vương Vô Cực thức tỉnh">👑 Kẻ Diệt Vô Cực</span>' : ''}<b>${W.name}</b><i>${ch} khu vực (chương) · ${meta[g].reduce((s,c)=> s + c.n, 0)} câu đố</i>
       <div class="bar"><div style="width:${Math.round(100*done/Math.max(1,ch))}%"></div></div><i>Đạt ≥ 7 điểm: ${done}/${ch} chương${titles ? ` · 🏅 ${titles} danh hiệu` : ''}</i>${acc && acc.khoi == g ? '<div style="position:absolute;right:10px;top:10px" class="lv">📌 Lớp của em</div>' : ''}${lk ? `<div class="lock">🔒 Mở khi em lên lớp ${g}<span>Ôn tập các lớp từ ${mg} trở xuống</span></div>` : ''}</div>`; }).join('');
-  document.querySelectorAll('.world').forEach(el=> el.onclick = ()=>{ if(+el.dataset.g > maxGrade()){ sfx('bad'); toast(`🔒 Vùng đất Lớp ${el.dataset.g} sẽ mở khi em lên lớp ${el.dataset.g}`, 2600); return; } if(!save.acct){ const nm = $('pname') ? $('pname').value.trim() : ''; if(!nm){ ($('aSbd') || $('pname')).focus(); toast('Vào lớp bằng SBD + họ tên, hoặc nhập tên nhân vật để chơi tự do', 2600); return; } save.name = nm; } persist(); auInit(); sfx('click'); enterWorld(+el.dataset.g); });
+  document.querySelectorAll('.world').forEach(el=> el.onclick = ()=>{ if(+el.dataset.g > maxGrade()){ sfx('bad'); toast(`🔒 Vùng đất Lớp ${el.dataset.g} sẽ mở khi em lên lớp ${el.dataset.g}`, 2600); return; } if(!save.acct){ if(!TESTER){ sfx('bad'); ($('aSbd') || $('aMa')).focus(); toast('🎓 Vào lớp bằng mã lớp + SBD + họ tên để bắt đầu chơi', 2800); return; } const nm = $('pname') ? $('pname').value.trim() : ''; if(!nm){ $('pname').focus(); toast('Nhập tên nhân vật để chơi thử', 2600); return; } save.name = nm; } persist(); auInit(); sfx('click'); enterWorld(+el.dataset.g); });
 }
 
 /* ======================= DỰNG CẢNH 3D ======================= */
@@ -1290,6 +1300,7 @@ function toast(t, ms = 1800, big){ const el = $('toast'); el.innerHTML = t; el.c
 
 /* ======================= VÀO THẾ GIỚI ======================= */
 async function enterWorld(g){
+  if(!save.acct && !TESTER){ toast('🎓 Vào lớp bằng mã lớp + SBD + họ tên để bắt đầu chơi', 2800); return; }
   if(rvLeft() > 0){ sfx('bad'); toast(`💀 Nhân vật đang chờ hồi sinh — còn ${mmss(rvLeft())}`, 2600); return; }
   if(g > maxGrade()){ toast(`🔒 Vùng đất Lớp ${g} chưa mở với lớp của em`, 2600); return; }
   $('loading').classList.remove('hidden'); $('loadTxt').textContent = `Đang tải ${WORLDS[g].name}…`;
@@ -1835,6 +1846,7 @@ $('instClose').onclick = ()=> $('inst').classList.add('hidden'); $('inst').oncli
 if(standalone()) $('menuInstall').textContent = '📲 Hướng dẫn cài lên điện thoại';
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 applyTier();
+TESTER = await testerCheck(); if(/debug/.test(location.search) && !TESTER) delete window.G;
 showMenu();
 </script>
 </body>
