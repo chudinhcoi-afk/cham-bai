@@ -48,6 +48,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 #chatList{flex:1;overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
 #chatList .m{background:#202a55;border-radius:12px;padding:6px 10px;max-width:88%;align-self:flex-start;font-size:14px;line-height:1.4;word-wrap:break-word}
 #chatList .m.me{align-self:flex-end;background:#3a3270}#chatList .m .w{font-size:11.5px;opacity:.7;margin-bottom:2px}#chatList .m .w b{color:#ffd76a}
+#chatNew{position:absolute;left:50%;transform:translateX(-50%);bottom:64px;background:#ffd76a;color:#2b1a00;border:0;border-radius:20px;padding:6px 14px;font-weight:800;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.4);cursor:pointer}
 #chatList .sys{align-self:center;font-size:12px;opacity:.65;text-align:center}
 #chat .cin{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--line)}#chat .cin input{flex:1;background:#0c1124;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:15px}
 #chat .small{font-size:11.5px;opacity:.6;padding:0 12px 10px}
@@ -292,7 +293,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   <button class="ibtn" id="instClose">Đóng</button>
 </div></div>
 <div id="chat" class="hidden"><div class="chd"><b id="chatTitle">💬 Kênh chat</b><button class="ibtn" id="chatX" style="padding:4px 10px">✕</button></div>
-  <div id="chatList"></div>
+  <div id="chatList"></div><button id="chatNew" class="hidden">⬇ Tin nhắn mới</button>
   <div class="cin"><input id="chatIn" maxlength="200" placeholder="Nhắn cho các bạn cùng khối…" autocomplete="off"><button class="go2" id="chatSend">Gửi</button></div>
   <div class="small" id="chatNote">Lịch sự, không nói tục, không chia sẻ đáp án lúc đang thi. Thầy/cô đọc được tất cả tin nhắn.</div></div>
 <div id="over" class="hidden">💀 Bạn đã gục ngã…</div>
@@ -2155,10 +2156,15 @@ const clean = t=> String(t).replace(BAD_RE, (m, a, w)=> a + '*'.repeat(w.length)
 const esc = t=> String(t).replace(/[&<>"]/g, c=> ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'})[c]);
 let whoOk = false;
 async function ensureWho(){ if(whoOk || !save.acct) return; try{ await fbToken(); await fb('game/who/' + fbAuth.uid, 'PUT', {ma:save.acct.ma, s:save.acct.sbd}); whoOk = true; }catch(e){} }
-function chatRender(){ const L = $('chatList'), me = fbAuth && fbAuth.uid;
+// giữ nguyên chỗ đang đọc: chỉ tự cuộn xuống khi đang ở cuối (hoặc vừa mở/vừa gửi); có tin mới khi đang xem lại thì hiện nút "⬇ Tin nhắn mới"
+const chatAtEnd = L=> L.scrollHeight - L.scrollTop - L.clientHeight < 40;
+function chatRender(force){ const L = $('chatList'), me = fbAuth && fbAuth.uid;
+  const sig = (chatK() || '') + '|' + CHAT.msgs.length + '|' + (CHAT.msgs.length ? CHAT.msgs[CHAT.msgs.length - 1].ts : 0);
+  if(!force && sig === CHAT.sig) return; const hadSig = CHAT.sig; CHAT.sig = sig;
+  const stick = force || !hadSig || chatAtEnd(L), keep = L.scrollTop;
   if(!chatK()){ L.innerHTML = '<div class="sys">Vào lớp bằng <b>mã lớp + SBD + họ tên</b> ở màn hình chính để chat với các bạn cùng khối.</div>'; return; }
   L.innerHTML = (CHAT.msgs.length ? '' : '<div class="sys">Chưa có tin nhắn nào. Hãy chào các bạn nhé! 👋</div>') + CHAT.msgs.map(m=> `<div class="m${m.u === me ? ' me' : ''}"><div class="w"><b>${esc(m.n || '?')}</b> · ${new Date(m.ts).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'})}</div>${esc(clean(m.t))}</div>`).join('');
-  L.scrollTop = L.scrollHeight; }
+  if(stick){ L.scrollTop = L.scrollHeight; $('chatNew').classList.add('hidden'); } else { L.scrollTop = keep; $('chatNew').classList.remove('hidden'); } }
 function chatBadge(){ let seen = 0; try{ seen = +localStorage.getItem(CHAT.seenKey + chatK()) || 0; }catch(e){} const n = CHAT.open ? 0 : CHAT.msgs.filter(m=> m.ts > seen && m.u !== (fbAuth && fbAuth.uid)).length;
   ['chatBadge', 'chatBadge2'].forEach(id=>{ const b = $(id); if(b){ b.textContent = n > 9 ? '9+' : n; b.classList.toggle('hidden', !n); } }); }
 async function chatPull(){ const k = chatK(); if(!k) return; await ensureWho();
@@ -2166,15 +2172,15 @@ async function chatPull(){ const k = chatK(); if(!k) return; await ensureWho();
   catch(e){ if(CHAT.open) $('chatNote').textContent = e.message === 'DENIED' ? '⚠ Kênh chat chưa mở — báo thầy/cô cập nhật quy tắc máy chủ.' : '⚠ Chưa tải được tin nhắn, sẽ thử lại.'; }
   if(CHAT.open){ chatRender(); try{ localStorage.setItem(CHAT.seenKey + k, String(Date.now())); }catch(e){} } chatBadge(); }
 function chatLoop(){ clearTimeout(CHAT.timer); CHAT.timer = setTimeout(async ()=>{ if(!document.hidden && chatK()) await chatPull(); chatLoop(); }, CHAT.open ? 4000 : 45000); }
-function chatOpen(){ if(inQuiz){ toast('🔒 Không mở chat khi đang trả lời câu đố', 2200); return; } CHAT.open = true; $('chat').classList.remove('hidden'); $('chatTitle').textContent = chatK() ? `💬 Kênh chat Khối ${chatK()}` : '💬 Kênh chat'; chatRender(); chatPull(); chatLoop(); if(!mobile) setTimeout(()=> $('chatIn').focus(), 50); }
+function chatOpen(){ if(inQuiz){ toast('🔒 Không mở chat khi đang trả lời câu đố', 2200); return; } CHAT.open = true; $('chat').classList.remove('hidden'); $('chatTitle').textContent = chatK() ? `💬 Kênh chat Khối ${chatK()}` : '💬 Kênh chat'; chatRender(true); chatPull(); chatLoop(); if(!mobile) setTimeout(()=> $('chatIn').focus(), 50); }
 function chatClose(){ CHAT.open = false; $('chat').classList.add('hidden'); chatBadge(); chatLoop(); }
 async function chatSend(){ const k = chatK(), inp = $('chatIn'), t = inp.value.trim(); if(!t) return; if(!k){ toast('Vào lớp để chat với các bạn cùng khối', 2200); return; }
   if(Date.now() - CHAT.sent < 5000){ toast('Chờ vài giây rồi gửi tiếp nhé', 1500); return; }
   CHAT.sent = Date.now(); inp.value = ''; const A = save.acct, nm = A.ten.trim().split(/\s+/).slice(-2).join(' ') + ' (' + A.lop + ')';
-  try{ await ensureWho(); await fb('game/chat/' + k, 'POST', {u:fbAuth.uid, n:nm, t:clean(t).slice(0, 200), ts:{'.sv':'timestamp'}}); await chatPull(); }
+  try{ await ensureWho(); await fb('game/chat/' + k, 'POST', {u:fbAuth.uid, n:nm, t:clean(t).slice(0, 200), ts:{'.sv':'timestamp'}}); await chatPull(); chatRender(true); }
   catch(e){ inp.value = t; toast(e.message === 'DENIED' ? 'Không gửi được: kênh chat chưa mở hoặc em đang bị khoá chat' : 'Không gửi được, kiểm tra mạng', 2600); } }
 $('bChat').onclick = $('menuChat').onclick = ()=>{ auInit(); sfx('click'); CHAT.open ? chatClose() : chatOpen(); };
-$('chatX').onclick = chatClose; $('chatSend').onclick = chatSend; $('chatIn').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); chatSend(); } });
+$('chatX').onclick = chatClose; $('chatNew').onclick = ()=>{ const L = $('chatList'); L.scrollTop = L.scrollHeight; $('chatNew').classList.add('hidden'); }; $('chatList').addEventListener('scroll', e=>{ if(chatAtEnd(e.target)) $('chatNew').classList.add('hidden'); }, {passive:true}); $('chatSend').onclick = chatSend; $('chatIn').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); chatSend(); } });
 if(chatK()){ chatPull(); chatLoop(); }
 // ----- cài lên màn hình điện thoại (PWA) -----
 let instEvt = null; const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
