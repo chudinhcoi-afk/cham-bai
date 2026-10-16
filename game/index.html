@@ -791,6 +791,55 @@ function signTex(back){ const t = canvasTex(2048, 384, (x)=>{ x.scale(2, 2); con
   x.textAlign = 'center'; x.font = '800 70px "Segoe UI",Arial,sans-serif'; x.fillStyle = '#ffd65a'; x.shadowColor = 'rgba(0,0,0,.5)'; x.shadowBlur = 6; x.shadowOffsetY = 3;
   const T = back ? 'HỌC — HỌC NỮA — HỌC MÃI' : 'TRƯỜNG TRUNG HỌC PHỔ THÔNG VÕ NHAI'; x.fillText(T, w/2, h/2 + 18, w - 50); x.shadowBlur = 0; x.shadowOffsetY = 0; x.strokeStyle = '#ffd65a'; x.lineWidth = 2.6; x.lineJoin = 'round'; x.strokeText(T, w/2, h/2 + 18, w - 50);
   x.shadowBlur = 0; x.shadowOffsetY = 0; }); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; }
+/* ----- khuôn viên trường (theo ảnh & sơ đồ THPT Võ Nhai): sau trại, đối diện cổng trường; các khu chương bao quanh -----
+   dãy phòng học chính 3 tầng (A3–A9) có băng rôn "TIÊN HỌC LỄ, HẬU HỌC VĂN", 2 dãy hai bên (nhà học bộ môn, nhà hiệu bộ),
+   bậc tam cấp, cột cờ, hàng tùng trong bồn gạch đỏ, cây cọ */
+const CAMPUS_R = 26;
+function bannerTex(txt, bg, fg){ return canvasTex(1024, 96, (x, w, h)=>{ x.fillStyle = bg; x.fillRect(0, 0, w, h); x.strokeStyle = '#ffffff'; x.lineWidth = 4; x.strokeRect(4, 4, w - 8, h - 8);
+  x.fillStyle = fg; x.font = '800 54px "Segoe UI",Arial,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(txt, w/2, h/2 + 3, w - 40); }); }
+function flagTex(){ return canvasTex(192, 128, (x, w, h)=>{ x.fillStyle = '#da251d'; x.fillRect(0, 0, w, h); x.fillStyle = '#ffde00'; x.beginPath();
+  for(let i = 0; i < 10; i++){ const r = i % 2 ? 17 : 42, a = -Math.PI/2 + i*Math.PI/5; i ? x.lineTo(w/2 + Math.cos(a)*r, h/2 + Math.sin(a)*r) : x.moveTo(w/2 + Math.cos(a)*r, h/2 + Math.sin(a)*r); } x.closePath(); x.fill(); }); }
+function buildCampus(gA){
+  const [cx, cz] = W._campusC, gy = height(cx, cz), rot = Math.atan2(Math.cos(gA), Math.sin(gA));
+  const C = new THREE.Group(); C.position.set(cx, gy, cz); C.rotation.y = rot; world.add(C);
+  const WALL = 0xf2cf6e, WALL2 = 0xe9bf55, COL = 0xe8a64a, CREAM = 0xf7ecc8, ROOF = 0xc0392b, GLASS = 0x4a6a8e, FRAME = 0x2f5fa8, STONE = 0x9a9a92, BRICK = 0xb5523a;
+  const B = (x, y, z)=> new THREE.BoxGeometry(x, y, z);
+  // một dãy nhà: dài len (trục x), sâu dep, mặt trước +z có hành lang + cột + lan can từng tầng, mái đỏ hai mái
+  function building(len, dep, floors, x, z, ry, label){
+    const fh = 3.2, H = floors*fh, P = [], bays = Math.max(2, Math.floor(len/3.4)), bw = len/bays;
+    P.push({g:B(len, H, dep), m:M4(0, H/2, 0), c:WALL}, {g:B(len + 0.6, 3.2, dep + 3.2), m:M4(0, -1.0, 1.1), c:STONE});
+    for(let f = 0; f < floors; f++){ const y0 = f*fh;
+      if(f) P.push({g:B(len + 0.4, 0.28, 2.6), m:M4(0, y0, dep/2 + 1.3), c:CREAM}, {g:B(len + 0.4, 0.95, 0.14), m:M4(0, y0 + 0.6, dep/2 + 2.55), c:CREAM}, {g:B(len + 0.4, 0.12, 0.2), m:M4(0, y0 + 1.1, dep/2 + 2.55), c:WALL2});
+      for(let b = 0; b < bays; b++){ const wx = -len/2 + bw*(b + 0.5);
+        P.push({g:B(bw*0.5, 1.35, 0.08), m:M4(wx - bw*0.12, y0 + 1.75, dep/2 + 0.04), c:GLASS}, {g:B(bw*0.5 + 0.16, 0.12, 0.1), m:M4(wx - bw*0.12, y0 + 2.48, dep/2 + 0.05), c:FRAME},
+          {g:B(0.95, 2.2, 0.08), m:M4(wx + bw*0.3, y0 + 1.1, dep/2 + 0.04), c:0x8a5a3a},
+          {g:B(bw*0.55, 1.2, 0.08), m:M4(wx, y0 + 1.75, -dep/2 - 0.04), c:GLASS}); } }
+    for(let b = 0; b <= bays; b++) P.push({g:B(0.42, H + 0.1, 0.42), m:M4(-len/2 + bw*b, H/2, dep/2 + 2.5), c:COL});
+    P.push({g:B(len + 0.6, 0.3, 3.0), m:M4(0, H, dep/2 + 1.3), c:CREAM});
+    const tri = new THREE.Shape(); const rw = dep + 4.2; tri.moveTo(-rw/2, 0); tri.lineTo(rw/2, 0); tri.lineTo(0, 1.9); tri.lineTo(-rw/2, 0);
+    const roof = new THREE.ExtrudeGeometry(tri, {depth:len + 1.6, bevelEnabled:false}); roof.rotateY(Math.PI/2); roof.translate(-(len + 1.6)/2, 0, 0);
+    P.push({g:roof, m:M4(0, H + 0.12, 1.2), c:ROOF}, {g:B(len + 1.8, 0.22, rw + 0.2), m:M4(0, H + 0.1, 1.2), c:0x9a2a20});
+    const G = new THREE.Group(); G.position.set(x, 0, z); G.rotation.y = ry; const m = new THREE.Mesh(merge(P), toon({vertexColors:true, flatShading:true})); outline(m, 0.035, true); m.castShadow = m.receiveShadow = tier.shadow; G.add(m); C.add(G);
+    if(label){ const s = textSprite(label, {screen:0.03, color:'#ffe6a3'}); s.position.set(0, H + 3.2, 0); G.add(s); }
+    return {G, H, dep}; }
+  const main = building(34, 9, 3, 0, 0, 0, '🏫 Dãy phòng học A3 – A9');
+  building(20, 8, 3, -21, 11, Math.PI/2, '🔬 Nhà học bộ môn');
+  building(20, 8, 2, 21, 11, -Math.PI/2, '🏢 Nhà hiệu bộ');
+  // băng rôn tầng 2 dãy chính
+  const ban = new THREE.Mesh(new THREE.PlaneGeometry(10, 0.95), toon({map:bannerTex('TIÊN HỌC LỄ, HẬU HỌC VĂN', '#1f5fbf', '#ffffff')})); ban.position.set(0, 3.2 + 0.62, 9/2 + 2.64); C.add(ban);
+  const ban2 = new THREE.Mesh(new THREE.PlaneGeometry(9, 0.9), toon({map:bannerTex('THI ĐUA DẠY TỐT – HỌC TỐT', '#1f5fbf', '#ffffff')})); ban2.position.set(10.5, 6.4 + 0.62, 9/2 + 2.64); C.add(ban2);
+  // bậc tam cấp, bồn cây, tùng, cột cờ, cây cọ
+  const P = [];
+  for(let k = 0; k < 6; k++){ const top = 0.15*(6 - k); P.push({g:B(16, top + 0.6, 1.0), m:M4(0, (top - 0.6)/2, 9/2 + 3.0 + k*1.0), c:k % 2 ? BRICK : STONE}); }
+  [-1, 1].forEach(sd=>{ P.push({g:B(1.1, 0.6, 12), m:M4(sd*11, 0.3, 14), c:BRICK});
+    for(let i = 0; i < 4; i++){ const z = 9.5 + i*3; P.push({g:Co(0.95, 3.4, 8), m:M4(sd*11, 2.2, z), c:0x2f6a3a}, {g:Co(0.7, 2.2, 8), m:M4(sd*11, 3.8, z), c:0x3a7a44}); } });
+  P.push({g:Cy(0.08, 0.12, 11, 8), m:M4(0, 5.5, 13.5), c:0xd8d8d8}, {g:Sp(0.16, 8, 6), m:M4(0, 11.05, 13.5), c:0xf2c14e}, {g:Cy(0.8, 1.0, 0.5, 12), m:M4(0, 0.25, 13.5), c:STONE});
+  // cây cọ góc sân
+  const px = -15.5, pz = 17; for(let i = 0; i < 6; i++) P.push({g:Cy(0.2, 0.24, 1.1, 6), m:M4(px + i*0.08, 0.55 + i*1.05, pz, 1, 1, 1, 0, 0, -0.06), c:0x8a6a44});
+  for(let i = 0; i < 7; i++){ const a = i/7*Math.PI*2; P.push({g:B(0.5, 0.08, 2.6), m:M4(px + 0.5 + Math.cos(a)*1.1, 6.3, pz + Math.sin(a)*1.1, 1, 1, 1, 0.45, -a + Math.PI/2, 0), c:0x3f9a4a}); }
+  const deco = new THREE.Mesh(merge(P), toon({vertexColors:true, flatShading:true})); outline(deco, 0.03, true); deco.castShadow = tier.shadow; C.add(deco);
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.6), toon({map:flagTex(), side:THREE.DoubleSide})); flag.position.set(1.25, 10.1, 13.5); C.add(flag); W._vnFlag = flag;
+  return C; }
 function buildSchoolGate(gA){
   const cx = Math.cos(gA)*GATE_R, cz = Math.sin(gA)*GATE_R, gy = height(cx, cz), rot = Math.atan2(Math.cos(gA), Math.sin(gA));
   const G = new THREE.Group(); G.position.set(cx, gy, cz); G.rotation.y = rot; W._gate = {x:cx, z:cz};
@@ -1143,6 +1192,7 @@ function buildWorld(g){
   const zc = chs.map((c, i)=>{ const a = i/chs.length*Math.PI*2 - Math.PI/2, r = 30 + i*(52/Math.max(1, chs.length - 1)); return [Math.cos(a)*r, Math.sin(a)*r]; });
   FLAT = []; const lift = (x, z)=> Math.max(baseH(x, z)*0.5, W.wl + 0.9);
   FLAT.push({x:0, z:0, r:15, y:lift(0, 0)}); zc.forEach(([x, z])=> FLAT.push({x, z, r:19, y:lift(x, z)}));
+  { const a0 = zc.length ? Math.atan2(zc[0][1], zc[0][0]) : 0; W._campusC = [-Math.cos(a0)*CAMPUS_R, -Math.sin(a0)*CAMPUS_R]; FLAT.push({x:W._campusC[0], z:W._campusC[1], r:34, y:lift(0, 0)}); }
   PATH = [[0, 0], ...zc];
   // mặt đất: tô màu theo độ cao, đường mòn nối các khu, bãi bờ nước, đỉnh núi
   const seg = tier.seg, geoG = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg); geoG.rotateX(-Math.PI/2);
@@ -1224,10 +1274,10 @@ function buildWorld(g){
   if(tier.light){ campLight = new THREE.PointLight(0xff8a3a, 6, 16, 1.5); campLight.position.set(fireAt.x, fireAt.y + 2.2, fireAt.z); camp.add(campLight); const gl = new THREE.PointLight(0x5dff9a, 4, 9, 1.6); gl.position.copy(crystal.position); camp.add(gl); }
   W._gA = gA; camp.userData = {ring, crystal, rings, cHalo, spark, ember, flags, halos, wat};
   world.add(camp); W._camp = camp;
-  buildSchoolGate(gA);
+  buildSchoolGate(gA); buildCampus(gA);
   // cây cỏ, đá (tránh trại, khu vực, đường mòn)
   let rs = 12345 + g; const rnd = ()=> (rs = (rs*16807) % 2147483647)/2147483647;
-  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
+  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || (W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 30) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
   scatterFlora(g, rnd, avoid);
   // đá viền quanh khu vực
   zStones = new THREE.InstancedMesh(geo('rock', FLORA.rock), toon({vertexColors:true, flatShading:true, color:W.rock}), zc.length*16); let zk = 0;
