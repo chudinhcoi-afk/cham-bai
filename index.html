@@ -556,7 +556,7 @@ function wakLocate(gray, w, h, pickTest){
       const TL = ord[k], TR = ord[(k+1)%4], BR = ord[(k+2)%4], BL = ord[(k+3)%4];
       const top = Math.hypot(TR.x-TL.x, TR.y-TL.y), bot = Math.hypot(BR.x-BL.x, BR.y-BL.y), lef = Math.hypot(BL.x-TL.x, BL.y-TL.y), rig = Math.hypot(BR.x-TR.x, BR.y-TR.y);
       if(Math.min(top,bot)/Math.max(top,bot) < 0.8 || Math.min(lef,rig)/Math.max(lef,rig) < 0.8) continue;
-      const asp = ((top+bot)/2)/((lef+rig)/2); if(asp < 2 || asp > 16) continue;
+      const asp = ((top+bot)/2)/((lef+rig)/2); if(asp < 0.5 || asp > 16) continue;   // khung nhiều câu trả lời ngắn gần vuông, thậm chí cao hơn rộng
       const sideMm = (TL.side+TR.side+BL.side+BR.side)/4/((top+bot)/2)*span; if(sideMm < 2.4 || sideMm > 6.5) continue;
       const map = omrSolveHomography([[0,0],[1,0],[1,1],[0,1]], [[TL.x,TL.y],[TR.x,TR.y],[BR.x,BR.y],[BL.x,BL.y]]); if(!map) continue;
       const ink = [[0,0],[1,0],[1,1],[0,1]].reduce((t,[u,v])=> t + omrMeanGray(gray,w,h,map,u,v,ru), 0)/4;
@@ -578,6 +578,28 @@ function wakLocate(gray, w, h, pickTest){
   return best;
 }
 
+// Giấy cong / gợn (ảnh chụp tay, mép giấy vênh): 4 góc khung chỉ cho vị trí gần đúng ở giữa khung. Dò lại từng HÀNG ô:
+// dịch tối đa ±2 mm để các vòng tròn in sẵn khớp nhất (vòng tối hơn giấy quanh nó), rồi làm trơn với hai hàng kề cùng cột.
+function wakRefine(gray, w, h, mp, test, G){
+  const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
+  const RING = Array.from({length:16}, (_, t)=> [1.65*Math.cos(t*Math.PI/8), 1.65*Math.sin(t*Math.PI/8)]), BG = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]];
+  const fitAt = (k, dx, dy)=>{ let s = 0; for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j), x = p.x + dx, y = p.y + dy;
+      let ring = 0; for(const [a, b] of RING) ring += px(x + a, y + b); ring /= RING.length;
+      const bg = BG.map(([a, b])=> px(x + a, y + b)).sort((u, v)=> v - u)[1]; s += bg - ring; } return s/test.rows[k].n; };
+  const off = test.rows.map((r, k)=>{ let best = [0, 0], bv = fitAt(k, 0, 0) + 1;              // ưu tiên nhẹ vị trí gốc
+    const tryAt = (dx, dy)=>{ const v = fitAt(k, dx, dy) - 0.6*Math.hypot(dx, dy); if(v > bv){ bv = v; best = [dx, dy]; } };
+    for(let dy = -2; dy <= 2.001; dy += 0.5) for(let dx = -2; dx <= 2.001; dx += 0.5) tryAt(dx, dy);   // dò thô bước 0,5 mm
+    const [cx, cy] = best; for(const dy of [-0.25, 0, 0.25]) for(const dx of [-0.25, 0, 0.25]) if(dx || dy) tryAt(cx + dx, cy + dy);   // rồi tinh chỉnh 0,25 mm
+    return best; });
+  // làm trơn: trung vị với hàng trên / dưới trong cùng cột (độ cong biến đổi chậm), tránh một hàng nhảy sai
+  const col = k=> Math.round(G.pos(k, 0).x/5)*1000 + (test.rows[k].t ? 1 : 0), byCol = {};
+  test.rows.forEach((r, k)=> (byCol[col(k)] = byCol[col(k)] || []).push(k));
+  const med3 = (a, b, c)=> a + b + c - Math.max(a, b, c) - Math.min(a, b, c);
+  const sm = off.map(o=> o.slice());
+  Object.values(byCol).forEach(ks=>{ ks.sort((a, b)=> G.pos(a, 0).y - G.pos(b, 0).y); ks.forEach((k, i)=>{ if(ks.length < 3) return; const a = ks[Math.max(0, i-1)], c = ks[Math.min(ks.length-1, i+1)];
+    sm[k] = [med3(off[a][0], off[k][0], off[c][0]), med3(off[a][1], off[k][1], off[c][1])]; }); });
+  return sm;
+}
 // Đọc khung trả lời — bản 2: độ tương phản CỤC BỘ (so với giấy ngay quanh ô), trừ nền chữ in theo từng cột phương án, ngưỡng TỰ THÍCH NGHI theo chính bài đó.
 function wakScores(gray, w, h, loc, test, G){
   const span = WAK.W - 4, vs = G.H - 4, mp = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
@@ -619,8 +641,9 @@ function wakRead(img, pickTest){
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
   const test = pickTest(loc.id);
   if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
-  const G = wakGeom(test.rows), span = WAK.W - 4, vs = G.H - 4;
+  const G0 = wakGeom(test.rows), span = WAK.W - 4, vs = G0.H - 4;
   const mapMm = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
+  const off = wakRefine(gray, w, h, mapMm, test, G0), G = {...G0, off, pos:(k, j)=>{ const p = G0.pos(k, j); return {x:p.x + off[k][0], y:p.y + off[k][1]}; }};
   const sc = wakScores(gray, w, h, loc, test, G), T = wakThreshold(sc), thr = T.thr;
   const warn = [];
   const picks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
