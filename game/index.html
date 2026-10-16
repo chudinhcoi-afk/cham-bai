@@ -79,6 +79,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 .pbar>div{height:100%;border-radius:6px;transition:width .2s}.pbar span{position:absolute;inset:0;font-size:9px;line-height:10px;text-align:center;font-weight:700;text-shadow:0 1px 2px #000}
 #zone{position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:30px;padding:7px 16px;font-size:14px;max-width:62vw;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #topR{position:fixed;right:12px;top:12px;z-index:5;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+#zoomB{position:absolute;right:calc(var(--mw, 150px) + 8px);top:6px;display:flex;flex-direction:column;gap:6px}#zoomB button{width:36px;height:36px;border-radius:50%;background:var(--panel);border:1px solid var(--line);color:var(--ink);font-size:20px;font-weight:800;line-height:1;padding:0;cursor:pointer;touch-action:manipulation}
 #mini{width:150px;height:150px;border-radius:50%;border:2px solid var(--line);background:rgba(10,14,30,.7)}
 .ibtn{background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:12px;padding:8px 12px;font-size:14px;cursor:pointer}
 #toast{position:fixed;left:50%;top:30%;transform:translateX(-50%);z-index:8;font-weight:800;font-size:clamp(18px,3vw,28px);text-shadow:0 2px 10px #000;pointer-events:none;opacity:0;transition:opacity .3s;text-align:center}
@@ -176,7 +177,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 #over .tf{font-size:52px}#over .tn{opacity:.8;font-size:14px;margin-top:4px}#over .tq{font-size:20px;font-weight:800;color:#ffd0a0;margin:8px 0 14px;line-height:1.4;font-style:italic}
 #over .tt{font-size:16px}#over .tt b{font-size:24px;color:#ff8a8a;font-variant-numeric:tabular-nums}#over .ts{font-size:13px;opacity:.75;margin-top:6px}#over .tbn{display:flex;gap:8px;justify-content:center;margin-top:14px}
 #over{position:fixed;inset:0;z-index:14;display:flex;align-items:center;justify-content:center;background:rgba(60,0,0,.35);font-size:32px;font-weight:900;text-shadow:0 3px 12px #000;pointer-events:none}
-@media (max-width:700px){ #mini{width:104px;height:104px} #hud{min-width:0;padding:6px 10px 6px 6px} #hud .av{width:38px;height:38px} #zone{top:auto;bottom:178px;font-size:12px} #quiz .opts{grid-template-columns:1fr} #quiz .q{font-size:15px} .abtn{width:70px;height:70px} #tip{top:auto;bottom:220px;font-size:14px} }
+@media (max-width:700px){ #mini{width:104px;height:104px} #topR{--mw:104px} #zoomB button{width:32px;height:32px;font-size:18px} #hud{min-width:0;padding:6px 10px 6px 6px} #hud .av{width:38px;height:38px} #zone{top:auto;bottom:178px;font-size:12px} #quiz .opts{grid-template-columns:1fr} #quiz .q{font-size:15px} .abtn{width:70px;height:70px} #tip{top:auto;bottom:220px;font-size:14px} }
 @media (hover:hover) and (pointer:fine){ #joy{display:none} }
 #game,#c{touch-action:none}
 .tbtns{display:flex;gap:6px}
@@ -189,7 +190,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   #hud .nm{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #hud .pbar{height:11px;font-size:9px;margin-top:3px}#hud .pbar span{font-size:9px;line-height:11px}
   #cloud{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  #mini{width:78px;height:78px}
+  #mini{width:78px;height:78px} #topR{--mw:78px}
   #topR{gap:6px}.tbtns{gap:4px}.tbtns .ibtn{padding:5px 7px;font-size:15px;border-radius:10px}.tbtns .t{display:none}
   #zone{top:auto;bottom:calc(150px + env(safe-area-inset-bottom));font-size:11.5px;padding:5px 12px;max-width:86vw}
   #joy{left:16px;width:112px;height:112px}#joy>div{width:48px;height:48px;margin:-24px 0 0 -24px}
@@ -239,7 +240,7 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
     <div class="pbar"><div id="hpBar" style="background:linear-gradient(90deg,#e5484d,#ff7a59)"></div><span id="hpTxt"></span></div>
     <div class="pbar"><div id="xpBar" style="background:linear-gradient(90deg,#4aa3ff,#7b5cff)"></div><span id="xpTxt"></span></div><div id="cloud"></div><div id="peerN" style="font-size:10px;opacity:.85"></div></div></div>
   <div id="zone">Trại xuất phát</div>
-  <div id="topR"><canvas id="mini" width="300" height="300"></canvas>
+  <div id="topR"><div id="zoomB"><button id="zIn" title="Phóng to (lăn chuột / chụm 2 ngón)">＋</button><button id="zOut" title="Thu nhỏ — nhìn toàn cảnh">－</button></div><canvas id="mini" width="300" height="300"></canvas>
     <div class="tbtns"><button class="ibtn" id="bChat" title="Kênh chat">💬<span class="t"> Chat</span><span class="cbadge hidden" id="chatBadge"></span></button><button class="ibtn" id="bQ" title="Nhiệm vụ">📜<span class="t"> Nhiệm vụ</span><span class="cbadge hidden" id="qBadge"></span></button><button class="ibtn" id="bEq" title="Trang bị">🎒<span class="t"> Trang bị</span><span class="cbadge hidden" id="eqBadge"></span></button><button class="ibtn" id="bBook" title="Sổ tay">📖<span class="t"> Sổ tay</span></button><button class="ibtn" id="bGear" title="Cài đặt">⚙</button><button class="ibtn" id="bHome" title="Bản đồ">🗺<span class="t"> Bản đồ</span></button></div></div>
   <div id="toast"></div>
   <div id="tip" class="hidden"></div>
@@ -1590,7 +1591,7 @@ function makeHero(style){ const colors = eqCol(), look = lookOf(style), sig = st
   heroStyle = sig; player.add(heroImpl.object); player.rotation.y = rot; heroCB.forEach(([e, f])=> heroImpl.on(e, f)); }
 makeHero(save.char || 'boy');
 const pShadow = blob(1.8); scene.add(pShadow);
-let pHp = pMaxHp(), yaw = Math.PI, pitch = 0.42, dist = 11, skillCd = 0, skillTarget = null, moveAmt = 0, atkCd = 0, target = null, running = false, deadT = 0, inZone = null, walkPh = 0;
+let pHp = pMaxHp(), yaw = Math.PI, pitch = 0.42, dist = Math.max(5, Math.min(40, +(save.opt && save.opt.cam) || 11)), skillCd = 0, skillTarget = null, moveAmt = 0, atkCd = 0, target = null, running = false, deadT = 0, inZone = null, walkPh = 0;
 const nameTag = textSprite('', {scale:0.75}); scene.add(nameTag);
 const guide = new THREE.Mesh(new THREE.ConeGeometry(0.38, 1.0, 10).rotateX(Math.PI/2), toon({color:0xffd23a, emissive:0x6a4a00})); outline(guide, 0.05); guide.visible = false; scene.add(guide);
 
@@ -1873,10 +1874,19 @@ let keys = {}, joyV = {x:0, y:0}, rotAcc = 0, moveAcc = 0;
 addEventListener('keydown', e=>{ if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; if(inQuiz || !running) return; keys[e.key.toLowerCase()] = true; if(e.key === ' '){ e.preventDefault(); attack(); } if(e.key.toLowerCase() === 'q') skill(); if(e.key.toLowerCase() === 'e') challenge(near); if(e.key.toLowerCase() === 'i') openEquip(); });
 addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 let drag = null;
-canvas.addEventListener('pointerdown', e=>{ drag = {x:e.clientX, y:e.clientY, id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
-canvas.addEventListener('pointermove', e=>{ if(!drag || drag.id !== e.pointerId) return; const dy = (e.clientX - drag.x)*0.006; yaw -= dy; rotAcc += Math.abs(dy); pitch = Math.max(0.12, Math.min(1.2, pitch + (e.clientY - drag.y)*0.004)); drag.x = e.clientX; drag.y = e.clientY; });
+// thu phóng góc nhìn: lăn chuột, chụm/mở 2 ngón, nút ＋/－ (xa nhất 40 để nhìn toàn cảnh); nhớ mức đã chọn
+const DIST_MIN = 5, DIST_MAX = 40; let camSaveT = null;
+function setDist(v){ dist = Math.max(DIST_MIN, Math.min(DIST_MAX, v)); save.opt.cam = Math.round(dist*10)/10; clearTimeout(camSaveT); camSaveT = setTimeout(persist, 800); }
+const pts = new Map(); let pinch0 = 0;
+const pinchD = ()=>{ const [a, b] = [...pts.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+canvas.addEventListener('pointerdown', e=>{ pts.set(e.pointerId, {x:e.clientX, y:e.clientY}); if(pts.size === 2){ drag = null; pinch0 = pinchD(); } });
+canvas.addEventListener('pointermove', e=>{ if(pts.has(e.pointerId)) pts.set(e.pointerId, {x:e.clientX, y:e.clientY}); if(pts.size === 2 && pinch0 > 0){ const d = pinchD(); if(d > 10){ setDist(dist*pinch0/d); pinch0 = d; } } });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev=> canvas.addEventListener(ev, e=>{ pts.delete(e.pointerId); if(pts.size < 2) pinch0 = 0; }));
+$('zIn').onclick = ()=> setDist(dist/1.35); $('zOut').onclick = ()=> setDist(dist*1.35);
+canvas.addEventListener('pointerdown', e=>{ if(pts.size > 1) return; drag = {x:e.clientX, y:e.clientY, id:e.pointerId}; try{ canvas.setPointerCapture(e.pointerId); }catch(er){} });
+canvas.addEventListener('pointermove', e=>{ if(!drag || drag.id !== e.pointerId || pts.size > 1) return; const dy = (e.clientX - drag.x)*0.006; yaw -= dy; rotAcc += Math.abs(dy); pitch = Math.max(0.12, Math.min(1.2, pitch + (e.clientY - drag.y)*0.004)); drag.x = e.clientX; drag.y = e.clientY; });
 canvas.addEventListener('pointerup', ()=> drag = null);
-canvas.addEventListener('wheel', e=>{ dist = Math.max(5, Math.min(22, dist + e.deltaY*0.01)); }, {passive:true});
+canvas.addEventListener('wheel', e=>{ setDist(dist*Math.exp(e.deltaY*0.0012)); }, {passive:true});
 const joy = $('joy'), knob = joy.firstElementChild; let jid = null;
 joy.addEventListener('pointerdown', e=>{ jid = e.pointerId; joy.setPointerCapture(jid); joyMove(e); });
 joy.addEventListener('pointermove', e=>{ if(e.pointerId === jid) joyMove(e); });
@@ -2197,8 +2207,8 @@ function loop(t){
   if(gT){ const a = Math.atan2(gT.x - player.position.x, gT.z - player.position.z); guide.position.set(player.position.x + Math.sin(a)*2.2, player.position.y + 0.6 + Math.sin(t*0.006)*0.15, player.position.z + Math.cos(a)*2.2); guide.rotation.y = a; }
   // camera bám theo người chơi; trong cảnh quay thì lia tới quái
   camTarget.lerp(tmp.set(player.position.x, player.position.y + 1.6, player.position.z), 0.18);
-  const bf = monsters.find(o=> o.boss && !o.dead && o.state === 'fight'); camExtra += ((bf ? (bf.boss.phase === 2 ? 9 : 5) : 0) - camExtra)*Math.min(1, rdt*2); const dd = dist + camExtra;
-  fpos.set(camTarget.x - Math.sin(yaw)*Math.cos(pitch)*dd, camTarget.y + Math.sin(pitch)*dd, camTarget.z - Math.cos(yaw)*Math.cos(pitch)*dd);
+  const bf = monsters.find(o=> o.boss && !o.dead && o.state === 'fight'); camExtra += ((bf ? (bf.boss.phase === 2 ? 9 : 5) : 0) - camExtra)*Math.min(1, rdt*2); const dd = dist + camExtra, pe = dist > 14 ? Math.max(pitch, Math.min(1.15, pitch + (dist - 14)/26*0.5)) : pitch;   // càng xa càng nhìn từ trên cao xuống
+  fpos.set(camTarget.x - Math.sin(yaw)*Math.cos(pe)*dd, camTarget.y + Math.sin(pe)*dd, camTarget.z - Math.cos(yaw)*Math.cos(pe)*dd);
   camW = cine ? Math.min(1, camW + rdt*2.5) : Math.max(0, camW - rdt*2);
   if(camW > 0 && (cine || lastCineM)){ const M = cine ? cine.M : lastCineM; if(cine) lastCineM = M; const s = M.boss ? (M.boss.phase === 2 ? 4.2 : 3.2) : M.baseScale, c = M.g.position;
     tmp.set(player.position.x - c.x, 0, player.position.z - c.z); if(tmp.lengthSq() < 0.01) tmp.set(0, 0, 1); tmp.normalize();
