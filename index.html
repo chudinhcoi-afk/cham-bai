@@ -821,14 +821,20 @@ function makeRecord(canvas, f){
     return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
   const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
 }
-function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ a[i] = rec; toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
+// bỏ một bản ghi đã lưu (đúng đối tượng đó) khỏi danh sách kết quả
+function unkeep(rec){ if(!rec) return; if(rec.kind==='exam'){ const a = xres[rec.exId] || [], i = a.indexOf(rec); if(i >= 0){ a.splice(i, 1); saveX(); } } else { const i = results.indexOf(rec); if(i >= 0){ results.splice(i, 1); saveResults(); } } }
+// bài vừa chấm được LƯU NGAY (không đợi bấm “Bài tiếp”) — tắt app, chuyển thẻ hay khoá máy cũng không mất bài cuối; sửa tay thì cập nhật bản đã lưu, bấm “Bỏ” thì xoá
+let savedRec = null, replacedRec = null;   // replacedRec: bài cũ cùng SBD bị thay — bấm “Bỏ” thì trả lại
+function syncPending(){ if(!pending || pending===savedRec) return; unkeep(savedRec); const old = keep(pending); if(old && !replacedRec) replacedRec = old; savedRec = pending; drawHeader(); }
+function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ const old = a[i]; a[i] = rec; saveX(); toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); return old; } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 let pendSrc = null;   // ảnh gốc + kết quả đọc của bài đang xem, để chấm tay lại các câu máy chưa chắc
 function showShot(canvas, f){
   pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> f.r.test.rows[p.k].t ? (p.pk.state==='weak' || p.pk.state==='multi' || p.pk.faint) : (p.pk.state!=='ok' || p.pk.faint)).map(p=> p.k) : [], xfix: f.kind==='exam' ? (f.r.unsure||[]).map(u=> ({...u})) : []};
   pending = makeRecord(canvas, f); frozen = true; loopOn = false; drawQuad(null);
-  drawShot(); $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
+  savedRec = null; replacedRec = null; drawShot(); $('shot').classList.add('on'); try{ navigator.vibrate && navigator.vibrate(70); }catch(e){}
 }
 function drawShot(){
+  syncPending();
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
@@ -902,7 +908,7 @@ function manualPick(k, i){
   p.pk = i < 0 ? {v:'', state:'blank', i:p.pk.i, manual:true} : {v:opts[i], state:'ok', i, manual:true};
   regradeWs(r);
 }
-function closeShot(ok){ if(ok && pending) keep(pending); pending = null; pendSrc = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
+function closeShot(ok){ if(!ok){ unkeep(savedRec); if(replacedRec && replacedRec.kind==='exam'){ (xres[replacedRec.exId] = xres[replacedRec.exId] || []).push(replacedRec); saveX(); } } savedRec = null; replacedRec = null; pending = null; pendSrc = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
 $('bNext').onclick = ()=> closeShot(true);
 $('bDrop').onclick = ()=> closeShot(false);
 $('bSend').onclick = ()=>{ if(pending) share([[pending, 0]]); };   // gửi ngay ảnh vừa chấm (Zalo, Messenger, Gmail… theo bảng chia sẻ của máy)
