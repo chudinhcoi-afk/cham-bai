@@ -379,7 +379,7 @@ async function login(ma, sbd, ten){
 // khối của lớp: chỉ mở vùng đất ≤ khối (thầy/cô nâng khối lớp ở năm học sau thì mở thêm)
 const maxGrade = ()=> save.acct && save.acct.khoi ? save.acct.khoi : 99;
 let khoiChecked = 0;
-async function refreshKhoi(){ const A = save.acct; if(!A || Date.now() - khoiChecked < 60000) return false; khoiChecked = Date.now();
+async function refreshKhoi(force){ const A = save.acct; if(!A || (!force && Date.now() - khoiChecked < 60000)) return false; khoiChecked = Date.now();
   try{ const lop = await fb('game/lop/' + A.ma); if(!lop) return false; const lc = JSON.stringify(lop.lich || null) !== JSON.stringify(A.lich || null); if(lc){ A.lich = lop.lich || null; persist(); } if((+lop.khoi || null) !== A.khoi){ A.khoi = +lop.khoi || null; A.lop = lop.ten || A.lop; persist(); return true; } return lc; }catch(e){} return false; }
 function logout(){ switchSave(SAVE_KEY); renderAcct(); showMenu(); }
 let syncT = null;
@@ -452,8 +452,11 @@ function chLock(g, ci){ const A = save.acct;
   if(TESTER && tUnl()[g + ':' + ci]) return null;
   // máy thử của thầy/cô (chơi tự do) bật "xem thử khoá chương": đã mở đến chương 3 (mở được 2 tuần), chương 4 mở sau 1 tuần, các chương sau cách nhau 2 tuần
   if(!A && TESTER && testerDemo()){ const st = demoStart(g, ci); if(!st) return null; const open = addDays(st, -DEMO_LEAD); return today() >= open ? null : {open, start:st, demo:true}; }
-  if(!A || +g !== +A.khoi || !A.lich || !A.lich.d) return null;
-  const st = A.lich.d[ci]; if(!st) return {open:null, start:null}; const open = addDays(st, -(A.lich.lead == null ? 14 : +A.lich.lead));
+  if(!A || +g !== +A.khoi || !A.lich || (!A.lich.d && !A.lich.o)) return null;
+  // thầy/cô mở/đóng thủ công (lich.o[ci] = 1 mở · 0 đóng) — ưu tiên hơn ngày theo lịch
+  const o = A.lich.o && A.lich.o[ci]; if(o === 1) return null; if(o === 0) return {open:null, start:null, off:true};
+  const st = (A.lich.d || {})[ci]; if(!st) return A.lich.d && Object.keys(A.lich.d).length ? {open:null, start:null} : null;   // chưa đặt ngày nào: chỉ áp các chương đóng thủ công
+  const open = addDays(st, -(A.lich.lead == null ? 14 : +A.lich.lead));
   return today() >= open ? null : {open, start:st}; }
 /* ----- trần điểm thường xuyên theo thứ tự trong lớp: 10 bạn đầu đạt điểm tối đa của chương được 10, 10 bạn tiếp theo tối đa 9,9, ...
    danh sách chung game/rank/{mã}/{khối}/{ci}/{sbd} = thời điểm (giờ máy chủ) — ai ghi trước xếp trước ----- */
@@ -1170,7 +1173,7 @@ async function startWB(){ const M = WBo; if(!M || inQuiz) return; M.seen = new S
   if(txOn()){ wbRefresh(true); setTimeout(()=> openWB(), 2600); } }
 /* ----- Người gác chương: đứng trước khu vực chưa mở, báo ngày mở theo phân phối chương trình ----- */
 let keepers = [];
-const lockTxt = L=> L.open ? `Mở ngày ${viDate(L.open)}` : 'Chưa có lịch mở';
+const lockTxt = L=> L.off ? 'Thầy/cô đang tạm đóng' : L.open ? `Mở ngày ${viDate(L.open)}` : 'Chưa có lịch mở';
 function buildKeeper(Z, px, pz){
   const y = height(Z.x, Z.z);
   // vòng chắn phát sáng quanh khu vực
@@ -1195,10 +1198,10 @@ function buildKeeper(Z, px, pz){
   keepers.push({keeper:true, Z, g:G, bang, base:G.rotation.y, name:'Người gác chương', greeted:false}); }
 function openKeeper(K){ sfx('click'); const Z = K.Z, L = Z.lock, A = save.acct || {lop:'thử', lich:{lead:DEMO_LEAD, d:Object.fromEntries(zones.map(z=> [z.ci, demoStart(grade, z.ci)]))}}, lead = A.lich.lead == null ? 14 : +A.lich.lead, C = META[grade];
   const rows = zones.map(z=>{ const lk = z.lock, st = (A.lich.d && A.lich.d[z.ci]) || (lk && lk.start), sc = chScore((save.ch || {})[grade] && save.ch[grade][z.ci], C[z.ci]);
-    return `<tr${z === Z ? ' style="background:rgba(242,193,78,.14)"' : ''}><td>${z.idx + 1}. ${shortCh(z.name)}</td><td>${st ? viDate(st) : '—'}</td><td>${lk ? (lk.open ? '🔒 ' + viDate(lk.open) : '🔒 chưa có lịch') : '✅ đã mở'}</td><td style="text-align:center">${lk ? '—' : fmtS(sc.s)}</td></tr>`; }).join('');
+    return `<tr${z === Z ? ' style="background:rgba(242,193,78,.14)"' : ''}><td>${z.idx + 1}. ${shortCh(z.name)}</td><td>${st ? viDate(st) : '—'}</td><td>${lk ? (lk.off ? '🔒 tạm đóng' : lk.open ? '🔒 ' + viDate(lk.open) : '🔒 chưa có lịch') : '✅ đã mở'}</td><td style="text-align:center">${lk ? '—' : fmtS(sc.s)}</td></tr>`; }).join('');
   const dn = L.open ? daysTo(L.open) : null;
   $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">🧙</div><div><b style="color:var(--gold);font-size:18px">Người gác chương</b><div style="font-size:13px;opacity:.8">Khu ${Z.idx + 1}: ${Z.name}</div></div></div>
-    <p style="font-size:16px;line-height:1.55;margin:12px 0">${L.open ? `“Cánh cổng này sẽ mở vào <b style="color:var(--gold)">${viDate(L.open, true)}</b> — còn <b>${dn}</b> ngày nữa. Theo phân phối chương trình, lớp ${A.lop} bắt đầu học chương này từ ${viDate(L.start, true)}; ta mở sớm ${lead} ngày để các em kịp làm quen.”` : '“Thầy/cô chưa đặt lịch mở chương này. Khi đến lúc học, cánh cổng sẽ tự mở.”'}</p>
+    <p style="font-size:16px;line-height:1.55;margin:12px 0">${L.open ? `“Cánh cổng này sẽ mở vào <b style="color:var(--gold)">${viDate(L.open, true)}</b> — còn <b>${dn}</b> ngày nữa. Theo phân phối chương trình, lớp ${A.lop} bắt đầu học chương này từ ${viDate(L.start, true)}; ta mở sớm ${lead} ngày để các em kịp làm quen.”` : L.off ? '“Thầy/cô đang <b>tạm đóng</b> chương này. Khi thầy/cô mở lại, cánh cổng sẽ mở ngay.”' : '“Thầy/cô chưa đặt lịch mở chương này. Khi đến lúc học, cánh cổng sẽ tự mở.”'}</p>
     <p style="font-size:14px;opacity:.85;margin:0 0 8px">Trong lúc chờ, hãy luyện thật vững các chương đã mở — <b>10 bạn đầu tiên</b> đạt điểm tối đa ở mỗi chương mới được trọn <b>10 điểm</b> thường xuyên!</p>
     <table style="width:100%;border-collapse:collapse;font-size:13.5px"><tr style="opacity:.75;text-align:left"><th>Chương</th><th>Học theo PPCT</th><th>Mở trong game</th><th>Chuyên cần</th></tr>${rows}</table>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="ibtn" onclick="document.getElementById('keeper').classList.add('hidden')">Đã hiểu</button>
@@ -1601,6 +1604,7 @@ async function enterWorld(g){
   if(rvLeft() > 0){ sfx('bad'); toast(`💀 Nhân vật đang chờ hồi sinh — còn ${mmss(rvLeft())}`, 2600); return; }
   if(g > maxGrade()){ toast(`🔒 Vùng đất Lớp ${g} chưa mở với lớp của em`, 2600); return; }
   $('loading').classList.remove('hidden'); $('loadTxt').textContent = `Đang tải ${WORLDS[g].name}…`;
+  if(save.acct) await Promise.race([refreshKhoi(true).catch(()=>{}), new Promise(r=> setTimeout(r, 3000))]);
   try{ grade = g; await loadMeta(); await loadPack(g); }catch(e){ $('loadTxt').textContent = 'Không tải được dữ liệu, kiểm tra mạng rồi thử lại.'; setTimeout(()=> $('loading').classList.add('hidden'), 2500); return; }
   await new Promise(r=> setTimeout(r, 30));
   $('menu').classList.add('hidden'); $('game').classList.remove('hidden');
@@ -1896,6 +1900,11 @@ $('oPeer').onchange = ()=>{ save.opt.peers = $('oPeer').checked; persist(); if(r
 $('oFull').onchange = ()=>{ save.opt.full = $('oFull').checked; persist(); if(save.opt.full) goFull(); else if(document.fullscreenElement) document.exitFullscreen().catch(()=>{}); };
 $('oSfx').onchange = ()=>{ save.opt.sfx = $('oSfx').checked; persist(); auInit(); auVol(); sfx('click'); };
 $('oTut').onclick = ()=>{ $('opts').classList.add('hidden'); save.tut = 0; persist(); if(running) tutStart(); else toast('Hướng dẫn sẽ hiện khi vào vùng đất', 2000); };
+setInterval(async ()=>{ if(!running || document.hidden || !save.acct || +grade !== +save.acct.khoi) return;
+  if(!(await refreshKhoi(true).catch(()=> false))) return;
+  const ch = zones.filter(Z=> !Z.lock !== !chLock(grade, Z.ci)); if(!ch.length) return;
+  const op = ch.filter(Z=> Z.lock).map(Z=> Z.idx + 1), cl = ch.filter(Z=> !Z.lock).map(Z=> Z.idx + 1);
+  const go = ()=>{ if(inQuiz || cine){ setTimeout(go, 5000); return; } reopenWorld(); toast(`📢 Thầy/cô vừa ${op.length ? '🔓 mở khu ' + op.join(', ') : ''}${op.length && cl.length ? ' · ' : ''}${cl.length ? '🔒 đóng khu ' + cl.join(', ') : ''}`, 3600); }; go(); }, 120000);
 function reopenWorld(){ if(!running || inQuiz || cine) return; const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); sfx('lvl'); }
 function setTier(name, rebuild){ const old = tierName; tierName = name; applyTier(); if(rebuild && running && old !== name && !inQuiz && !cine){ const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); } }
 
@@ -2139,7 +2148,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
