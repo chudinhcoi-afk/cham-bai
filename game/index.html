@@ -1080,6 +1080,108 @@ async function wbRefresh(force){ if(!save.acct || (!force && Date.now() - WB_BOA
   try{ const L = await wbBoard(), R = {}; L.slice(0, WB_TOP).forEach((x, i)=> R[x.ma + '_' + x.s] = i + 1); WB_RANK = R; setMyTitle(); PEER.ghosts.forEach(G=> peerTitle(G)); }catch(e){} }
 function peerTitle(G){ const T = titleOf(WB_RANK[G.w] || 0); if(G.title && (!T || G.title.userData.T !== T)){ world.remove(G.title); disposeObj(G.title); G.title = null; } if(T && !G.title){ G.title = titleSprite(T); world.add(G.title); } }
 function titleAnim(sp, x, y, z, now){ if(!sp) return; sp.position.set(x, y, z); const T = sp.userData.T, k = sp.userData.k*(T.pulse ? 1 + 0.06*Math.sin(now*0.005) : 1); sp.scale.set(sp.userData.w/sp.userData.h*k, k, 1); }
+/* ----- 🐕 Cậu Vàng: chú chó vàng lon ton quanh Thầy Định ----- */
+function buildDog(){
+  const Y = 0xe8b04a, Y2 = 0xf6d79a, Y3 = 0xc98a2e, DK = 0x2a1a10, RED = 0xc8232c, GOLD = 0xf2c14e;
+  const mk = (parts, t = 0.03)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x2a1a08})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
+  const body = mk([
+    {g:Sp(0.36, 14, 10), m:M4(0, 0.62, 0, 0.85, 0.8, 1.35), c:Y}, {g:Sp(0.25, 12, 8), m:M4(0, 0.55, 0.12, 0.85, 0.7, 1.2), c:Y2},     // thân + bụng sáng
+    {g:Sp(0.3, 12, 8), m:M4(0, 0.7, 0.36, 0.9, 0.95, 0.9), c:Y}, {g:Sp(0.2, 10, 8), m:M4(0, 0.66, 0.5, 0.9, 0.9, 0.7), c:Y2},          // ức
+    {g:Cy(0.13, 0.15, 0.08, 14), m:M4(0, 0.86, 0.5, 1, 1, 1, 0.5, 0, 0), c:RED}, {g:Sp(0.05, 8, 6), m:M4(0, 0.78, 0.62), c:GOLD}       // vòng cổ đỏ + chuông
+  ]);
+  const head = new THREE.Group(); head.position.set(0, 1.0, 0.55);
+  head.add(mk([
+    {g:Sp(0.27, 16, 12), m:M4(0, 0, 0, 1.05, 0.95, 1), c:Y}, {g:Sp(0.16, 12, 8), m:M4(0, -0.07, 0.2, 1, 0.75, 1.1), c:Y2},            // đầu + mõm
+    {g:Sp(0.1, 8, 6), m:M4(-0.15, -0.06, 0.12, 1, 0.8, 0.8), c:Y2}, {g:Sp(0.1, 8, 6), m:M4(0.15, -0.06, 0.12, 1, 0.8, 0.8), c:Y2},    // má
+    {g:Co(0.1, 0.24, 4), m:M4(-0.15, 0.24, -0.02, 1, 1, 0.55, 0, 0, 0.25), c:Y3}, {g:Co(0.1, 0.24, 4), m:M4(0.15, 0.24, -0.02, 1, 1, 0.55, 0, 0, -0.25), c:Y3}  // tai dựng
+  ], 0.025));
+  head.add(new THREE.Mesh(merge([
+    {g:Sp(0.045, 10, 8), m:M4(-0.1, 0.05, 0.22), c:DK}, {g:Sp(0.045, 10, 8), m:M4(0.1, 0.05, 0.22), c:DK},
+    {g:Sp(0.014, 5, 4), m:M4(-0.09, 0.07, 0.262), c:0xffffff}, {g:Sp(0.014, 5, 4), m:M4(0.11, 0.07, 0.262), c:0xffffff},
+    {g:Sp(0.05, 8, 6), m:M4(0, -0.02, 0.37, 1.2, 0.85, 0.8), c:DK},                                                                    // mũi
+    {g:Sp(0.06, 8, 6), m:M4(0, -0.15, 0.3, 0.8, 0.45, 0.8), c:0xe86a7a},                                                               // lưỡi
+    {g:Co(0.06, 0.12, 4), m:M4(-0.15, 0.22, 0.02, 1, 1, 0.3, 0, 0, 0.25), c:0xf3a6a0}, {g:Co(0.06, 0.12, 4), m:M4(0.15, 0.22, 0.02, 1, 1, 0.3, 0, 0, -0.25), c:0xf3a6a0}
+  ]), toon({vertexColors:true, emissive:0x1a1010})));
+  const leg = (x, z)=>{ const G = new THREE.Group(); G.position.set(x, 0.5, z); G.add(mk([{g:Cy(0.075, 0.065, 0.46, 8), m:M4(0, -0.23, 0), c:Y}, {g:Sp(0.085, 8, 6), m:M4(0, -0.46, 0.03, 1, 0.6, 1.25), c:Y2}], 0.02)); return G; };
+  const legs = [leg(-0.17, 0.32), leg(0.17, 0.32), leg(-0.17, -0.3), leg(0.17, -0.3)];
+  const tail = new THREE.Group(); tail.position.set(0, 0.82, -0.42);
+  tail.add(mk([{g:new THREE.TorusGeometry(0.13, 0.065, 8, 14, Math.PI*1.5), m:M4(0, 0.12, 0, 1, 1, 1, 0, Math.PI/2, 0), c:Y}, {g:Sp(0.07, 8, 6), m:M4(0, 0.25, 0.0), c:Y2}], 0.02));
+  const G = new THREE.Group(); G.add(body, head, tail, ...legs); G.scale.setScalar(1.25);
+  const lab = textSprite('🐕 Cậu Vàng', {screen:0.026, color:'#ffd27a'});
+  return {G, head, tail, legs, lab, state:'trot', t:1, tgt:null, ph:0, spin:0}; }
+function updDog(dt, now, T){ const D = T.dog; if(!D) return; const P = D.G.position, C = T.G.position;
+  const dT = Math.hypot(P.x - C.x, P.z - C.z), dp = P.distanceTo(player.position);
+  D.t -= dt;
+  if(D.state === 'circle'){ D.spin += dt*2.6; D.tgt = [C.x + Math.cos(D.spin)*2.4, C.z + Math.sin(D.spin)*2.4]; if(D.t <= 0){ D.state = 'trot'; D.t = 1 + Math.random()*2; } }
+  else if(D.t <= 0 || !D.tgt || dT > 7){ if(Math.random() < 0.3 && dT < 4){ D.state = 'circle'; D.spin = Math.atan2(P.z - C.z, P.x - C.x); D.t = 2.5 + Math.random()*2; D.tgt = [P.x, P.z]; }
+    else { const a = Math.random()*6.283, rr = 1.6 + Math.random()*2.2; D.tgt = [C.x + Math.cos(a)*rr, C.z + Math.sin(a)*rr]; D.t = 1.2 + Math.random()*2.5; } }
+  const dx = D.tgt[0] - P.x, dz = D.tgt[1] - P.z, d = Math.hypot(dx, dz); let sp = 0;
+  if(d > 0.25){ sp = Math.min(d, (dT > 5 ? 7.5 : D.state === 'circle' ? 5.5 : 4.2)*dt); P.x += dx/d*sp; P.z += dz/d*sp; D.G.rotation.y = Math.atan2(dx, dz); }
+  else if(dp < 4) D.G.rotation.y = Math.atan2(player.position.x - P.x, player.position.z - P.z);                                     // dừng lại nhìn học sinh
+  const run = sp/Math.max(dt, 1e-4); D.ph += dt*(run > 0.5 ? 6 + run*1.6 : 0); const sw = run > 0.5 ? Math.sin(D.ph)*0.7 : 0;
+  D.legs[0].rotation.x = sw; D.legs[3].rotation.x = sw; D.legs[1].rotation.x = -sw; D.legs[2].rotation.x = -sw;
+  P.y = height(P.x, P.z) + (run > 0.5 ? Math.abs(Math.sin(D.ph))*0.12 : 0);
+  D.tail.rotation.z = Math.sin(now*(dp < 5 ? 0.03 : 0.015))*0.5; D.head.rotation.x = run > 0.5 ? 0.12 : Math.sin(now*0.002)*0.08;
+  D.head.rotation.y = run > 0.5 ? 0 : Math.sin(now*0.0013)*0.35;
+  D.lab.position.set(P.x, P.y + 1.9, P.z); D.lab.visible = dp < 16; }
+/* ----- 📐 Giác kế khổng lồ ở chương Hệ thức lượng trong tam giác (lớp 10): mô hình để quan sát ----- */
+function protractorTex(full){ return canvasTex(1024, full ? 1024 : 560, (x, w, h)=>{ const cx = w/2, cy = full ? h/2 : h - 40, R = w/2 - 30;
+  x.fillStyle = full ? '#f4ead2' : '#f7f1de'; x.beginPath(); full ? x.arc(cx, cy, R + 22, 0, 7) : x.arc(cx, cy, R + 22, Math.PI, 0); x.closePath(); x.fill();
+  x.strokeStyle = '#8a5a1c'; x.lineWidth = 10; x.stroke();
+  const N = full ? 360 : 180; x.strokeStyle = '#2a1c10'; x.fillStyle = '#2a1c10'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  for(let a = 0; a <= N; a++){ if(full && a === 360) break; const t = full ? a*Math.PI/180 : Math.PI + a*Math.PI/180, L = a % 10 === 0 ? 46 : a % 5 === 0 ? 30 : 16;
+    x.lineWidth = a % 10 === 0 ? 4 : 2; x.beginPath(); x.moveTo(cx + Math.cos(t)*R, cy + Math.sin(t)*R); x.lineTo(cx + Math.cos(t)*(R - L), cy + Math.sin(t)*(R - L)); x.stroke();
+    if(a % (full ? 30 : 10) === 0){ x.font = `bold ${full ? 44 : 34}px Arial`; x.fillText(full ? a : (a <= 90 ? 90 - a : a - 90) + '°', cx + Math.cos(t)*(R - 80), cy + Math.sin(t)*(R - 80)); } }
+  x.fillStyle = '#c8232c'; x.beginPath(); x.arc(cx, cy, 16, 0, 7); x.fill();
+  if(!full){ x.font = 'bold 40px Arial'; x.fillStyle = '#8a5a1c'; x.fillText('GIÁC KẾ', cx, cy - R*0.42); } }); }
+function buildGiacKe(Z){
+  const WOOD = 0x8a5a2c, MET = 0x7d8794, BR = 0xc9973a, DK = 0x2b2f36;
+  const mk = (parts, t = 0.04)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x161210})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
+  const HT = 3.4, root = new THREE.Group();
+  // chân ba càng
+  const tri = []; for(let i = 0; i < 3; i++){ const a = i*2.094 + 0.4, fx = Math.cos(a)*1.5, fz = Math.sin(a)*1.5, L = Math.hypot(1.5, HT);
+    tri.push({g:Cy(0.07, 0.1, L, 6), m:new THREE.Matrix4().compose(new THREE.Vector3(fx/2, HT/2, fz/2), new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-fx, HT, -fz).normalize()), new THREE.Vector3(1, 1, 1)), c:WOOD},
+      {g:Cy(0.11, 0.05, 0.25, 6), m:M4(fx, 0.12, fz), c:DK}); }
+  tri.push({g:Cy(0.32, 0.36, 0.22, 16), m:M4(0, HT, 0), c:BR}, {g:Cy(0.07, 0.07, 0.5, 10), m:M4(0, HT + 0.33, 0), c:MET});
+  root.add(mk(tri));
+  // mâm chia độ nằm ngang (đo góc phương vị)
+  const disk = new THREE.Mesh(new THREE.CircleGeometry(1.15, 48), toon({map:protractorTex(true), side:THREE.DoubleSide})); disk.rotation.x = -Math.PI/2; disk.position.y = HT + 0.13; root.add(disk);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(1.17, 0.05, 6, 48), toon({color:BR})); rim.rotation.x = Math.PI/2; rim.position.y = HT + 0.13; outline(rim, 0.03, true); root.add(rim);
+  // phần quay: thước đo góc đứng + ống ngắm + dây dọi
+  const turn = new THREE.Group(); turn.position.y = HT + 0.6; root.add(turn);
+  const pr = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6*560/1024), toon({map:protractorTex(false), side:THREE.DoubleSide, transparent:true, alphaTest:0.5}));
+  pr.position.y = 2.6*560/1024/2 - 2.6*(40/1024); turn.add(pr);
+  turn.add(mk([{g:new THREE.BoxGeometry(0.16, 0.25, 0.16), m:M4(0, -0.1, 0), c:BR}, {g:Cy(0.04, 0.04, 0.24, 8), m:M4(0, 0, 0.02, 1, 1, 1, Math.PI/2, 0, 0), c:DK}], 0.02));
+  const tube = new THREE.Group(); tube.position.set(0, 0, 0.12); turn.add(tube);
+  tube.add(mk([{g:Cy(0.09, 0.09, 2.6, 12), m:M4(0, 0, 0, 1, 1, 1, 0, 0, Math.PI/2), c:DK}, {g:Cy(0.13, 0.11, 0.18, 12), m:M4(1.3, 0, 0, 1, 1, 1, 0, 0, Math.PI/2), c:BR}, {g:Cy(0.1, 0.12, 0.14, 12), m:M4(-1.3, 0, 0, 1, 1, 1, 0, 0, Math.PI/2), c:BR},
+    {g:new THREE.BoxGeometry(0.06, 1.0, 0.04), m:M4(0.15, 0.5, 0, 1, 1, 1, 0, 0, 0), c:0xc8232c}], 0.025));                        // kim chỉ góc vuông góc ống ngắm
+  const beam = new THREE.Mesh(Cy(0.03, 0.03, 14, 6), new THREE.MeshBasicMaterial({color:0xff5a4a, transparent:true, opacity:0.35, depthWrite:false, blending:THREE.AdditiveBlending}));
+  beam.rotation.z = Math.PI/2; beam.position.x = 8.3; tube.add(beam);
+  const plumb = new THREE.Group(); turn.add(plumb); plumb.position.z = 0.06;
+  plumb.add(new THREE.Mesh(Cy(0.008, 0.008, 1.0, 4), new THREE.MeshBasicMaterial({color:0x222222})), mk([{g:Co(0.07, 0.18, 8), m:M4(0, -0.58, 0, 1, 1, 1, Math.PI, 0, 0), c:BR}], 0.015));
+  plumb.children[0].position.y = -0.5;
+  const a = Math.atan2(-Z.z, -Z.x) + 0.75, x = Z.x + Math.cos(a)*8, z = Z.z + Math.sin(a)*8; root.position.set(x, height(x, z) - 0.05, z); root.scale.setScalar(1.9);
+  const lab = textSprite('📐 Giác kế\nđo góc → tính chiều cao, khoảng cách', {screen:0.024, color:'#ffe6a3'}); lab.position.set(x, root.position.y + 11.2, z);
+  world.add(root, lab);
+  return {exhibit:true, G:root, turn, tube, plumb, lab, name:'Giác kế', ph:Math.random()*6}; }
+function updGK(dt, now){ const K = W._gk; if(!K) return; K.ph += dt;
+  K.turn.rotation.y = Math.sin(K.ph*0.18)*1.4;                                   // quay tìm mục tiêu
+  const el = 0.35 + Math.sin(K.ph*0.31)*0.3; K.tube.rotation.z = el; K.el = el;   // ngẩng/hạ ống ngắm
+  K.plumb.rotation.z = 0; K.lab.visible = K.G.position.distanceTo(player.position) < 40; }
+function openGK(){ sfx('click'); const K = W._gk, deg = K ? Math.round((K.el || 0.5)*180/Math.PI) : 30;
+  $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">📐</div><div><b style="color:var(--gold);font-size:18px">Giác kế</b><div style="font-size:13px;opacity:.8">Dụng cụ đo góc — Hệ thức lượng trong tam giác</div></div></div>
+    <p style="font-size:15px;line-height:1.55;margin:10px 0">Giác kế gồm <b>chân ba càng</b>, <b>mâm chia độ nằm ngang</b> (đo góc theo phương ngang) và <b>thước đo góc đứng</b> có <b>ống ngắm</b> (đo góc nâng). Ống ngắm lúc này đang nâng khoảng <b style="color:var(--gold)">${deg}°</b>.</p>
+    <svg viewBox="0 0 360 170" style="width:100%;background:#0e1430;border-radius:12px">
+      <line x1="20" y1="150" x2="340" y2="150" stroke="#6b7a99" stroke-width="2"/>
+      <rect x="300" y="30" width="14" height="120" fill="#8a5a2c"/><text x="322" y="90" fill="#ffd76a" font-size="13">H</text>
+      <line x1="60" y1="150" x2="60" y2="118" stroke="#c9973a" stroke-width="4"/><text x="40" y="138" fill="#9fb0cc" font-size="12">h₀</text>
+      <line x1="60" y1="118" x2="307" y2="118" stroke="#9fb0cc" stroke-dasharray="5 4"/><line x1="60" y1="118" x2="307" y2="32" stroke="#ff5a4a" stroke-width="2"/>
+      <path d="M100 118 A40 40 0 0 0 97 105" stroke="#ffd76a" fill="none" stroke-width="2"/><text x="104" y="112" fill="#ffd76a" font-size="13">α</text>
+      <text x="170" y="166" fill="#9fb0cc" font-size="12">d (đo bằng thước dây)</text></svg>
+    <p style="font-size:14.5px;line-height:1.55;margin:10px 0 4px"><b>Đo chiều cao cái cây, cột cờ:</b> đứng cách chân cột một khoảng <i>d</i>, ngắm đỉnh cột được góc nâng <i>α</i>, giác kế cao <i>h₀</i> thì<br><b style="color:var(--gold)">H = h₀ + d·tan α</b></p>
+    <p style="font-size:14.5px;line-height:1.55;margin:4px 0"><b>Đo khoảng cách tới điểm không đến được</b> (bên kia sông): đặt giác kế ở A và B cách nhau <i>c</i>, đo các góc <i>A</i>, <i>B</i> rồi dùng định lí sin: <b style="color:var(--gold)">AC = c·sin B / sin(A + B)</b>.</p>
+    <div style="display:flex;gap:8px;margin-top:12px"><button class="ibtn" onclick="document.getElementById('keeper').classList.add('hidden')">Đã hiểu</button></div>`;
+  $('keeper').classList.remove('hidden'); }
 function buildTeacher(){
   const NAVY = 0x1f3157, NAVY2 = 0x15213d, SKIN = 0xf0c49c, SKIN2 = 0xe2ae86, HAIR = 0x1c130e, WHITE = 0xf7f6f2, TIE = 0xa81f2a, GOLD = 0xe2b850, DARK = 0x141414, SHOE = 0x2a1810;
   const mk = (parts, t = 0.02)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x1e1a16})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
@@ -1128,7 +1230,8 @@ function buildTeacher(){
 function spawnWB(){ const open = zones.filter(z=> !z.lock); if(!open.length) return; const Z0 = open[Math.floor(Math.random()*open.length)];
   const T = buildTeacher(), gA = W._gA || 0, x = Math.cos(gA)*(GATE_R + 4) + Math.sin(gA)*2.5, z = Math.sin(gA)*(GATE_R + 4) - Math.cos(gA)*2.5; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
   const lab = textSprite('👨‍🏫 Thầy Định', {screen:0.034, color:'#ffd76a'}); world.add(lab);
-  WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:25, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99}); }
+  WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:25, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99});
+  const D = buildDog(); D.G.position.set(x + 1.6, height(x + 1.6, z + 1), z + 1); world.add(D.G, D.lab); WBo.dog = D; }
 function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position, dp = P.distanceTo(player.position);
   if(dp < 7 && !inQuiz){ W0.state = 'talk'; W0.G.rotation.y = Math.atan2(player.position.x - P.x, player.position.z - P.z); }
   else if(W0.state === 'talk'){ W0.state = 'idle'; W0.t = 2; }
@@ -1140,7 +1243,7 @@ function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position
   W0.legL.rotation.x = sw; W0.legR.rotation.x = -sw; W0.armL.rotation.x = -0.5 - sw*0.25; W0.armR.rotation.x = W0.state === 'talk' ? -1.1 + Math.sin(now*0.004)*0.15 : -0.25 + sw*0.5;
   W0.G.children[0].position.y = moving ? Math.abs(Math.sin(W0.ph))*0.03 : Math.sin(now*0.002)*0.01;
   W0.aura.position.set(P.x, P.y + 0.08, P.z); W0.aura.rotation.z += dt*0.8; W0.aura.material.opacity = 0.35 + 0.2*Math.sin(now*0.003);
-  W0.lab.position.set(P.x, P.y + 3.55, P.z); W0.lab.visible = dp < 45; }
+  W0.lab.position.set(P.x, P.y + 3.55, P.z); W0.lab.visible = dp < 45; updDog(dt, now, W0); }
 // hộp thoại: luật chơi + bảng vinh danh 30 em
 async function openWB(){ sfx('click'); const A = save.acct, on = txOn(), my = (save.wb || {})[grade];
   $('wbBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:50px">👨‍🏫</div><div><b style="color:var(--gold);font-size:20px">Thầy Định</b><div style="font-size:13px;opacity:.8">${WORLDS[grade].mood} ${WORLDS[grade].name} · khối ${grade}</div></div></div>
@@ -1321,6 +1424,7 @@ function buildWorld(g){
   zStones.count = zk; zStones.frustumCulled = false; world.add(zStones); if(tier.outline) outline(zStones, 0.06, true);
   // các khu vực: cờ, vòng sáng, biển tên, quái
   const flagGeo = geo('flag', ()=>{ const q = new THREE.PlaneGeometry(1.8, 1.1, 8, 1); q.translate(0.9, 0, 0); q.userData.keep = true; return q; });
+  W._gk = null;
   chs.forEach((c, i)=>{ const [x, z] = zc[i], y = height(x, z);
     const Z = {ci:c.ci, name:c.ten, x, z, r:15, idx:i, lvl:1 + i*2};
     const mark = new THREE.Mesh(new THREE.RingGeometry(Z.r - 0.5, Z.r, 64), new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.22, side:THREE.DoubleSide, depthWrite:false})); mark.rotation.x = -Math.PI/2; mark.position.set(x, y + 0.2, z); world.add(mark); Z.mark = mark;
@@ -1328,6 +1432,7 @@ function buildWorld(g){
     Z.flagMat = toon({color:0xd94f3a, side:THREE.DoubleSide}); const flag = new THREE.Mesh(flagGeo.clone(), Z.flagMat); flag.position.set(x, y + 3.6, z); world.add(flag); Z.flag = flag; Z.flagBase = flag.geometry.attributes.position.array.slice();
     const lab = textSprite(`Khu ${i + 1}: ${c.ten.replace(/^Chương [IVXL]+\. /, '')}\nQuái cấp ${Z.lvl}–${Z.lvl + 2}`, {screen:0.03, color:'#ffe6a3'}); lab.position.set(x, y + 6, z); world.add(lab); Z.lab = lab;
     zones.push(Z); Z.lock = chLock(g, c.ci);
+    if(+g === 10 && /Hệ thức lượng/i.test(c.ten)) W._gk = buildGiacKe(Z);
     if(Z.lock){ const [px, pz] = i ? zc[i - 1] : [0, 0]; buildKeeper(Z, px, pz); return; }
     const n = tier.mons; for(let k = 0; k < n; k++) spawnMonster(Z, k === 0 ? 'elite' : 'normal');
     if(i < chs.length - 1) spawnMonster(Z, 'guard');
@@ -1735,6 +1840,7 @@ let inQuiz = false;
 async function challenge(M){
   if(M && M.keeper){ if(!inQuiz && !cine) openKeeper(M); return; }
   if(M && M.wb){ if(!inQuiz && !cine && deadT <= 0) openWB(); return; }
+  if(M && M.exhibit){ if(!inQuiz && !cine) openGK(); return; }
   if(!M || M.dead || inQuiz || cine || M.answered !== null || deadT > 0) return;
   if(M.kind === 'guard' && txOn()){ const X = txRec(grade, M.Z.ci), t = today(); if((X.a[t] || 0) >= TX_DAY){ toast(`🛡 Hôm nay em đã thách đấu Hộ vệ chương này ${TX_DAY} lần.<br><span style="font-size:.65em">Ôn thêm rồi quay lại vào ngày mai nhé!</span>`, 3200); return; } }
   if(M.kind === 'guard'){ const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
@@ -2014,7 +2120,7 @@ function loop(t){
     if(!Z._bumpT || performance.now() - Z._bumpT > 4000){ Z._bumpT = performance.now(); sfx('warn'); toast(`🔒 Khu ${Z.idx + 1} chưa mở — ${lockTxt(Z.lock)}<br><span style="font-size:.62em">Hỏi 🧙 Người gác chương để biết thêm</span>`, 2600); } } });
   keepers.forEach(K=>{ const d = K.g.position.distanceTo(player.position); K.bang.position.y = K.g.position.y + 3.9 + Math.sin(t*0.004)*0.15; K.g.rotation.y = d < 12 ? Math.atan2(player.position.x - K.g.position.x, player.position.z - K.g.position.z) : K.base;
     if(d < 10 && !K.greeted){ K.greeted = true; toast(`🧙 “Khu ${K.Z.idx + 1} đang khoá — ${lockTxt(K.Z.lock).toLowerCase()}. Lại đây ta kể cho!”`, 3000); } });
-  updWB(dt, t);
+  updWB(dt, t); updGK(dt, t);
   let z = null; zones.forEach(Z=>{ if(Math.hypot(player.position.x - Z.x, player.position.z - Z.z) < Z.r + 2) z = Z; });
   if(z !== inZone){ inZone = z; $('zone').textContent = z ? (z.lock ? '🔒 ' : '') + `Khu ${z.idx + 1}: ${z.name}` + (z.lock ? ` — ${lockTxt(z.lock).toLowerCase()}` : '') : (dCamp < 9 ? '🏕 Trại xuất phát' : WORLDS[grade].name); if(z && !z.lock) toast(`📍 ${z.name}`, 1600); }
   // quái vật
@@ -2070,8 +2176,9 @@ function loop(t){
     M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
   }
   if(!near && WBo && WBo.G.position.distanceTo(player.position) < 6.5) near = WBo;
+  if(!near && W._gk && !(zones.find(z=> z.ci != null && W._gk && z.lock && Math.hypot(W._gk.G.position.x - z.x, W._gk.G.position.z - z.z) < z.r)) && W._gk.G.position.distanceTo(player.position) < 6) near = W._gk;
   if(!near) for(const K of keepers) if(K.g.position.distanceTo(player.position) < 5.5) near = K;
-  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near && near.keeper) $('challenge').textContent = '💬 Hỏi Người gác chương' + (mobile ? '' : ' (E)'); else if(near && near.wb) $('challenge').textContent = '🎓 Thách đấu Thầy Định' + (mobile ? '' : ' (E)'); else if(near){ const gl = near.kind === 'guard' && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
+  $('challenge').classList.toggle('hidden', !(near && !inQuiz && !cine && deadT <= 0)); if(near && near.keeper) $('challenge').textContent = '💬 Hỏi Người gác chương' + (mobile ? '' : ' (E)'); else if(near && near.wb) $('challenge').textContent = '🎓 Thách đấu Thầy Định' + (mobile ? '' : ' (E)'); else if(near && near.exhibit) $('challenge').textContent = '📐 Xem giác kế' + (mobile ? '' : ' (E)'); else if(near){ const gl = near.kind === 'guard' && gkGet(grade, near.Z.ci) < GUARD_NEED; $('challenge').textContent = (gl ? `🔒 Hộ vệ — hạ quái nhỏ ${gkGet(grade, near.Z.ci)}/${GUARD_NEED}` : `⚔ Thách đấu ${near.name}` + (near.kind === 'guard' && txOn() ? ` · điểm ${fmtM(txM(txRec(grade, near.Z.ci)))}` : '')) + (mobile ? '' : ' (E)'); }
   if(cine) updCine(rdt);
   // hiệu ứng
   for(let i = fx.length - 1; i >= 0; i--){ const f = fx[i]; f.life -= dt; if(f.upd) f.upd(f, dt); if(f.life <= 0){ f.parent.remove(f.obj); disposeFx(f.obj); fx.splice(i, 1); } }
