@@ -511,7 +511,9 @@ async function txWin(M){
   setTimeout(()=> toast((title ? `🏆 DANH HIỆU MỚI: Khắc tinh Hộ vệ<br><span style="font-size:.62em">${shortCh(C.ten)}</span><br>` : `🛡 Hạ Hộ vệ chương!<br>`) + `<span style="font-size:.62em">Điểm thường xuyên lần này: <b>${fmtS(sc)}</b> (${M.right}/${M.total} câu ${fmtM(m)}) · cao nhất: <b>${fmtS(X.b)}</b>${capTxt} — đã gửi cho thầy/cô${rkTxt}</span>`, 5600, true), 1600);
   if(title){ hero.victory(); pillar(player.position, 0xffd23a); burst(player.position, 0xffd23a, 2, 30); sfx('lvl'); }
 }
-function recAnswer(q, ok){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
+function recAnswer(q, ok, sec, kind){ const R = chRec(grade, q.c); R.n++; R.r = (R.r + (ok ? '1' : '0')).slice(-30);
+  // mốc luyện tập riêng (không tính lượt Hộ vệ, Trùm, Thầy Định, làm lại) để thầy/cô đối chiếu khi đánh Hộ vệ: theo mức độ [đúng, tổng, tổng giây các câu đúng]
+  if(sec != null && !['guard', 'boss', 'wb', 'redo'].includes(kind)){ const m = q.m || 'TH'; R.lq = R.lq || {}; const L = R.lq[m] = R.lq[m] || [0, 0, 0]; L[1]++; if(ok){ L[0]++; L[2] += Math.min(sec, 300); } }
   if(ok){ R.c++; if(q.k != null) R.d[q.k] = 1; if(q.m === 'VD') R.vd++; if(q.m === 'TH') R.th++; R.st++; R.best = Math.max(R.best, R.st); } else R.st = 0;
   const t = today(); R.days[t] = (R.days[t] || 0) + 1; const ks = Object.keys(R.days).sort(); while(ks.length > 60) delete R.days[ks.shift()];
   R.t = Date.now(); checkLevel(q.c); syncSoon(); eqCheck(); }
@@ -1844,7 +1846,7 @@ function renderMath(el){ try{ if(window.renderMathInElement) renderMathInElement
 function fitFigs(root){ root.querySelectorAll('.fig').forEach(f=>{ const inner = f.firstElementChild; if(!inner) return; inner.style.zoom = ''; const w = Math.max(inner.scrollWidth, inner.firstElementChild ? inner.firstElementChild.scrollWidth : 0), avail = f.clientWidth; if(w > avail && avail > 0) inner.style.zoom = (avail/w).toFixed(3); }); }
 function askQuiz(M){
   return new Promise(res=>{
-    let step = 0, right = 0, rvOk = 0, offN = 0, wrong = 0, stopped = false; const tms = [], WBK = M.kind === 'wb'; const RDO = M.kind === 'redo', big = M.kind === 'boss' || M.kind === 'guard' || RDO, total = WBK ? Infinity : M.kind === 'guard' || RDO ? 5 : big ? 3 : 1;
+    let step = 0, right = 0, rvOk = 0, offN = 0, wrong = 0, stopped = false; const tms = [], det = [], WBK = M.kind === 'wb'; const RDO = M.kind === 'redo', big = M.kind === 'boss' || M.kind === 'guard' || RDO, total = WBK ? Infinity : M.kind === 'guard' || RDO ? 5 : big ? 3 : 1;
     const one = ()=>{
       M._qi = step; const q = shuffleQ(pickQuestion(M)); curQ = q; const tq = Date.now(); QZ.kind = M.kind; const fig = /class="fig"/.test(q.q), secs = qSecs(q, fig); let left = secs, done = false;
       $('quiz').classList.remove('hidden'); $('qFace').textContent = RDO ? '📝' : WBK ? '👨‍🏫' : M.kind === 'boss' ? '👹' : M.kind === 'guard' ? '🛡' : {slime:'🟢', golem:'🗿', bat:'🦇', spirit:'👻', spider:'🕷'}[M.type];
@@ -1857,7 +1859,7 @@ function askQuiz(M){
       renderMath($('qText')); renderMath($('qOpts')); requestAnimationFrame(()=> fitFigs($('qText'))); if(exam) qbStart();
       const finish = (i, away)=>{ if(done) return; done = true; qbStop(); QZ.fail = null; clearTimeout(QZ.t); tms.push(Math.round((Date.now() - tq)/1000)); if(away){ offN++; acLog('off', {c:q.c, m:q.m}); } clearInterval(quizTimer); const ok = i === q.a; sfx(ok ? 'ok' : 'bad');
         $('qOpts').querySelectorAll('.opt').forEach((b, j)=>{ b.disabled = true; if(j === q.a) b.classList.add('ok'); else if(j === i) b.classList.add('bad'); });
-        const st = save.stat[grade] = save.stat[grade] || {}; const k = q.c; st[k] = st[k] || [0, 0]; st[k][1]++; if(ok){ st[k][0]++; save.stars++; right++; if(isWordQ(q)) save.wq = (save.wq || 0) + 1; } recAnswer(q, ok);
+        const st = save.stat[grade] = save.stat[grade] || {}; const k = q.c; st[k] = st[k] || [0, 0]; st[k][1]++; if(ok){ st[k][0]++; save.stars++; right++; if(isWordQ(q)) save.wq = (save.wq || 0) + 1; } const sec = tms[tms.length - 1]; det.push([q.m || 'TH', ok ? 1 : 0, sec, away ? 1 : 0]); recAnswer(q, ok, sec, M.kind);
         const R = chRec(grade, q.c); R.retry = R.retry || []; let rvTxt = '';
         if(ok){ save.streak = (save.streak || 0) + 1; if(q.rv && q.k != null){ R.retry = R.retry.filter(x=> x !== q.k); rvOk++; rvTxt = ' 🔁 <b>Báo thù thành công!</b>'; } }
         else { save.streak = 0; if(q.k != null && !R.retry.includes(q.k)){ R.retry.push(q.k); if(R.retry.length > 12) R.retry.shift(); } }
@@ -1869,7 +1871,7 @@ function askQuiz(M){
         renderMath($('qRes'));
         const go = $('qRes').querySelector('.go'), lbl = go.textContent; let wait = ok || fastQ() ? 0 : (q.s ? 6 : 3);
         if(wait){ go.disabled = true; const tk = ()=>{ if(wait <= 0){ go.disabled = false; go.textContent = lbl; return; } go.textContent = `📖 Đọc lời giải… (${wait})`; wait--; go._t = setTimeout(tk, 1000); }; tk(); }
-        const end = ()=>{ $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk, total:WBK ? step + (WB_LIVES - wrong) : total, tm:tms, off:offN, stopped}); };
+        const end = ()=>{ $('quiz').classList.add('hidden'); res({ok:fin, right, rv:rvOk, total:WBK ? step + (WB_LIVES - wrong) : total, tm:tms, det, off:offN, stopped}); };
         go.onclick = ()=>{ if(go.disabled) return; sfx('click'); if(more) one(); else end(); };
         if($('qStop')) $('qStop').onclick = ()=>{ if(!confirm('Dừng thử thách? Các tim còn lại tính là câu sai.')) return; stopped = true; end(); };
       };
@@ -1893,7 +1895,7 @@ async function challenge(M){
   if(M.kind === 'guard'){ const k = gkGet(grade, M.Z.ci); if(k < GUARD_NEED){ sfx('bad'); toast(`🛡 Hộ vệ chưa nhận lời thách đấu!<br><span style="font-size:.65em">Hạ thêm <b>${GUARD_NEED - k}</b> quái nhỏ trong khu vực này (trả lời đúng) rồi quay lại — ${k}/${GUARD_NEED}</span>`, 3400); return; } }
   if(M.kind === 'guard') rankPeek(M);
   inQuiz = true; if(CHAT.open) chatClose(); keys = {}; joyV = {x:0, y:0}; mus.mode = 'quiz'; sfx('click'); faceTo(M.g.position); hero.think(true); const qr = await askQuiz(M), ok = qr.ok; M.right = qr.right; M.total = qr.total;
-  if(M.kind === 'guard' && txOn() && !chot(grade, M.Z.ci)){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); persist(); syncSoon(); } if(M.kind === 'guard'){ gkSet(grade, M.Z.ci, 0); persist(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
+  if(M.kind === 'guard' && txOn() && !chot(grade, M.Z.ci)){ const X = txRec(grade, M.Z.ci), t = today(); X.a[t] = (X.a[t] || 0) + 1; X.n++; M.txm = txM(X); X.m = Math.max(TXM_MIN, txM(X) - 1); X.tm = qr.tm; X.off = (X.off || 0) + (qr.off || 0); X.log = (X.log || []).concat([{t:Date.now(), r:qr.right, n:qr.total, d:qr.det || []}]).slice(-10); persist(); syncSoon(); } if(M.kind === 'guard'){ gkSet(grade, M.Z.ci, 0); persist(); } M.rv = qr.rv || 0; M.sk = save.streak || 0; inQuiz = false; hero.think(false);
   M.answered = ok; target = M; startCine(M, ok ? 'weak' : 'morph');
 }
 
