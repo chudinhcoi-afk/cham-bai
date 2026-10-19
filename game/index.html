@@ -1144,6 +1144,13 @@ function protractorTex(full){ return canvasTex(1024, full ? 1024 : 560, (x, w, h
     if(a % (full ? 30 : 10) === 0){ x.font = `bold ${full ? 44 : 34}px Arial`; x.fillText(full ? a : (a <= 90 ? 90 - a : a - 90) + '°', cx + Math.cos(t)*(R - 80), cy + Math.sin(t)*(R - 80)); } }
   x.fillStyle = '#c8232c'; x.beginPath(); x.arc(cx, cy, 16, 0, 7); x.fill();
   if(!full){ x.font = 'bold 40px Arial'; x.fillStyle = '#8a5a1c'; x.fillText('GIÁC KẾ', cx, cy - R*0.42); } }); }
+// chỗ đất trống để đặt giác kế: quanh khu chương, ngoài vòng quái (bán kính 15), xa khu khác, xa trường, hồ; sát đường mòn (3–9 m) cho dễ thấy
+function gkSpot(c, zc){ let best = null, bs = -1e9;
+  for(let k = 0; k < 48; k++) for(const rr of [22, 25, 28]){ const a = k/48*Math.PI*2, x = c[0] + Math.cos(a)*rr, z = c[1] + Math.sin(a)*rr, pd = pathDist(x, z);
+    if(pd < 3.5) continue;
+    const dz = Math.min(...zc.map(([p, q])=> Math.hypot(x - p, z - q) - 15)), dc = W._campusC ? Math.hypot(x - W._campusC[0], z - W._campusC[1]) - 34 : 99, dl = W._lake ? Math.hypot(x - W._lake.x, z - W._lake.z) - W._lake.r : 99, d0 = Math.hypot(x, z) - 14;
+    const sc = Math.min(dz, dc, dl, d0, 12) - Math.max(0, pd - 9)*0.8; if(sc > bs){ bs = sc; best = [x, z]; } }
+  return best || [c[0] + 22, c[1]]; }
 function buildGiacKe(Z){
   const WOOD = 0x8a5a2c, MET = 0x7d8794, BR = 0xc9973a, DK = 0x2b2f36;
   const mk = (parts, t = 0.04)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, emissive:0x161210})); outline(m, t, true); m.castShadow = tier.shadow; return m; };
@@ -1170,7 +1177,8 @@ function buildGiacKe(Z){
   const plumb = new THREE.Group(); turn.add(plumb); plumb.position.z = 0.06;
   plumb.add(new THREE.Mesh(Cy(0.008, 0.008, 1.0, 4), new THREE.MeshBasicMaterial({color:0x222222})), mk([{g:Co(0.07, 0.18, 8), m:M4(0, -0.58, 0, 1, 1, 1, Math.PI, 0, 0), c:BR}], 0.015));
   plumb.children[0].position.y = -0.5;
-  const a = Math.atan2(-Z.z, -Z.x) + 0.75, x = Z.x + Math.cos(a)*8, z = Z.z + Math.sin(a)*8; root.position.set(x, height(x, z) - 0.05, z); root.scale.setScalar(1.9);
+  const P0 = W._gkPos || gkSpot([Z.x, Z.z], zones.map(q=> [q.x, q.z])), x = P0[0], z = P0[1]; root.position.set(x, height(x, z) - 0.05, z); root.scale.setScalar(1.9);
+  root.rotation.y = Math.atan2(Z.x - x, Z.z - z);   // ống ngắm hướng về phía khu chương
   const lab = textSprite('📐 Giác kế\nđo góc → tính chiều cao, khoảng cách', {screen:0.024, color:'#ffe6a3'}); lab.position.set(x, root.position.y + 11.2, z);
   world.add(root, lab);
   return {exhibit:true, G:root, turn, tube, plumb, lab, name:'Giác kế', ph:Math.random()*6}; }
@@ -1238,17 +1246,42 @@ function buildTeacher(){
   aura.rotation.x = -Math.PI/2;
   return {G, legL, legR, armL, armR, aura}; }
 function spawnWB(){ const open = zones.filter(z=> !z.lock); if(!open.length) return; const Z0 = open[Math.floor(Math.random()*open.length)];
-  const T = buildTeacher(), gA = W._gA || 0, x = Math.cos(gA)*(GATE_R + 4) + Math.sin(gA)*2.5, z = Math.sin(gA)*(GATE_R + 4) - Math.cos(gA)*2.5; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
+  const T = buildTeacher(), sp = wbTarget(true).p, x = sp[0], z = sp[1]; T.G.position.set(x, height(x, z), z); world.add(T.G, T.aura);
   const lab = textSprite('👨‍🏫 Thầy Định', {screen:0.034, color:'#ffd76a'}); world.add(lab);
   WBo = Object.assign(T, {wb:true, name:'Thầy Định', lab, state:'idle', t:25, tgt:null, ph:0, Z:Z0, kind:'wb', lvl:99});
   const D = buildDog(); D.G.position.set(x + 1.6, height(x + 1.6, z + 1), z + 1); world.add(D.G, D.lab); WBo.dog = D; }
+// khoảng cách từ (x, z) tới con quái gần nhất còn sống
+function wbMonNear(x, z){ let d = 1e9; monsters.forEach(M=>{ if(!M.dead && M.g) d = Math.min(d, Math.hypot(x - M.g.position.x, z - M.g.position.z)); }); return d; }
+// Thầy Định chỉ dừng ở chỗ thoáng: ngoài các khu quái, cách quái ≥ 10 m, không vào trường, không xuống hồ; ưu tiên gần đường mòn để học sinh dễ tìm
+function wbTarget(nearGate){ const open = zones.filter(z=> !z.lock); if(!open.length && !nearGate) return null;
+  const ok = (x, z)=> zones.every(q=> Math.hypot(x - q.x, z - q.z) > q.r + 3) && wbMonNear(x, z) > 10 && Math.hypot(x, z) > 9 && !(W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 34) && !(W._lake && Math.hypot(x - W._lake.x, z - W._lake.z) < W._lake.r + 3) && !(W._gkPos && Math.hypot(x - W._gkPos[0], z - W._gkPos[1]) < 4);
+  const gA = W._gA || 0, G0 = [Math.cos(gA)*(GATE_R + 4) + Math.sin(gA)*2.5, Math.sin(gA)*(GATE_R + 4) - Math.cos(gA)*2.5];
+  if(nearGate){ if(ok(G0[0], G0[1])) return {p:G0, Z:open[0] || null}; let best = null, bd = 1e9;   // chỗ thoáng gần cổng trường nhất
+    for(let r = 4; r <= 40; r += 3) for(let k = 0; k < 24; k++){ const x = G0[0] + Math.cos(k/24*6.283)*r, z = G0[1] + Math.sin(k/24*6.283)*r; if(ok(x, z) && r < bd){ bd = r; best = [x, z]; } }
+    return {p:best || G0, Z:open[0] || null}; }
+  for(let t = 0; t < 40; t++){ const Z = open[Math.floor(Math.random()*open.length)], a = Math.random()*6.3, r = Z.r + 4 + Math.random()*6, x = Z.x + Math.cos(a)*r, z = Z.z + Math.sin(a)*r;
+    if(ok(x, z) && (t > 25 || pathDist(x, z) < 8)) return {p:[x, z], Z}; }
+  return wbTarget(true); }   // không tìm được chỗ: về chỗ thoáng gần cổng trường
+// đường đi vòng ngoài các khu quái: đoạn thẳng nào cắt vòng khu (bán kính + 3) thì chèn một điểm trung gian ở rìa ngoài khu
+function wbRoute(from, to){ const L = [from, to];
+  for(let it = 0; it < 10; it++){ let hit = null;
+    for(let i = 0; i < L.length - 1 && !hit; i++){ const a = L[i], b = L[i + 1];
+      for(const Z of zones){ const d = segDist(Z.x, Z.z, a, b); if(d < Z.r + 3 && Math.hypot(a[0] - Z.x, a[1] - Z.z) > Z.r + 1 && Math.hypot(b[0] - Z.x, b[1] - Z.z) > Z.r + 1){ hit = {i, Z, a, b}; break; } } }
+    if(!hit) break; const {i, Z, a, b} = hit, dx = b[0] - a[0], dz = b[1] - a[1], LL = dx*dx + dz*dz, t = LL ? Math.max(0, Math.min(1, ((Z.x - a[0])*dx + (Z.z - a[1])*dz)/LL)) : 0;
+    let ux = a[0] + t*dx - Z.x, uz = a[1] + t*dz - Z.z, n = Math.hypot(ux, uz); if(n < 0.5){ ux = -dz; uz = dx; n = Math.hypot(ux, uz) || 1; }
+    L.splice(i + 1, 0, [Z.x + ux/n*(Z.r + 6), Z.z + uz/n*(Z.r + 6)]); }
+  return L.slice(1); }
 function updWB(dt, now){ const W0 = WBo; if(!W0) return; const P = W0.G.position, dp = P.distanceTo(player.position);
   if(dp < 7 && !inQuiz){ W0.state = 'talk'; W0.G.rotation.y = Math.atan2(player.position.x - P.x, player.position.z - P.z); }
   else if(W0.state === 'talk'){ W0.state = 'idle'; W0.t = 2; }
-  if(W0.state === 'idle'){ W0.t -= dt; if(W0.t <= 0){ const open = zones.filter(z=> !z.lock); if(open.length){ const Z = open[Math.floor(Math.random()*open.length)], a = Math.random()*6.3, r = 3 + Math.random()*7; W0.tgt = [Z.x + Math.cos(a)*r, Z.z + Math.sin(a)*r]; W0.Z = Z; W0.state = 'walk'; } else W0.t = 5; } }
+  if(W0.state === 'idle'){ W0.t -= dt; if(W0.t <= 0 || wbMonNear(P.x, P.z) < 9.5){ const T = wbTarget(); if(T){ W0.route = wbRoute([P.x, P.z], T.p); W0.tgt = W0.route.shift(); W0.Z = T.Z; W0.state = 'walk'; } else W0.t = 5; } }
   let moving = false;
-  if(W0.state === 'walk'){ const dx = W0.tgt[0] - P.x, dz = W0.tgt[1] - P.z, d = Math.hypot(dx, dz); if(d < 0.6){ W0.state = 'idle'; W0.t = 6 + Math.random()*10; }
-    else { const v = Math.min(d, 3.4*dt); P.x += dx/d*v; P.z += dz/d*v; W0.G.rotation.y = Math.atan2(dx, dz); moving = true; } }
+  if(W0.state === 'walk'){ const dx = W0.tgt[0] - P.x, dz = W0.tgt[1] - P.z, d = Math.hypot(dx, dz); if(d < 0.8 && W0.route && W0.route.length) W0.tgt = W0.route.shift(); else if(d < 0.6){ W0.state = 'idle'; W0.t = 6 + Math.random()*10; }
+    else { let ux = dx/d, uz = dz/d;   // né quái trên đường đi: cộng lực đẩy ra xa những con ở gần
+      monsters.forEach(M=>{ if(M.dead || !M.g) return; const mx = P.x - M.g.position.x, mz = P.z - M.g.position.z, md = Math.hypot(mx, mz); if(md < 7 && md > 0.01){ const w = (7 - md)/7*1.4; ux += mx/md*w; uz += mz/md*w; } });
+      const L = Math.hypot(ux, uz) || 1; ux /= L; uz /= L; const v = Math.min(d, 3.4*dt); P.x += ux*v; P.z += uz*v; W0.G.rotation.y = Math.atan2(ux, uz); moving = true;
+      W0.stuck = (W0.stuck || 0) + dt; if(W0.stuck > 25){ W0.stuck = 0; W0.state = 'idle'; W0.t = 0; } } }
+  if(W0.state !== 'walk') W0.stuck = 0;
   P.y = height(P.x, P.z); W0.ph += dt*(moving ? 7 : 1.5); const sw = moving ? Math.sin(W0.ph)*0.55 : 0;
   W0.legL.rotation.x = sw; W0.legR.rotation.x = -sw; W0.armL.rotation.x = -0.5 - sw*0.25; W0.armR.rotation.x = W0.state === 'talk' ? -1.1 + Math.sin(now*0.004)*0.15 : -0.25 + sw*0.5;
   W0.G.children[0].position.y = moving ? Math.abs(Math.sin(W0.ph))*0.03 : Math.sin(now*0.002)*0.01;
@@ -1426,7 +1459,9 @@ function buildWorld(g){
   buildSchoolGate(gA); buildCampus(gA);
   // cây cỏ, đá (tránh trại, khu vực, đường mòn)
   let rs = 12345 + g; const rnd = ()=> (rs = (rs*16807) % 2147483647)/2147483647;
-  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || (W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 30) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
+  // giác kế (lớp 10, chương Hệ thức lượng): đặt ở khoảng đất trống NGOÀI khu quái, sát đường mòn cho dễ thấy; cây cỏ không mọc đè lên chỗ này
+  W._gkPos = null; { const gi = chs.findIndex(c=> +g === 10 && /Hệ thức lượng/i.test(c.ten)); if(gi >= 0) W._gkPos = gkSpot(zc[gi], zc); }
+  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._gkPos && Math.hypot(x - W._gkPos[0], z - W._gkPos[1]) < 8) || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || (W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 30) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
   scatterFlora(g, rnd, avoid);
   // đá viền quanh khu vực
   zStones = new THREE.InstancedMesh(geo('rock', FLORA.rock), toon({vertexColors:true, flatShading:true, color:W.rock}), zc.length*16); let zk = 0;
@@ -1728,7 +1763,7 @@ async function enterWorld(g){
   $('avTxt').textContent = (save.name || '?').trim().split(' ').pop().slice(0,1).toUpperCase(); updHud(); cloudTxt(save.acct ? '☁ ' + save.acct.lop + ' · SBD ' + save.acct.sbd : 'Chơi tự do (không tính điểm)'); toast(`${WORLDS[g].mood} ${WORLDS[g].name}<br><span style="font-size:.6em">Lớp ${g} · ${zones.length} khu vực</span>`, 2600);
   renderer.compile(scene, camera); $('loading').classList.add('hidden');
   perfM.t = 0; perfM.n = 0; perfM.skip = 1; mus.mode = 'explore'; musStart(g);
-  if(WBo) setTimeout(()=>{ if(running && WBo) toast('👨‍🏫 Thầy Định đang đứng ngoài cổng trường — đến thách đấu nhé!<br><span style="font-size:.6em">Thầy đi lại giữa các khu; tìm chấm vàng <b>Đ</b> trên bản đồ nhỏ</span>', 3800); }, 3000);
+  if(WBo) setTimeout(()=>{ if(running && WBo) toast('👨‍🏫 Thầy Định đang đứng gần cổng trường — đến thách đấu nhé!<br><span style="font-size:.6em">Thầy đi lại giữa các khu; tìm chấm vàng <b>Đ</b> trên bản đồ nhỏ</span>', 3800); }, 3000);
   if(!save.tut) tutStart(); lowTip = 0; if(lowGrade()) setTimeout(()=> toast(`📘 Ôn tập Lớp ${g}: không nhận kinh nghiệm và điểm thường xuyên`, 3200), 2800);
   lastT = performance.now(); requestAnimationFrame(loop); peerStart();
 }
@@ -2277,7 +2312,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
