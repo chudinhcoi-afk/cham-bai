@@ -2385,14 +2385,17 @@ function labTapeBtn(){ if(!LAB.on || LAB.sight) return; const T = LAB.tape;
   if(!T || T.done){ labTapeClear(); const s = labSnap(player.position), line = new THREE.Mesh(new THREE.BoxGeometry(1, 0.03, 0.09), new THREE.MeshBasicMaterial({color:0xffd23a})); world.add(line);
     LAB.tape = {a:s.p, an:s.n, line, lab:null, len:0, txt:''}; sfx('click'); toast(`📏 Đã giữ đầu thước ${s.n ? 'ở <b>' + s.n + '</b>' : 'tại chỗ'} — đi tới điểm cuối rồi bấm <b>📏 Chốt thước</b>`, 2600); }
   else { const s = labSnap(player.position);
-    for(let i = 1; i < 40; i++){ const k = i/40, x = T.a.x + (s.p.x - T.a.x)*k, z = T.a.z + (s.p.z - T.a.z)*k; if(labLakeQ(x, z).q < 1){ labTapeClear(); sfx('bad'); toast('🌊 Thước dây không kéo qua mặt hồ được — hãy đo gián tiếp', 2400); labHud(); return; } }
+    if(labTapeWet(T.a, s.p)){ labTapeClear(); sfx('bad'); toast('🌊 Thước dây không kéo qua mặt hồ được — hãy đo gián tiếp', 2400); labHud(); return; }
     T.b = s.p; T.bn = s.n; T.done = true; const L = Math.round(Math.hypot(T.b.x - T.a.x, T.b.z - T.a.z)*10)/10; T.len = L; labTapeDraw(true); const r1 = v=> Math.round(v*10)/10;
     labNote('dài', L, {u:'m', w:[T.an || 'điểm đầu', T.bn || 'điểm cuối'].join(' → '), a:{x:r1(T.a.x), z:r1(T.a.z)}, b:{x:r1(T.b.x), z:r1(T.b.z)}}); sfx('ok'); toast(`📏 Thước dây: <b>${String(L).replace('.', ',')} m</b> (đã ghi sổ)`, 2200); }
   labHud(); }
+function labTapeWet(a, b){ const n = Math.max(8, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z)/1.5)); for(let i = 1; i < n; i++){ const k = i/n; if(labLakeQ(a.x + (b.x - a.x)*k, a.z + (b.z - a.z)*k).q < 1) return true; } return false; }
 function labTapeDrop(silent){ if(LAB.tape && !LAB.tape.done){ labTapeClear(); if(!silent) toast('📏 Đã cuộn thước', 1200); } }
 function labTapeDraw(force){ const T = LAB.tape; if(!T) return; const b = T.done ? T.b : new THREE.Vector3(player.position.x, 0, player.position.z), dx = b.x - T.a.x, dz = b.z - T.a.z, L = Math.hypot(dx, dz);
-  T.line.scale.set(Math.max(0.01, L), 1, 1); T.line.position.set((T.a.x + b.x)/2, 0.08, (T.a.z + b.z)/2); T.line.rotation.y = Math.atan2(-dz, dx);
-  const txt = String(Math.round(L*10)/10).replace('.', ',') + ' m'; if(txt !== T.txt || force){ T.txt = txt; if(T.lab){ world.remove(T.lab); disposeObj(T.lab); } T.lab = textSprite('📏 ' + txt, {screen:0.024, color:'#ffe680', bg:'rgba(60,40,0,.75)'}); world.add(T.lab); }
+  T.line.scale.set(Math.max(0.01, L), 1, 1); T.line.position.set((T.a.x + b.x)/2, 0.12, (T.a.z + b.z)/2); T.line.rotation.y = Math.atan2(-dz, dx);
+  // thước vắt qua mặt hồ: không đọc được độ dài (thước chùng, chìm trong nước)
+  const wet = !T.done && labTapeWet(T.a, b); T.line.material.color.set(wet ? 0xff4a3a : 0xffd23a);
+  const txt = wet ? '🌊 thước vướng mặt hồ — không đọc được' : String(Math.round(L*10)/10).replace('.', ',') + ' m'; if(txt !== T.txt || force){ T.txt = txt; if(T.lab){ world.remove(T.lab); disposeObj(T.lab); } T.lab = textSprite((wet ? '' : '📏 ') + txt, {screen:0.024, color:wet ? '#ffd0c8' : '#ffe680', bg:wet ? 'rgba(90,10,0,.8)' : 'rgba(60,40,0,.75)'}); world.add(T.lab); }
   T.lab.position.set((T.a.x + b.x)/2, 1.1, (T.a.z + b.z)/2); }
 // ---- thanh công cụ ----
 function labHud(){ const bar = $('labBar'); if(!bar) return; bar.classList.toggle('hidden', !LAB.on || !!LAB.sight); $('act').classList.toggle('hidden', LAB.on);
