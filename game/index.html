@@ -853,6 +853,7 @@ function height(x, z){ let h = baseH(x, z); for(const f of FLAT){ const d = Math
 const segDist = (x, z, a, b)=>{ const dx = b[0] - a[0], dz = b[1] - a[1], L = dx*dx + dz*dz, t = L ? Math.max(0, Math.min(1, ((x - a[0])*dx + (z - a[1])*dz)/L)) : 0; return Math.hypot(x - a[0] - t*dx, z - a[1] - t*dz); };
 const pathDist = (x, z)=>{ let d = 1e9; for(let i = 1; i < PATH.length; i++) d = Math.min(d, segDist(x, z, PATH[i - 1], PATH[i])); return d; };
 const world = new THREE.Group(); scene.add(world);
+let TIGER = null;   // Hổ trắng ham học của vùng đất đang chơi
 let zones = [], monsters = [], grade = 6, campPos = new THREE.Vector3(0, 0, 0), bossZone = null, water = null, amb = null, clouds = [], campLight = null, fireMeshes = [], zStones = null;
 
 // cổng trường THPT Võ Nhai (theo ảnh thật): 2 trụ đá xám, biển đỏ tên trường, mái hình quyển sách mở
@@ -972,7 +973,7 @@ function textSprite(text, opt = {}){
   if(opt.screen) s.scale.set(c.width/c.height*opt.screen*lines.length, opt.screen*lines.length, 1); else { const k = (opt.scale || 1)/90; s.scale.set(c.width*k, c.height*k, 1); } s.renderOrder = 5; return s;
 }
 function disposeObj(o){ o.traverse(n=>{ if(n.geometry && !n.geometry.userData.keep) n.geometry.dispose(); if(n.material){ (Array.isArray(n.material) ? n.material : [n.material]).forEach(m=>{ if(m.userData.keep) return; if(m.map && m.map !== DOT_TEX && m.map !== SHADOW_TEX) m.map.dispose(); m.dispose(); }); } }); }
-function clearWorld(){ PEER.ghosts.forEach(G=>{ if(G.hero) G.hero.dispose(); }); PEER.ghosts.clear(); while(world.children.length){ const o = world.children.pop(); disposeObj(o); } monsters = []; zones = []; keepers = []; WBo = null; clouds = []; water = null; amb = null; campLight = null; fireMeshes = []; if(stars){ scene.remove(stars); disposeObj(stars); stars = null; } }
+function clearWorld(){ PEER.ghosts.forEach(G=>{ if(G.hero) G.hero.dispose(); }); PEER.ghosts.clear(); while(world.children.length){ const o = world.children.pop(); disposeObj(o); } monsters = []; zones = []; keepers = []; WBo = null; TIGER = null; clouds = []; water = null; amb = null; campLight = null; fireMeshes = []; if(stars){ scene.remove(stars); disposeObj(stars); stars = null; } }
 
 /* ---------- cây cỏ riêng từng vùng đất (gộp khối + vẽ hàng loạt) ---------- */
 const Cy = (rt, rb, h, s = 6)=> new THREE.CylinderGeometry(rt, rb, h, s), Co = (r, h, s = 7)=> new THREE.ConeGeometry(r, h, s), Ic = (r, d = 0)=> new THREE.IcosahedronGeometry(r, d), Oc = r=> new THREE.OctahedronGeometry(r, 0), Do = r=> new THREE.DodecahedronGeometry(r, 0), Sp = (r, a = 10, b = 8)=> new THREE.SphereGeometry(r, a, b);
@@ -1412,6 +1413,8 @@ function buildWorld(g){
       const dz = Math.min(...zc.map(([zx, zz])=> Math.hypot(x - zx, z - zz) - 15)), dp = pathDist(x, z), sc = Math.min(dz, dp + 4);
       if(sc > bs){ bs = sc; best = {x, z}; } }
     if(best && bs > 14) W._lake = {x:best.x, z:best.z, r:Math.min(22, bs + 2)}; }
+  // Núi Hổ trắng: góc xa nhất, nâng thành đỉnh núi có mặt bằng cho hang hổ
+  { const H = W._tgr = tigerHomeSpot(zc); FLAT.push({x:H.x, z:H.z, r:26, y:Math.max(baseH(H.x, H.z), 10)}); }
   // mặt đất: tô màu theo độ cao, đường mòn nối các khu, bãi bờ nước, đỉnh núi
   const seg = tier.seg, geoG = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg); geoG.rotateX(-Math.PI/2);
   const pos = geoG.attributes.position, col = new Float32Array(pos.count*3), c0 = new THREE.Color(W.ground[0]), c1 = new THREE.Color(W.ground[1]), cp = new THREE.Color(W.patch), cpath = new THREE.Color(W.path), csh = new THREE.Color(W.shore), crk = new THREE.Color(W.rock), cpk = new THREE.Color(W.peak), cc = new THREE.Color();
@@ -1482,7 +1485,7 @@ function buildWorld(g){
   const tent = new THREE.Mesh(merge([{g:Cy(1.6, 1.6, 3.0, 3), m:M4(0, 0.8, 0, 1, 1, 1, -Math.PI/2, 0, 0), c:0xe8573f}, {g:Cy(1.62, 1.62, 0.5, 3), m:M4(0, 0.8, 0.9, 1, 1, 1, -Math.PI/2, 0, 0), c:0xf2c14e}, {g:Cy(0.78, 0.78, 0.06, 3), m:M4(0, 0.39, 1.51, 1, 1, 1, -Math.PI/2, 0, 0), c:0x4a1610},
     {g:Cy(0.06, 0.06, 3.5, 5), m:M4(0, 2.42, 0, 1, 1, 1, Math.PI/2, 0, 0), c:0x5a3a22}, {g:Cy(0.06, 0.06, 2.45, 5), m:M4(0, 1.22, 1.62), c:0x5a3a22}, {g:Cy(0.06, 0.06, 2.45, 5), m:M4(0, 1.22, -1.62), c:0x5a3a22},
     {g:new THREE.BoxGeometry(3.4, 0.06, 3.8), m:M4(0, 0.03, 0.2), c:0x8a6a4a}]), toon({vertexColors:true, flatShading:true}));
-  { const [x, z] = at(gA + Math.PI + 1.05, 5.4); tent.position.set(x, height(x, z) - campPos.y, z); tent.rotation.y = Math.atan2(-x, -z); } outline(tent, 0.06, true); tent.castShadow = true;
+  { const [x, z] = at(gA - 0.8, 5.2); tent.position.set(x, height(x, z) - campPos.y, z); tent.rotation.y = Math.atan2(-x, -z); } outline(tent, 0.06, true); tent.castShadow = true;
   const crates = new THREE.Mesh(merge([{g:new THREE.BoxGeometry(1, 1, 1), m:M4(0, 0.5, 0), c:0xb07a42}, {g:new THREE.BoxGeometry(0.8, 0.8, 0.8), m:M4(0.15, 1.4, 0.05, 1, 1, 1, 0, 0.4, 0), c:0xc48a4a}, {g:new THREE.BoxGeometry(0.9, 0.9, 0.9), m:M4(1.05, 0.45, 0.2, 1, 1, 1, 0, 0.2, 0), c:0xa86e38}, {g:Cy(0.4, 0.4, 0.9, 10), m:M4(-0.9, 0.45, 0.3), c:0x8a5a32}]), toon({vertexColors:true, flatShading:true}));
   { const [x, z] = at(gA + 2.35, 5.0); crates.position.set(x, height(x, z) - campPos.y, z); crates.rotation.y = gA; } outline(crates, 0.04, true); crates.castShadow = true;
   const bench = new THREE.Mesh(geo('log', FLORA.log), toon({vertexColors:true, flatShading:true})); { const [x, z] = at(gA + 1.45, 4.7); bench.position.set(x, height(x, z) - campPos.y, z); bench.rotation.y = -gA - 1.45; } outline(bench, 0.05, true);
@@ -1492,12 +1495,12 @@ function buildWorld(g){
   if(tier.light){ campLight = new THREE.PointLight(0xff8a3a, 6, 16, 1.5); campLight.position.set(fireAt.x, fireAt.y + 2.2, fireAt.z); camp.add(campLight); const gl = new THREE.PointLight(0x5dff9a, 4, 9, 1.6); gl.position.copy(crystal.position); camp.add(gl); }
   W._gA = gA; camp.userData = {ring, crystal, rings, cHalo, spark, ember, flags, halos, wat};
   world.add(camp); W._camp = camp;
-  buildSchoolGate(gA); buildCampus(gA);
+  buildSchoolGate(gA); buildCampus(gA); buildTigerDen();
   // cây cỏ, đá (tránh trại, khu vực, đường mòn)
   let rs = 12345 + g; const rnd = ()=> (rs = (rs*16807) % 2147483647)/2147483647;
   // giác kế (lớp 10, chương Hệ thức lượng): đặt ở khoảng đất trống NGOÀI khu quái, sát đường mòn cho dễ thấy; cây cỏ không mọc đè lên chỗ này
   W._gkPos = null; { const gi = chs.findIndex(c=> +g === 10 && /Hệ thức lượng/i.test(c.ten)); if(gi >= 0) W._gkPos = gkSpot(zc[gi], zc); }
-  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._gkPos && Math.hypot(x - W._gkPos[0], z - W._gkPos[1]) < 8) || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || (W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 30) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
+  const avoid = (x, z, d)=> Math.hypot(x, z) < 12 || (W._tgr && Math.hypot(x - W._tgr.x, z - W._tgr.z) < 15) || (W._gkPos && Math.hypot(x - W._gkPos[0], z - W._gkPos[1]) < 8) || (W._gate && Math.hypot(x - W._gate.x, z - W._gate.z) < 11) || (W._campusC && Math.hypot(x - W._campusC[0], z - W._campusC[1]) < 30) || zc.some(([a, b])=> Math.hypot(x - a, z - b) < (d.grass ? 13 : 17.5)) || (!d.grass && pathDist(x, z) < 3.5);
   scatterFlora(g, rnd, avoid);
   // đá viền quanh khu vực
   zStones = new THREE.InstancedMesh(geo('rock', FLORA.rock), toon({vertexColors:true, flatShading:true, color:W.rock}), zc.length*16); let zk = 0;
@@ -1658,6 +1661,126 @@ function transform(M){
   burst(M.g.position, 0xff2a2a, 1.8, 26); shockwave(M.g.position, 0xff3a3a, 9*M.baseScale/1.45);
 }
 function weaken(M){ M.hp = Math.round(M.hpMax*0.7); M.atk *= 0.65; M.stun = 2.5; M.baseEm = 0x183050; if(M.mat) M.mat.emissive.setHex(M.baseEm); burst(M.g.position, 0x4aa3ff, 1.3, 20); }
+
+/* ======================= HỔ TRẮNG HAM HỌC =======================
+   Chú hổ trắng khổng lồ sống trên Núi Hổ (một góc xa của vùng đất). Cứ vài phút lại xuống núi, vào một khu chương ăn hết quái nhỏ
+   ("ham học" — ăn quái để "học" thêm dạng toán), xong lại về núi. Gặp người chơi trong phạm vi ~16 m là lao vào cắn, thỉnh thoảng
+   vồ từ xa (có vòng đỏ cảnh báo, chạy ra để né). Da cực dày: người chơi cần khoảng cấp 100 mới thắng được. Gần hết máu thì bỏ chạy
+   về núi hồi máu — đuổi theo hạ được trước khi nó hồi đủ máu là chiến công lớn nhất. Không vào trại (vùng an toàn). */
+const TG = {lv:100, hp:55000, atk:46, aggro:16, flee:0.12, sc:1.6, reach:4.9};
+const tigerArmor = ()=> Math.min(1, Math.pow(Math.max(1, save.lv)/100, 2.5));   // cấp thấp đánh như gãi ngứa
+function tigerHomeSpot(zc){ let best = null, bs = -1e9;
+  for(let x = -104; x <= 104; x += 8) for(let z = -104; z <= 104; z += 8){ if(Math.max(Math.abs(x), Math.abs(z)) < 86) continue;
+    const dz = Math.min(...zc.map(([a, b])=> Math.hypot(x - a, z - b) - 26), Math.hypot(x, z) - 40, W._campusC ? Math.hypot(x - W._campusC[0], z - W._campusC[1]) - 44 : 99, W._lake ? Math.hypot(x - W._lake.x, z - W._lake.z) - W._lake.r - 14 : 99);
+    if(dz < 4) continue; const sc = baseH(x, z) + Math.min(dz, 30)*0.35; if(sc > bs){ bs = sc; best = {x, z}; } }
+  return best || {x:100, z:100}; }
+function tigerTex(){ return canvasTex(512, 256, (x, w, h)=>{ x.fillStyle = '#f6f3ec'; x.fillRect(0, 0, w, h); x.fillStyle = '#1f1f26';
+  for(let i = 0; i < 11; i++){ const v = 18 + i*(h - 36)/10, th = 7 + (i % 3)*3; for(const u0 of [0.06, 0.56]){ x.beginPath(); const u1 = u0 + 0.36;
+      for(let k = 0; k <= 20; k++){ const u = u0 + (u1 - u0)*k/20, t = Math.sin(k/20*Math.PI); x.lineTo(u*w, v + Math.sin(k*0.9 + i)*5 - th*t); }
+      for(let k = 20; k >= 0; k--){ const u = u0 + (u1 - u0)*k/20, t = Math.sin(k/20*Math.PI); x.lineTo(u*w, v + Math.sin(k*0.9 + i)*5 + th*t); } x.closePath(); x.fill(); } } }); }
+function buildTigerModel(){
+  const G = new THREE.Group(), rig = new THREE.Group(); G.add(rig);
+  const WH = toon({color:0xf6f3ec}), ST = toon({map:tigerTex()}), DK = toon({color:0x1f1f26}), PK = toon({color:0xe88a9a}), YE = new THREE.MeshBasicMaterial({color:0x7fe0ff});
+  const mats = [WH, ST], mk = (geo, mat, x, y, z, o = 0.04)=>{ const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = tier.shadow; outline(m, o, true); return m; };
+  const body = mk(Cy(0.95, 0.88, 3.3, 16), ST, 0, 1.8, -0.1); body.rotation.x = Math.PI/2; body.rotation.y = Math.PI/2; body.scale.set(1, 1, 0.92); rig.add(body);
+  rig.add(mk(Sp(1.02, 14, 10), ST, 0, 1.92, 1.25), mk(Sp(0.96, 14, 10), ST, 0, 1.82, -1.45));
+  // đầu
+  const head = new THREE.Group(); head.position.set(0, 2.55, 2.25); rig.add(head);
+  const skull = mk(Sp(0.78, 14, 10), ST, 0, 0, 0); skull.scale.set(1.08, 0.95, 1); skull.rotation.y = Math.PI/2; head.add(skull);
+  head.add(mk(new THREE.BoxGeometry(0.78, 0.42, 0.6), WH, 0, -0.2, 0.62), mk(Sp(0.13, 8, 6), PK, 0, -0.06, 0.95, 0.02));
+  [-1, 1].forEach(s=>{ head.add(mk(Sp(0.12, 8, 6), YE, s*0.3, 0.14, 0.62, 0.02), mk(Sp(0.06, 6, 4), DK, s*0.31, 0.14, 0.72, 0)); const ear = mk(Co(0.24, 0.42, 6), WH, s*0.5, 0.66, -0.1); ear.rotation.z = -s*0.35; head.add(ear);
+    const ein = mk(Co(0.12, 0.24, 6), PK, s*0.5, 0.64, -0.02, 0); ein.rotation.z = -s*0.35; head.add(ein);
+    for(let k = 0; k < 3; k++){ const wsk = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.015, 0.015), DK); wsk.position.set(s*0.55, -0.18 + k*0.06, 0.78); wsk.rotation.z = s*(k - 1)*0.18; head.add(wsk); } });
+  const jaw = new THREE.Group(); jaw.position.set(0, -0.42, 0.25); head.add(jaw); jaw.add(mk(new THREE.BoxGeometry(0.62, 0.16, 0.62), WH, 0, 0, 0.3));
+  [-1, 1].forEach(s=> jaw.add(mk(Co(0.05, 0.18, 4), WH, s*0.2, 0.15, 0.55, 0.01)));
+  // chân: 4 chân có khớp hông
+  const legs = [[-0.62, 1.25, 0], [0.62, 1.25, 1], [-0.6, -1.45, 1], [0.6, -1.45, 0]].map(([x, z, ph])=>{ const L = new THREE.Group(); L.position.set(x, 1.55, z); rig.add(L);
+    const up = mk(Cy(0.34, 0.26, 1.2, 10), ST, 0, -0.55, 0); L.add(up); L.add(mk(Sp(0.33, 10, 8), WH, 0, -1.2, 0.12)); L.userData.ph = ph; return L; });
+  // đuôi khoanh đen trắng
+  const tail = new THREE.Group(); tail.position.set(0, 2.15, -2.2); rig.add(tail); let par = tail; const segs = [];
+  for(let i = 0; i < 6; i++){ const s = new THREE.Group(); s.position.set(0, 0, i ? -0.42 : 0); par.add(s); s.add(mk(Cy(0.15 - i*0.012, 0.15 - i*0.012, 0.46, 8), i % 2 ? DK : WH, 0, 0, -0.21, 0.02)); s.children[0].rotation.x = Math.PI/2; segs.push(s); par = s; }
+  let ph = 0, t = 0, atkT = 0, hurtT = 0, dieT = -1, sit = 0;
+  return {G, rig, head, jaw, legs, segs, height:3.4,
+    attack(){ atkT = 0.55; }, hurt(){ hurtT = 0.12; }, die(){ dieT = 0; }, setSit(v){ sit = v; },
+    update(dt, speed, chew){ t += dt; ph += dt*(1.4 + speed*0.95); const mv = Math.min(1, speed/5);
+      if(dieT >= 0){ dieT += dt; rig.rotation.z = Math.min(Math.PI/2, dieT*2.4); rig.position.y = -Math.min(0.9, dieT*1.2); return; }
+      const s = sit*(1 - mv); rig.position.y = -0.85*s + Math.abs(Math.sin(ph))*0.08*mv;
+      legs.forEach(L=>{ const a = Math.sin(ph + L.userData.ph*Math.PI)*0.75*mv; L.rotation.x = a*(1 - s) + (L.position.z > 0 ? -1.25 : 1.1)*s; });
+      rig.rotation.x = -0.05*s;
+      segs.forEach((sg, i)=>{ sg.rotation.y = Math.sin(t*2.2 - i*0.6)*0.28; sg.rotation.x = i ? 0.22 + 0.05*Math.sin(t*1.7 + i) : -0.5; });
+      atkT = Math.max(0, atkT - dt); const k = atkT > 0 ? Math.sin((1 - atkT/0.55)*Math.PI) : 0, ch = chew ? Math.max(0, Math.sin(t*14)) : 0;
+      head.position.z = 2.25 + k*0.7; head.rotation.x = -0.25*k + 0.35*ch + (s ? 0.15 : 0); jaw.rotation.x = 0.55*Math.max(k, ch);
+      hurtT = Math.max(0, hurtT - dt); mats.forEach(m=> m.emissive.setHex(hurtT > 0 ? 0x666666 : 0x000000)); } }; }
+function buildTigerDen(){ const H = W._tgr; if(!H) return; const y = height(H.x, H.z), parts = [], aIn = Math.atan2(-H.z, -H.x);
+  for(let i = 0; i < 16; i++){ const a = i/16*Math.PI*2; if(Math.abs(Math.atan2(Math.sin(a - aIn), Math.cos(a - aIn))) < 0.5) continue; const r = 10 + Math.sin(i*2.3)*1.5, x = H.x + Math.cos(a)*r, z = H.z + Math.sin(a)*r, s = 1.4 + Math.abs(Math.sin(i*1.7))*1.6;
+    parts.push({g:Do(s), m:M4(x, height(x, z) + s*0.5, z, 1, 0.8, 1, i, i*0.7, 0), c:i % 2 ? 0x8f969f : 0xa7adb5}); }
+  const ca = aIn + Math.PI, cx = H.x + Math.cos(ca)*5.5, cz = H.z + Math.sin(ca)*5.5;
+  parts.push({g:new THREE.SphereGeometry(4.2, 14, 10, 0, Math.PI*2, 0, Math.PI/2), m:M4(cx, y - 0.2, cz, 1.2, 1, 1), c:0x9aa1aa});
+  const den = new THREE.Mesh(merge(parts), toon({vertexColors:true, flatShading:true})); outline(den, 0.06, true); den.castShadow = tier.shadow; world.add(den);
+  const hole = new THREE.Mesh(new THREE.CircleGeometry(1.9, 20, 0, Math.PI), new THREE.MeshBasicMaterial({color:0x111116, side:THREE.DoubleSide})); hole.position.set(cx + Math.cos(aIn)*4.4, y - 0.1, cz + Math.sin(aIn)*4.4); hole.rotation.y = Math.PI/2 - aIn; world.add(hole);
+  const lab = textSprite('⛰ Núi Hổ trắng', {screen:0.03, color:'#e8f4ff'}); lab.position.set(H.x, y + 9.5, H.z); world.add(lab);
+  W._tgr.y = y; spawnTiger(); }
+function spawnTiger(){ const H = W._tgr, m = buildTigerModel(); m.G.scale.setScalar(TG.sc); m.height *= TG.sc; m.G.position.set(H.x, height(H.x, H.z), H.z); m.G.rotation.y = Math.atan2(-H.x, -H.z); world.add(m.G);
+  const T = TIGER = {tiger:true, kind:'tiger', g:m.G, model:m, name:'Hổ trắng ham học', lvl:TG.lv, hp:TG.hp, hpMax:TG.hp, atk:TG.atk, answered:true, baseScale:4, kb:new THREE.Vector3(), dead:false,
+    mode:'rest', wait:60 + Math.random()*60, cd:1, pcd:5, n:0, t:0, lastHp:TG.hp, color:0xffffff, state:'idle', ate:0, won:false};
+  T.label = textSprite(`🐯 ${T.name} · Lv${T.lvl}`, {screen:0.034, color:'#e8f4ff'}); world.add(T.label);
+  T.hpBar = makeBar(); T.hpBar.scale.set(2, 1.5, 1); world.add(T.hpBar); T.shadow = blob(5); world.add(T.shadow); m.setSit(1); }
+function tigerRaid(){ const T = TIGER, open = zones.filter(Z=> !Z.lock && monsters.some(M=> !M.dead && M.Z === Z && M.kind !== 'guard' && !M.boss));
+  if(!open.length){ T.wait = 60; return; } T.zone = open[Math.floor(Math.random()*open.length)]; T.mode = 'go'; T.prey = null; T.model.setSit(0);
+  if(running && !LAB.on) toast(`🐯 <b>Hổ trắng ham học</b> xuống núi rồi!<br><span style="font-size:.62em">Nó đang tới <b>Khu ${T.zone.idx + 1}: ${shortCh(T.zone.name)}</b> để ăn quái — cẩn thận, gặp ai là vồ!</span>`, 3600); }
+function tigerEat(M){ M.dead = true; M.dying = M.model ? 1.0 : 0.4; if(M.model) M.model.die(); M.hpBar.visible = false; M.label.visible = false; M.respawn = 45; if(target === M) target = null;
+  burst(M.g.position, M.color, 1.2, 14); floatText(M.g.position, ['😋 Măm măm!', '📖 Ngon như sách Toán!', '🐯 Thêm một dạng nữa!'][Math.floor(Math.random()*3)], '#e8f4ff');
+  if(M.g.position.distanceTo(player.position) < 30) sfx('kill'); TIGER.ate++; }
+function tigerHit(dmg){ const k = tigerArmor(); if(k < 0.9 && !save.tgTip){ save.tgTip = 1; persist(); setTimeout(()=> toast('🐯 Da Hổ trắng dày quá — đòn của em chỉ như gãi ngứa!<br><span style="font-size:.62em">Cần lên khoảng <b>cấp 100</b> mới đánh thắng. Chạy về 🏕 Trại để thoát!</span>', 3600), 300); } return dmg*k; }
+function tigerReward(kill){ const T = TIGER, S = save.tiger = save.tiger || {win:0, kill:0}, low = lowGrade(); T.won = true;
+  if(kill){ S.kill++; save.badges = save.badges || {}; save.badges.tiger = 1; } else S.win++; persist(); syncSoon();
+  const xp = low ? 0 : kill ? 60000 : 15000; if(xp) gainXp(xp); hero.victory && hero.victory(); burst(player.position, 0xbff0ff, 2, 30);
+  toast(kill ? `👑 HUYỀN THOẠI! Em đã hạ gục <b>Hổ trắng ham học</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN · ' : ''}Danh hiệu: Kẻ Thuần Phục Hổ Trắng. Hổ sẽ quay lại sau 15 phút.</span>`
+    : `🐯 Hổ trắng ham học <b>bỏ chạy về núi</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN. ' : ''}Đuổi theo hạ nó trước khi hồi đủ máu để lập chiến công huyền thoại!</span>`, 4200, kill); }
+function tigerDefeat(){ const T = TIGER; T.dead = true; T.dieT = 0; T.model.die(); T.hpBar.visible = false; target = null; sfx('roar'); shockwave(T.g.position, 0xffffff, 10); burst(T.g.position, 0xffffff, 2.4, 30); tigerReward(true);
+  T.mode = 'gone'; T.wait = 900; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
+function tigerRespawn(){ const T = TIGER; [T.g, T.label, T.hpBar, T.shadow].forEach(o=>{ world.remove(o); disposeObj(o); }); TIGER = null; spawnTiger(); }
+function tigerPounce(T){ const to = player.position.clone(); T.pounce = {from:T.g.position.clone(), to, t:0, dur:0.95}; T.model.attack(); sfx('roar'); emoBubble('❗', '#ffd23a');
+  telegraph({shape:'circle', center:to, radius:4.2, duration:0.85}); }
+function updTiger(dt){ const T = TIGER; if(!T) return; const P = T.g.position, pl = player.position, H = W._tgr, d = Math.hypot(P.x - pl.x, P.z - pl.z), vis = d < 110;
+  T.g.visible = vis; T.shadow.visible = vis && !T.dead; T.label.visible = vis && d < 60 && !T.dead; T.t += dt;
+  if(T.mode === 'gone'){ T.wait -= dt; if(T.dieT != null){ T.dieT += dt; T.model.update(dt, 0, false); if(T.dieT > 2.5) T.g.visible = false; } if(T.wait <= 0) tigerRespawn(); return; }
+  if(inQuiz || cine){ T.model.update(dt, 0, false); return; }   // không đánh lén lúc em đang trả lời câu đố
+  const alive = deadT <= 0 && running && !LAB.on, inCamp = pl.distanceTo(campPos) < 11; let goal = null, sp = 0, chew = false;
+  // bị đánh khi đang đi/ăn/nghỉ → quay sang săn người đánh nó
+  if(T.hp < T.lastHp - 0.5 && !['hunt', 'flee'].includes(T.mode)){ T.prev = T.mode === 'heal' ? 'back' : T.mode; T.mode = 'hunt'; T.model.setSit(0); }
+  T.lastHp = T.hp;
+  if(['rest', 'go', 'eat', 'back'].includes(T.mode) && alive && d < TG.aggro && !inCamp){ T.prev = T.mode; T.mode = 'hunt'; T.model.setSit(0); sfx('roar'); emoBubble('❗', '#ffd23a'); shake = Math.max(shake, 0.5);
+    if(!T.seen){ T.seen = 1; toast('🐯 <b>Hổ trắng ham học</b> phát hiện em!<br><span style="font-size:.62em">Chạy về 🏕 Trại là an toàn — nó không vào trại</span>', 3000); } }
+  if(T.hp < T.hpMax*TG.flee && T.mode !== 'flee' && T.mode !== 'heal'){ T.mode = 'flee'; T.pounce = null; T.wind = 0; target = target === T ? target : target; floatText(P, '😿 Á á — về núi thôi!', '#e8f4ff', true); sfx('roar'); if(!T.won) tigerReward(false); }
+  switch(T.mode){
+    case 'rest': T.hp = Math.min(T.hpMax, T.hp + T.hpMax*0.02*dt); T.wait -= dt; if(T.wait <= 0) tigerRaid(); break;
+    case 'heal': T.hp = Math.min(T.hpMax, T.hp + T.hpMax*0.06*dt); T.model.setSit(1); if(T.hp >= T.hpMax){ T.mode = 'rest'; T.won = false; T.wait = 150 + Math.random()*120; } break;
+    case 'go': { const Z = T.zone; if(!Z){ T.mode = 'back'; break; } goal = {x:Z.x, z:Z.z}; sp = 5.5; if(Math.hypot(P.x - Z.x, P.z - Z.z) < Z.r*0.6) T.mode = 'eat'; break; }
+    case 'eat': { let M = T.prey; if(!M || M.dead){ let bd = 1e9; M = null; monsters.forEach(o=>{ if(o.dead || o.Z !== T.zone || o.kind === 'guard' || o.boss) return; const dd = o.g.position.distanceTo(P); if(dd < bd){ bd = dd; M = o; } }); T.prey = M; }
+      if(!M){ T.mode = 'back'; break; } const dd = Math.hypot(M.g.position.x - P.x, M.g.position.z - P.z);
+      if(dd > TG.reach){ goal = M.g.position; sp = 6; } else { chew = true; T.g.rotation.y = Math.atan2(M.g.position.x - P.x, M.g.position.z - P.z); T.cd -= dt; if(T.cd <= 0){ T.model.attack(); tigerEat(M); T.cd = 1.3; T.prey = null; } } break; }
+    case 'back': goal = H; sp = 5; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = T.hp < T.hpMax ? 'heal' : 'rest'; T.wait = 150 + Math.random()*120; T.model.setSit(1); } break;
+    case 'flee': goal = H; sp = 13; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = 'heal'; T.model.setSit(1); } break;
+    case 'hunt': {
+      if(!alive || d > 42 || inCamp){ T.mode = T.prev && T.prev !== 'hunt' ? T.prev : 'back'; T.pounce = null; T.wind = 0; if(target === T) target = null; break; }
+      if(T.pounce){ const U = T.pounce; U.t += dt; const k = Math.min(1, U.t/U.dur); P.x = U.from.x + (U.to.x - U.from.x)*k; P.z = U.from.z + (U.to.z - U.from.z)*k; T.jump = Math.sin(k*Math.PI)*3.2;
+        if(k >= 1){ T.pounce = null; T.jump = 0; shake = Math.max(shake, 0.7); sfx('thud'); shockwave(P, 0xffffff, 4); if(Math.hypot(pl.x - P.x, pl.z - P.z) < 4.2 + 0.45){ const dm = pDmg(T.atk*2.6*(0.9 + Math.random()*0.2)); pHp -= dm; floatText(pl, '-' + dm, '#ff6b6b', true); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die(T); } T.cd = 1.2; }
+        break; }
+      T.g.rotation.y = Math.atan2(pl.x - P.x, pl.z - P.z); T.pcd -= dt;
+      if(d > 7.5 && d < 15 && T.pcd <= 0){ tigerPounce(T); T.pcd = 7 + Math.random()*4; break; }
+      if(d > TG.reach){ goal = pl; sp = 8.2; }
+      else { T.cd -= dt; if(T.cd <= 0 && !T.wind){ T.wind = 0.45; T.model.attack(); T.cd = 1.5; } }
+      break; } }
+  if(T.wind > 0){ T.wind -= dt; if(T.wind <= 0){ T.wind = 0; if(alive && Math.hypot(pl.x - P.x, pl.z - P.z) < TG.reach + 1.3){ const dm = pDmg(T.atk*(0.85 + Math.random()*0.3)); pHp -= dm; floatText(pl, '-' + dm, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.4); updHud(); if(pHp <= 0) die(T); } } }
+  if(goal){ const dx = goal.x - P.x, dz = goal.z - P.z, L = Math.hypot(dx, dz); if(L > 0.3){ const st = Math.min(L, sp*dt); P.x += dx/L*st; P.z += dz/L*st;
+      let a = Math.atan2(dx, dz) - T.g.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); T.g.rotation.y += a*Math.min(1, dt*6); } else sp = 0; }
+  // không vào trại, không ra khỏi vùng chơi
+  { const cx = P.x - campPos.x, cz = P.z - campPos.z, cd = Math.hypot(cx, cz); if(cd < 12 && cd > 1e-3){ P.x = campPos.x + cx/cd*12; P.z = campPos.z + cz/cd*12; } }
+  P.x = Math.max(-PLAY, Math.min(PLAY, P.x)); P.z = Math.max(-PLAY, Math.min(PLAY, P.z)); T.kb.set(0, 0, 0);
+  const gy = height(P.x, P.z); P.y = gy + (T.jump || 0); T.model.update(dt, goal ? sp : 0, chew);
+  T.shadow.position.set(P.x, gy + 0.07, P.z); const top = P.y + T.model.height + 0.6;
+  T.label.position.set(P.x, top + 1.1, P.z); T.hpBar.position.set(P.x, top, P.z); T.hpBar.visible = vis && T.mode === 'hunt' || (T.mode === 'flee' && d < 60); T.hpBar.userData.fg.scale.x = 2.1*Math.max(0, T.hp/T.hpMax); }
 
 /* ======================= NGƯỜI CHƠI ======================= */
 const player = new THREE.Group(); scene.add(player);
@@ -2108,7 +2231,8 @@ setInterval(async ()=>{ if(!running || document.hidden || !save.acct || +grade !
 function reopenWorld(){ if(!running || inQuiz || cine) return; const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); sfx('lvl'); }
 function setTier(name, rebuild){ const old = tierName; tierName = name; applyTier(); if(rebuild && running && old !== name && !inQuiz && !cine){ const p = player.position.clone(); target = null; inZone = null; buildWorld(grade); player.position.copy(p); } }
 
-function nearestEnemy(range){ let best = null, bd = range; monsters.forEach(M=>{ if(M.dead) return; const d = M.g.position.distanceTo(player.position); if(d < bd){ bd = d; best = M; } }); return best; }
+function nearestEnemy(range){ let best = null, bd = range; monsters.forEach(M=>{ if(M.dead) return; const d = M.g.position.distanceTo(player.position); if(d < bd){ bd = d; best = M; } });
+  if(TIGER && !TIGER.dead && TIGER.mode !== 'gone'){ const d = TIGER.g.position.distanceTo(player.position) - 3.4; if(d < bd){ bd = d; best = TIGER; } } return best; }
 const pickTarget = range=> target && !target.dead && target.g.position.distanceTo(player.position) < range + target.baseScale*0.5 ? target : nearestEnemy(range);
 function attack(){
   if(LAB.on) return;
@@ -2141,12 +2265,14 @@ hero.on('impact', ()=>{
 });
 function faceTo(p){ player.rotation.y = Math.atan2(p.x - player.position.x, p.z - player.position.z); }
 function hit(M, dmg, crit, isSkill){
+  if(M.tiger){ if(M.dead) return; dmg = Math.max(1, tigerHit(dmg)); }
   dmg = Math.round(dmg); M.hp -= dmg; floatText(M.g.position, (crit && !isSkill ? 'Chí mạng! ' : '') + '-' + dmg, crit ? '#ffd76a' : '#ffffff', crit); M.flash = 0.12; target = M; M.state = 'fight'; if(mus.mode !== 'battle' && !inQuiz) mus.mode = 'battle';
   if(M.boss){ M.boss.flash(); if(isSkill) M.boss.hurt(); } else { if(M.model) M.model.hurt(); _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v); }
   hitStop = Math.max(hitStop, crit ? 0.09 : 0.05); shake = Math.max(shake, crit ? 0.45 : 0.2); if(crit && !isSkill) sfx('crit'); else if(!isSkill) sfx('hit');
   if(M.hp <= 0) killMonster(M);
 }
 function killMonster(M){
+  if(M.tiger){ tigerDefeat(); return; }
   M.dead = true; M.dying = M.boss ? 0 : M.model ? 1.0 : 0.4; if(M.model) M.model.die(); M.hpBar.visible = false; if(M.boss){ M.boss.die(); if(M.stars) M.stars.visible = false; } burst(M.g.position, M.color, M.kind === 'boss' ? 2.4 : 1.2, M.kind === 'boss' ? 30 : 16); shockwave(M.g.position, 0xffffff, 4*M.baseScale); sfx('kill');
   if((M.kind === 'guard' || M.kind === 'boss') && M.answered === true){ const R = chRec(grade, M.Z.ci); R.boss = Math.max(R.boss || 0, M.right === M.total ? 2 : 1); checkLevel(M.Z.ci); syncSoon(800); }
   if(M.kind === 'guard' && M.answered !== null) txWin(M);
@@ -2706,6 +2832,7 @@ function loop(t){
     M.label.position.set(M.g.position.x, top + 0.55, M.g.position.z); M.label.visible = (d < 22 || M.state === 'fight' || ((M.kind === 'boss' || M.kind === 'guard') && d < 50)) && M.spawnT >= 1;
     M.hpBar.position.set(M.g.position.x, top, M.g.position.z); M.hpBar.visible = M.state === 'fight' && !isC; M.hpBar.userData.fg.scale.x = 2.1*Math.max(0, M.hp/M.hpMax);
   }
+  updTiger(dt);
   if(!near && WBo && WBo.G.position.distanceTo(player.position) < 6.5) near = WBo;
   if(!near && !LAB.on && W._labIn && W._labIn.G.position.distanceTo(player.position) < 3.5) near = W._labIn;
   if(!near && W._gk && !(zones.find(z=> z.ci != null && W._gk && z.lock && Math.hypot(W._gk.G.position.x - z.x, W._gk.G.position.z - z.z) < z.r)) && W._gk.G.position.distanceTo(player.position) < 6) near = W._gk;
@@ -2774,6 +2901,7 @@ function drawMini(){
   { const [x, y] = P(campPos.x, campPos.z); mx.fillStyle = '#f2c14e'; mx.beginPath(); mx.arc(x, y, 7, 0, 7); mx.fill(); }
   monsters.forEach(M=>{ if(M.dead) return; const [x, y] = P(M.g.position.x, M.g.position.z); mx.fillStyle = M.kind === 'boss' ? '#c77dff' : M.kind === 'guard' ? '#9fd8ff' : M.morph ? '#ff2a2a' : M.answered ? '#4aa3ff' : '#ff8a5b'; mx.beginPath(); mx.arc(x, y, M.kind === 'boss' ? 7 : 4, 0, 7); mx.fill(); });
   Object.values(PEER.list).forEach(v=>{ const [x, y] = P(v.x, v.z); mx.fillStyle = '#7fd1ff'; mx.strokeStyle = '#08304a'; mx.lineWidth = 1.5; mx.beginPath(); mx.arc(x, y, 3.5, 0, 7); mx.fill(); mx.stroke(); });
+  if(TIGER && !TIGER.dead){ const [x, y] = P(TIGER.g.position.x, TIGER.g.position.z); mx.save(); mx.font = '15px sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.translate(x, y); mx.rotate(-(yaw + Math.PI)); mx.fillText('🐯', 0, 0); mx.restore(); }
   if(WBo){ const [x, y] = P(WBo.G.position.x, WBo.G.position.z), pu = 1 + 0.25*Math.sin(performance.now()*0.006); mx.fillStyle = '#ffd23a'; mx.strokeStyle = '#3a2400'; mx.lineWidth = 2; mx.beginPath(); mx.arc(x, y, 9*pu, 0, 7); mx.fill(); mx.stroke(); mx.fillStyle = '#3a2400'; mx.font = 'bold 12px sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('Đ', x, y + 0.5); }
   mx.restore(); mx.fillStyle = '#fff'; mx.beginPath(); mx.moveTo(R, R - 9); mx.lineTo(R - 6, R + 6); mx.lineTo(R + 6, R + 6); mx.fill();
 }
@@ -2790,7 +2918,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, labStakeBtn, labSightRecord, labExamStart, labExamStop, labBest, labDiag, labSubmit, labNotes, labTargets, labAz, labTrue, labAim, labSightSave, get labMode(){ return labMode(); }, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, get TIGER(){ return TIGER; }, hitT:(n, c)=> hit(TIGER, n, c), pAtk:()=> pAtk(), tigerRaid, updTiger, get W(){ return W; }, labStakeBtn, labSightRecord, labExamStart, labExamStop, labBest, labDiag, labSubmit, labNotes, labTargets, labAz, labTrue, labAim, labSightSave, get labMode(){ return labMode(); }, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
