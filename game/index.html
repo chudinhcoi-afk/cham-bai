@@ -1667,7 +1667,7 @@ function weaken(M){ M.hp = Math.round(M.hpMax*0.7); M.atk *= 0.65; M.stun = 2.5;
    ("ham học" — ăn quái để "học" thêm dạng toán), xong lại về núi. Gặp người chơi trong phạm vi ~16 m là lao vào cắn, thỉnh thoảng
    vồ từ xa (có vòng đỏ cảnh báo, chạy ra để né). Da cực dày: người chơi cần khoảng cấp 100 mới thắng được. Gần hết máu thì bỏ chạy
    về núi hồi máu — đuổi theo hạ được trước khi nó hồi đủ máu là chiến công lớn nhất. Không vào trại (vùng an toàn). */
-const TG = {lv:100, hp:55000, atk:46, aggro:16, flee:0.12, sc:1.6, reach:4.9};
+const TG = {lv:100, hp:55000, atk:46, aggro:16, flee:0.12, sc:1.6, reach:4.9, every:1500};   // every: giây giữa hai lần xuống núi (25 phút)
 const tigerArmor = ()=> Math.min(1, Math.pow(Math.max(1, save.lv)/100, 2.5));   // cấp thấp đánh như gãi ngứa
 function tigerHomeSpot(zc){ let best = null, bs = -1e9;
   for(let x = -104; x <= 104; x += 8) for(let z = -104; z <= 104; z += 8){ if(Math.max(Math.abs(x), Math.abs(z)) < 86) continue;
@@ -1729,7 +1729,7 @@ function buildTigerDen(){ const H = W._tgr; if(!H) return; const y = height(H.x,
   W._tgr.y = y; spawnTiger(); }
 function spawnTiger(){ const H = W._tgr, m = buildTigerModel(); m.G.scale.setScalar(TG.sc); m.height *= TG.sc; m.G.position.set(H.x, height(H.x, H.z), H.z); m.G.rotation.y = Math.atan2(-H.x, -H.z); world.add(m.G);
   const T = TIGER = {tiger:true, kind:'tiger', g:m.G, model:m, name:'Hổ trắng ham học', lvl:TG.lv, hp:TG.hp, hpMax:TG.hp, atk:TG.atk, answered:true, baseScale:4, kb:new THREE.Vector3(), dead:false,
-    mode:'rest', wait:60 + Math.random()*60, cd:1, pcd:5, n:0, t:0, lastHp:TG.hp, color:0xffffff, state:'idle', ate:0, won:false};
+    mode:'rest', wait:300 + Math.random()*(TG.every - 300), cd:1, pcd:5, n:0, t:0, lastHp:TG.hp, color:0xffffff, state:'idle', ate:0, won:false};
   T.label = textSprite(`🐯 ${T.name} · Lv${T.lvl}`, {screen:0.034, color:'#e8f4ff'}); world.add(T.label);
   T.hpBar = makeBar(); T.hpBar.scale.set(2, 1.5, 1); world.add(T.hpBar); T.shadow = blob(5); world.add(T.shadow); m.setSit(1); }
 function tigerObs(){ const L = [{x:campPos.x, z:campPos.z, r:12.5}]; if(W._campusC) L.push({x:W._campusC[0], z:W._campusC[1], r:30}); return L; }
@@ -1764,12 +1764,12 @@ function updTiger(dt){ const T = TIGER; if(!T) return; const P = T.g.position, p
   if(T.hp < T.hpMax*TG.flee && T.mode !== 'flee' && T.mode !== 'heal'){ T.mode = 'flee'; T.pounce = null; T.wind = 0; target = target === T ? target : target; floatText(P, '😿 Á á — về núi thôi!', '#e8f4ff', true); sfx('roar'); if(!T.won) tigerReward(false); }
   switch(T.mode){
     case 'rest': T.hp = Math.min(T.hpMax, T.hp + T.hpMax*0.02*dt); T.wait -= dt; if(T.wait <= 0) tigerRaid(); break;
-    case 'heal': T.hp = Math.min(T.hpMax, T.hp + T.hpMax*0.06*dt); T.model.setSit(1); if(T.hp >= T.hpMax){ T.mode = 'rest'; T.won = false; T.wait = 150 + Math.random()*120; } break;
+    case 'heal': T.hp = Math.min(T.hpMax, T.hp + T.hpMax*0.06*dt); T.model.setSit(1); if(T.hp >= T.hpMax){ T.mode = 'rest'; T.won = false; T.wait = TG.every; } break;
     case 'go': { const Z = T.zone; if(!Z){ T.mode = 'back'; break; } goal = {x:Z.x, z:Z.z}; sp = 5.5; if(Math.hypot(P.x - Z.x, P.z - Z.z) < Z.r*0.6) T.mode = 'eat'; break; }
     case 'eat': { let M = T.prey; if(!M || M.dead){ let bd = 1e9; M = null; monsters.forEach(o=>{ if(o.dead || o.Z !== T.zone || o.kind === 'guard' || o.boss) return; const dd = o.g.position.distanceTo(P); if(dd < bd){ bd = dd; M = o; } }); T.prey = M; }
       if(!M){ T.mode = 'back'; break; } const dd = Math.hypot(M.g.position.x - P.x, M.g.position.z - P.z);
       if(dd > TG.reach){ goal = M.g.position; sp = 6; } else { chew = true; T.g.rotation.y = Math.atan2(M.g.position.x - P.x, M.g.position.z - P.z); T.cd -= dt; if(T.cd <= 0){ T.model.attack(); tigerEat(M); T.cd = 1.3; T.prey = null; } } break; }
-    case 'back': goal = H; sp = 5; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = T.hp < T.hpMax ? 'heal' : 'rest'; T.wait = 150 + Math.random()*120; T.model.setSit(1); } break;
+    case 'back': goal = H; sp = 5; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = T.hp < T.hpMax ? 'heal' : 'rest'; T.wait = TG.every; T.model.setSit(1); } break;
     case 'flee': goal = H; sp = 13; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = 'heal'; T.model.setSit(1); } break;
     case 'hunt': {
       if(!alive || d > 42 || inCamp){ T.mode = T.prev && T.prev !== 'hunt' ? T.prev : 'back'; T.pounce = null; T.wind = 0; if(target === T) target = null; break; }
