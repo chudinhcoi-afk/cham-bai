@@ -101,8 +101,12 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
 #sBtns{position:absolute;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
 #sBtns button{font-size:15px;padding:10px 12px}#sBtns b{font-size:14px;min-width:30px;text-align:center}
 #labNoteIn{position:absolute;left:50%;top:58%;transform:translateX(-50%);background:rgba(10,16,40,.92);padding:10px 14px;border-radius:12px;font-size:16px;border:2px solid #ffd76a}
+#sAzBox{position:absolute;left:50%;top:calc(62px + env(safe-area-inset-top));transform:translateX(-50%);text-align:center;font-size:12px;text-shadow:0 1px 2px #000;width:min(560px,94vw)}
+#sAzBox canvas{width:100%;height:auto;border-radius:8px;border:2px solid #3a8fc9;display:block;margin-top:3px}
+#labNoteIn select{font-size:15px;padding:4px;border-radius:8px;border:0;margin:0 4px}
+.labAi{margin-top:6px;padding:8px 10px;border-radius:10px;background:rgba(80,140,255,.16);border:1px solid rgba(120,170,255,.55);color:#e6efff;line-height:1.5}
 #labNoteIn input{width:90px;font-size:18px;padding:5px 8px;border-radius:8px;border:0}#labNoteIn button{font-size:15px;padding:6px 12px;border-radius:8px;border:0;background:#ffd76a;cursor:pointer}
-@media (max-width:700px){#sScaleBox{bottom:calc(186px + env(safe-area-inset-bottom))}#sBtns{bottom:calc(14px + env(safe-area-inset-bottom));max-width:52vw}#sBtns button{padding:8px 9px;font-size:13px}#labBar .ibtn{font-size:13px;padding:8px 10px}}
+@media (max-width:700px){#sTop{font-size:10.5px;padding:3px 8px;top:6px;line-height:1.3}#sAzBox{top:calc(84px + env(safe-area-inset-top))}#sScaleBox{bottom:calc(186px + env(safe-area-inset-bottom))}#sBtns{bottom:calc(14px + env(safe-area-inset-bottom));max-width:52vw}#sBtns button{padding:8px 9px;font-size:13px}#labBar .ibtn{font-size:13px;padding:8px 10px}}
 .abtn{width:76px;height:76px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:radial-gradient(circle at 35% 30%,#ff8a5b,#d83b2a);color:#fff;font-weight:800;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.4);cursor:pointer;display:grid;place-items:center;line-height:1.1;text-align:center;position:relative;overflow:hidden}
 .abtn:active{transform:scale(.94)}
 .abtn.sk{width:62px;height:62px;background:radial-gradient(circle at 35% 30%,#8b7bff,#4b34c9)}
@@ -263,13 +267,14 @@ html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-
   <div id="toast"></div>
   <div id="tip" class="hidden"></div>
   <button id="challenge" class="hidden">⚔ Thách đấu</button>
-  <div id="labBar" class="hidden"><button class="ibtn" id="lbGk">📐 Cầm giác kế (G)</button><button class="ibtn" id="lbTape">📏 Kéo thước dây (T)</button><button class="ibtn" id="lbNote">📒 Sổ đo</button><button class="ibtn" id="lbNpc">👨‍🏫 Nhiệm vụ</button><button class="ibtn" id="lbWpn">🗡 Rút vũ khí</button></div>
+  <div id="labBar" class="hidden"><button class="ibtn" id="lbGk">📐 Cầm giác kế (G)</button><button class="ibtn" id="lbTape">📏 Kéo thước dây (T)</button><button class="ibtn" id="lbStake">📍 Cắm cọc (K)</button><button class="ibtn" id="lbNote">📒 Sổ đo</button><button class="ibtn" id="lbNpc">👨‍🏫 Nhiệm vụ</button><button class="ibtn" id="lbWpn">🗡 Rút vũ khí</button></div>
   <div id="sight" class="hidden"><div id="sightView"></div><div class="sVig"></div><div class="sCross"></div>
-    <div id="sTop">🔭 Kéo màn hình (hoặc ◀ ▶ ▲ ▼, phím mũi tên) để ngắm — tâm ✛ phải trùng mục tiêu. Phóng to 🔍 để ngắm chính xác.</div>
+    <div id="sTop">🔭 Kéo màn hình (◀ ▶ ▲ ▼, phím mũi tên) cho tâm ✛ trùng mục tiêu, phóng to 🔍 để ngắm chính xác. Thước dưới: <b>góc nâng</b> · vòng chia trên: <b>góc ngang</b>.</div>
+    <div id="sAzBox"><div>🧭 Vòng chia ngang (độ) — đọc tại kim đỏ</div><canvas id="sightAz" width="560" height="62"></canvas></div>
     <div id="sScaleBox"><div>📐 Vạch chia góc nâng (độ) — đọc tại kim đỏ</div><canvas id="sightScale" width="560" height="74"></canvas></div>
     <div id="sPad"><span></span><button id="sU">▲</button><span></span><button id="sL">◀</button><span></span><button id="sR">▶</button><span></span><button id="sD">▼</button><span></span></div>
     <div id="sBtns"><button id="sZout">🔍−</button><b id="sightZoom">×1</b><button id="sZin">🔍+</button><button id="sRec">📒 Ghi số đo</button><button id="sX">✕ Thoát</button></div>
-    <div id="labNoteIn" class="hidden">Em đọc được góc nâng: <input id="labNoteV" inputmode="decimal" autocomplete="off"> ° <button id="labNoteOk">✓ Ghi</button></div></div>
+    <div id="labNoteIn" class="hidden">Em đọc được <select id="labNoteK"><option value="el">góc nâng (thước dưới)</option><option value="az">góc ngang (vòng chia trên)</option></select> <input id="labNoteV" inputmode="decimal" autocomplete="off"> ° <button id="labNoteOk">✓ Ghi</button></div></div>
   <div id="act"><button class="abtn sk" id="bSkill">Tuyệt<br>chiêu<div class="cd" id="skCd" style="transform:scaleY(0)"></div></button><button class="abtn" id="bAtk">Đánh</button></div>
   <div id="joy"><div></div></div>
 </div>
@@ -387,7 +392,7 @@ async function login(ma, sbd, ten){
   if(!cl) await fb(`game/claim/${ma}/${sbd}`, 'PUT', fbAuth.uid);
   const kq = await fb(`game/kq/${ma}/${sbd}`) || {};
   switchSave(`${SAVE_KEY}:${ma}:${sbd}`);
-  save.name = hs.ten; save.acct = {ma, sbd, ten:hs.ten, lop:lop.ten || ma, khoi:+lop.khoi || null, lich:lop.lich || null, txk:lop.txk || null};
+  save.name = hs.ten; save.acct = {ma, sbd, ten:hs.ten, lop:lop.ten || ma, khoi:+lop.khoi || null, lich:lop.lich || null, txk:lop.txk || null, labg:(lop.labg && lop.labg[sbd]) || null};
   // gộp với bản trên máy chủ (lấy bản làm nhiều hơn)
   if(kq.ch) Object.keys(kq.ch).forEach(g=>{ save.ch = save.ch || {}; save.ch[g] = save.ch[g] || {}; Object.keys(kq.ch[g]).forEach(ci=>{ const a = save.ch[g][ci], b = kq.ch[g][ci]; if(!a || (b.n || 0) > (a.n || 0)) save.ch[g][ci] = Object.assign({d:{}, days:{}, r:''}, b); }); });
   if(kq.prof && (kq.prof.lv > save.lv || (kq.prof.lv === save.lv && kq.prof.xp > save.xp))){ Object.assign(save, {lv:kq.prof.lv, xp:kq.prof.xp, kills:kq.prof.kills || save.kills, stars:kq.prof.stars || save.stars}); if(kq.prof.badges) save.badges = kq.prof.badges; }
@@ -406,14 +411,16 @@ async function login(ma, sbd, ten){
 const maxGrade = ()=> save.acct && save.acct.khoi ? save.acct.khoi : 99;
 let khoiChecked = 0;
 async function refreshKhoi(force){ const A = save.acct; if(!A || (!force && Date.now() - khoiChecked < 60000)) return false; khoiChecked = Date.now();
-  try{ const lop = await fb('game/lop/' + A.ma); if(!lop) return false; const lc = JSON.stringify(lop.lich || null) !== JSON.stringify(A.lich || null); if(lc){ A.lich = lop.lich || null; persist(); } chotUpdate(lop.txk || null); if((+lop.khoi || null) !== A.khoi){ A.khoi = +lop.khoi || null; A.lop = lop.ten || A.lop; persist(); return true; } return lc; }catch(e){} return false; }
+  try{ const lop = await fb('game/lop/' + A.ma); if(!lop) return false; const lc = JSON.stringify(lop.lich || null) !== JSON.stringify(A.lich || null); if(lc){ A.lich = lop.lich || null; persist(); } chotUpdate(lop.txk || null); A.labg = (lop.labg && lop.labg[A.sbd]) || null; if((+lop.khoi || null) !== A.khoi){ A.khoi = +lop.khoi || null; A.lop = lop.ten || A.lop; persist(); return true; } return lc; }catch(e){} return false; }
 function logout(){ switchSave(SAVE_KEY); renderAcct(); showMenu(); }
 let syncT = null;
 function cloudTxt(t){ const el = $('cloud'); if(el) el.textContent = t; }
 function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudTxt('☁ đang chờ gửi…'); syncT = setTimeout(syncNow, ms); }
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
-  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, look:save.look || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, wb:save.wb || null, lab:save.lab || null, qd:save.qd || null, wq:save.wq || 0, sc}); cloudTxt('☁ đã lưu lên lớp'); }
+  try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, look:save.look || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, wb:save.wb || null, lab:save.lab || null, qd:save.qd || null, wq:save.wq || 0, sc});
+    if(save.labQ && Object.keys(save.labQ).length){ const Q = save.labQ; await fb(`game/kq/${ma}/${sbd}/labLog`, 'PATCH', Q); Object.keys(Q).forEach(k=> delete save.labQ[k]); persist(); }
+    cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
 addEventListener('online', ()=> syncSoon(500));
 
@@ -2187,10 +2194,27 @@ const LAB_MISS = [
   {id:'mt', ico:'⛰', ten:'Đo chiều cao ngọn núi', tol:x=> 0.06*x, tolTxt:'6%',
    de:'Ngọn núi phía trước có đèn hiệu đỏ trên đỉnh. Chân núi ở sâu bên trong, không đến được. Hãy đo chiều cao của đỉnh núi (đèn đỏ) so với mặt đất nơi em đứng.',
    g1:'Đi theo con đường thẳng hướng về núi. Đặt giác kế ở điểm A trên đường, ngắm đèn đỏ đọc góc nâng α. Dời giác kế lại gần núi đến điểm B cũng trên đường đó, đọc góc β (β > α). Đo AB bằng thước dây. Nên chọn A, B cách nhau từ 30 m trở lên để kết quả chính xác.',
-   g2:'Gọi h là phần cao hơn ống ngắm, x là khoảng cách từ B đến chân núi: h = x·tan β = (x + AB)·tan α ⇒ h = AB·tan α·tan β/(tan β − tan α). Hoặc dùng định lí sin trong tam giác tạo bởi A, B và đỉnh núi. Chiều cao núi = h + 1,5.'}];
-function labSc(force){ if(!force && save.labSc && save.labSc.v === 1) return save.labSc;
-  const r = (a, b)=> a + Math.random()*(b - a), d = r(22, 38), sx = r(-14, 14);
-  save.labSc = {v:1, tree:{h:Math.round(r(9, 21)*10)/10, x:Math.round(sx*10)/10, z:Math.round(d*10)/10}, mt:{h:Math.round(r(58, 96))}}; persist(); return save.labSc; }
+   g2:'Gọi h là phần cao hơn ống ngắm, x là khoảng cách từ B đến chân núi: h = x·tan β = (x + AB)·tan α ⇒ h = AB·tan α·tan β/(tan β − tan α). Hoặc dùng định lí sin trong tam giác tạo bởi A, B và đỉnh núi. Chiều cao núi = h + 1,5.'},
+  {id:'lake', ico:'🏞', ten:'Đo khoảng cách qua hồ', tol:x=> Math.max(1, 0.03*x), tolTxt:'3% (tối thiểu 1 m)',
+   de:'Phía đông bãi đo có một hồ nước. Hai lá cờ A (đỏ) và B (xanh) cắm ở hai bờ hồ. Thước dây không kéo qua mặt nước được. Hãy đo khoảng cách AB giữa hai chân cờ.',
+   g1:'Chọn một điểm C trên bờ nhìn thấy cả hai lá cờ, đặt giác kế ở C. Ngắm lần lượt cờ A và cờ B, mỗi lần đọc số đo trên <b>vòng chia ngang</b> (ghi là góc ngang). Dùng thước dây đo CA và CB (đứng sát chân cờ thì thước tự bắt vào chân cờ). Chọn C đủ xa bờ để thước dây từ C tới mỗi chân cờ không phải đi qua mặt nước.',
+   g2:'Góc ACB = hiệu hai số đọc trên vòng chia ngang (nếu hiệu lớn hơn 180° thì lấy 360° trừ đi). Định lí côsin: AB² = CA² + CB² − 2·CA·CB·cos C.'},
+  {id:'two', ico:'🗼', ten:'Đo khoảng cách hai tháp bên kia sông', tol:x=> 0.05*x, tolTxt:'5%',
+   de:'Phía tây có một con sông, bên kia sông có hai tháp canh P (cờ đỏ) và Q (cờ xanh). Không qua sông được. Hãy đo khoảng cách PQ giữa hai chân tháp.',
+   g1:'Bấm <b>📍 Cắm cọc</b> để cắm hai cọc C, D trên bờ sông, cách nhau từ 30 m trở lên; đo CD bằng thước dây. Đặt giác kế sát cọc C (giác kế tự đứng đúng cọc), đọc góc ngang khi ngắm tháp P, tháp Q và cọc D. Dời giác kế sang cọc D, đọc góc ngang khi ngắm P, Q và cọc C.',
+   g2:'Tam giác PCD biết CD, góc PCD, góc PDC ⇒ góc P = 180° − C − D, tính CP bằng định lí sin. Tương tự tính CQ trong tam giác QCD. Cuối cùng trong tam giác PCQ: PQ² = CP² + CQ² − 2·CP·CQ·cos PCQ (góc PCQ = hiệu hai số đọc khi ngắm P và Q từ C).'}];
+const LAB_TW = 12;   // chiều cao tháp canh
+function labSc(force){ if(!force && save.labSc && save.labSc.v === 2) return save.labSc;
+  const r = (a, b)=> a + Math.random()*(b - a), R1 = v=> Math.round(v*10)/10, d = r(22, 38), sx = r(-14, 14);
+  const lk = {x:R1(r(72, 84)), z:R1(r(-55, -35)), rx:R1(r(18, 26)), rz:R1(r(10, 15)), rot:Math.round(r(-0.6, 0.6)*100)/100};
+  const shore = t=>{ const lx = (lk.rx + 1.6)*Math.cos(t), lz = (lk.rz + 1.6)*Math.sin(t), c = Math.cos(lk.rot), s = Math.sin(lk.rot); return {x:R1(lk.x + lx*c - lz*s), z:R1(lk.z + lx*s + lz*c)}; };
+  const pz = r(-75, -30);
+  save.labSc = {v:2, tree:{h:R1(r(9, 21)), x:R1(sx), z:R1(d)}, mt:{h:Math.round(r(58, 96))}, lk, fa:shore(r(-0.5, 0.5)), fb:shore(Math.PI + r(-0.5, 0.5)),
+    tp:{x:R1(r(-128, -110)), z:R1(pz)}, tq:{x:R1(r(-128, -110)), z:R1(pz + r(28, 48))}};
+  save.labN = []; persist(); return save.labSc; }
+// hồ (elip xoay) — điểm (x,z) có nằm trong mặt hồ (nới thêm m mét) không
+function labLakeQ(x, z, m = 0){ const L = labSc().lk, c = Math.cos(L.rot), s = Math.sin(L.rot), dx = x - L.x, dz = z - L.z, lx = dx*c + dz*s, lz = -dx*s + dz*c; return {q:(lx/(L.rx + m))**2 + (lz/(L.rz + m))**2, lx, lz, c, s}; }
+const LAB_RIVER = -66.5;   // mép bờ sông phía tây (x)
 const labNotes = ()=> (save.labN = save.labN || []);
 function labNote(t, v, extra){ const N = labNotes(); N.push(Object.assign({t, v, at:Date.now()}, extra || {})); if(N.length > 30) N.shift(); persist(); labHud(); }
 function labTreeMesh(h){ const G = new THREE.Group(), th = h*0.16, mk = (parts)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, flatShading:true})); outline(m, 0.05, true); m.castShadow = tier.shadow; return m; };
@@ -2231,7 +2255,7 @@ function buildLab(){
   labGkDetach(); clearWorld(); W = Object.assign({}, WORLDS[6], {name:'Phòng thực hành đo đạc', wl:-100, fogR:[180, 820], amp:0.6}); grade = 10;
   skyMat.uniforms.top.value.set(W.sky); skyMat.uniforms.hor.value.set(W.fog); skyMat.uniforms.bot.value.set(W.ground[1]).lerp(new THREE.Color(W.fog), 0.5); skyMat.uniforms.sunCol.value.set(W.sunC); skyMat.uniforms.dim.value = 0;
   scene.fog = new THREE.Fog(W.fog, W.fogR[0], W.fogR[1]); W._fog = new THREE.Color(W.fog); hemi.color.set(0xffffff); hemi.groundColor.set(W.ground[1]); hemi.intensity = W.hemi; sun.intensity = W.sun; sun.color.set(W.sunC); Object.values(OL).forEach(m=> m.color.set(W.ol));
-  FLAT = [{x:0, z:0, r:225, y:0}]; PATH = [[0, 6], [0, -122]]; W._lake = null; W._campusC = null; W._gk = null; W._labIn = null;
+  FLAT = [{x:0, z:0, r:270, y:0}]; PATH = [[0, 6], [0, -122]]; W._lake = null; W._campusC = null; W._gk = null; W._labIn = null;
   const S = labSc(), seg = tier.seg, geoG = new THREE.PlaneGeometry(SIZE, SIZE, seg, seg); geoG.rotateX(-Math.PI/2);
   const pos = geoG.attributes.position, col = new Float32Array(pos.count*3), c0 = new THREE.Color(W.ground[0]), c1 = new THREE.Color(W.ground[1]), cp = new THREE.Color(W.patch), cpath = new THREE.Color(W.path), crk = new THREE.Color(W.rock), cc = new THREE.Color();
   for(let i = 0; i < pos.count; i++){ const x = pos.getX(i), z = pos.getZ(i), y = height(x, z); pos.setY(i, y); cc.copy(c1).lerp(c0, 0.5 + 0.5*Math.sin(x*0.07)*Math.cos(z*0.05));
@@ -2247,20 +2271,53 @@ function buildLab(){
   LAB.tree = labTreeMesh(S.tree.h); LAB.tree.position.set(S.tree.x, 0, S.tree.z); world.add(LAB.tree);
   const tl = textSprite('🌲 Cây thông', {screen:0.024, color:'#c9ffd2'}); tl.position.set(S.tree.x, 3, S.tree.z + 2.5); world.add(tl);
   LAB.mt = labMountain(S.mt.h); world.add(LAB.mt);
+  labBuildWater(S);
   const cloudMat = toon({color:0xffffff, fog:false}); for(let i = 0; i < 10; i++){ const cg = new THREE.Group(); for(let j = 0; j < 4; j++){ const s = new THREE.Mesh(Ic(1, 1), cloudMat); s.position.set((j - 2)*3.2, Math.random(), Math.random()*2); s.scale.setScalar(2.2 + Math.random()*1.4); cg.add(s); } cg.position.set((Math.random() - 0.5)*320, 120 + Math.random()*30, (Math.random() - 0.5)*320); world.add(cg); clouds.push(cg); }
   // khu xuất phát: biển tên, bàn dụng cụ, thầy hướng dẫn, cổng về
   campPos.set(0, 0, 0);
   const sign = textSprite('🔭 PHÒNG THỰC HÀNH ĐO ĐẠC\nHệ thức lượng trong tam giác', {screen:0.03, color:'#ffe6a3'}); sign.position.set(0, 4.6, 8); world.add(sign);
   const table = new THREE.Mesh(merge([{g:new THREE.BoxGeometry(2.4, 0.12, 1.1), m:M4(0, 0.9, 0), c:0x9a6a3e}, ...[[-1.05, -0.45], [1.05, -0.45], [-1.05, 0.45], [1.05, 0.45]].map(([x, z])=> ({g:new THREE.BoxGeometry(0.1, 0.9, 0.1), m:M4(x, 0.45, z), c:0x6b4a2b})), {g:Cy(0.22, 0.22, 0.12, 14), m:M4(0.6, 1.02, 0, 1, 1, 1, Math.PI/2, 0, 0), c:0xf2c14e}]), toon({vertexColors:true})); table.position.set(4, 0, 4); outline(table, 0.03, true); world.add(table);
   const tlab = textSprite('📏 Thước dây (bấm nút 📏)', {screen:0.02, color:'#ffe6a3'}); tlab.position.set(4, 2, 4); world.add(tlab);
-  LAB.gk = labGkMesh(); LAB.gk.G.position.set(2.2, 0, 3); LAB.gk.G.rotation.y = Math.PI; world.add(LAB.gk.G); LAB.carry = false; LAB.gk.yaw = Math.PI; LAB.gk.el = 0;
+  LAB.gk = labGkMesh(); LAB.gk.G.position.set(2.2, 0, 3); LAB.gk.G.rotation.y = Math.PI; world.add(LAB.gk.G); LAB.carry = false; LAB.gk.yaw = Math.PI; LAB.gk.base = Math.PI; LAB.gk.st = ''; LAB.gk.el = 0;
   LAB.gkLab = textSprite('📐 Giác kế', {screen:0.02, color:'#ffe6a3'}); world.add(LAB.gkLab);
   const T = buildTeacher(); T.G.position.set(-3.5, 0, 4.5); world.add(T.G); const nl = textSprite('👨‍🏫 Thầy Định — hướng dẫn thực hành', {screen:0.028, color:'#ffd76a'}); nl.position.set(-3.5, 3.6, 4.5); world.add(nl);
   LAB.npc = {labK:'npc', G:T.G, T, labTxt:'💬 Nhận nhiệm vụ đo đạc'};
   const P = labPortalMesh(0xffc24a); P.position.set(-8, 0, 1); P.rotation.y = Math.PI/2; world.add(P); const bl = textSprite('🌀 Về Cao Nguyên Tuyết (Lớp 10)', {screen:0.024, color:'#ffe6a3'}); bl.position.set(-8, 4.3, 1); world.add(bl);
   LAB.back = {labK:'back', G:P, labTxt:'🌀 Về vùng đất Lớp 10'};
+  LAB.stakes = []; (save.labK || []).forEach(k=> labStakeAdd(k.n, k.x, k.z));
   labTapeClear(); makeAmbient(6);
 }
+// hồ nước có hai lá cờ A, B; con sông phía tây, bên kia sông hai tháp canh P, Q
+function labFan(pts, y, color, op){ const g = new THREE.BufferGeometry(), cx = pts.reduce((t, p)=> t + p[0], 0)/pts.length, cz = pts.reduce((t, p)=> t + p[1], 0)/pts.length, v = [cx, y, cz];
+  pts.forEach(p=> v.push(p[0], y, p[1])); const idx = []; for(let i = 1; i <= pts.length; i++) idx.push(0, i, i % pts.length + 1);
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.setIndex(idx); g.computeVertexNormals();
+  return new THREE.Mesh(g, new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide, transparent:op < 1, opacity:op, depthWrite:op >= 1})); }
+function labFlag(color, txt, x, z, pole){ const G = new THREE.Group(), y = height(x, z);
+  G.add(new THREE.Mesh(merge([{g:Cy(0.05, 0.06, pole, 6), m:M4(0, pole/2, 0), c:0xeeeeee}, {g:Sp(0.12, 8, 6), m:M4(0, pole + 0.05, 0), c:0xffd23a}]), toon({vertexColors:true})));
+  const f = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.75), new THREE.MeshBasicMaterial({color, side:THREE.DoubleSide})); f.position.set(0.62, pole - 0.45, 0); G.add(f);
+  G.position.set(x, y, z); world.add(G); const l = textSprite(txt, {screen:0.024, color:'#fff2c0'}); l.position.set(x, y + pole + 1.4, z); world.add(l); return G; }
+function labBuildWater(S){ const L = S.lk, c = Math.cos(L.rot), s = Math.sin(L.rot), ring = (k, j)=>{ const P = []; for(let i = 0; i < 48; i++){ const t = i/48*Math.PI*2, w = 1 + 0.04*Math.sin(t*5 + j), lx = (L.rx + k)*Math.cos(t)*w, lz = (L.rz + k)*Math.sin(t)*w; P.push([L.x + lx*c - lz*s, L.z + lx*s + lz*c]); } return P; };
+  world.add(labFan(ring(1.4, 2), 0.04, 0xd8c690, 1), labFan(ring(0, 0), 0.08, 0x3d8fd6, 0.92));
+  labFlag(0xe53935, '🚩 Cờ A', S.fa.x, S.fa.z, 3); labFlag(0x1e88e5, '🏳 Cờ B', S.fb.x, S.fb.z, 3);
+  const ll = textSprite('🏞 Hồ nước', {screen:0.026, color:'#bfe6ff'}); ll.position.set(L.x, 4, L.z); world.add(ll);
+  // sông: dải nước dọc theo trục z, bờ bên kia không qua được
+  const rv = new THREE.Mesh(new THREE.PlaneGeometry(34, 520), new THREE.MeshBasicMaterial({color:0x3d8fd6, transparent:true, opacity:0.92})); rv.rotation.x = -Math.PI/2; rv.position.set(LAB_RIVER - 17.5, 0.08, -60); world.add(rv);
+  const sb = new THREE.Mesh(new THREE.PlaneGeometry(3, 520), new THREE.MeshBasicMaterial({color:0xd8c690})); sb.rotation.x = -Math.PI/2; sb.position.set(LAB_RIVER + 0.6, 0.05, -60); world.add(sb);
+  const rl = textSprite('〰 Sông — không qua được', {screen:0.024, color:'#bfe6ff'}); rl.position.set(LAB_RIVER - 6, 3, -10); world.add(rl);
+  [[S.tp, 0xe53935, 'P'], [S.tq, 0x1e88e5, 'Q']].forEach(([p, col, n])=>{ const y = height(p.x, p.z), G = new THREE.Group();
+    G.add(new THREE.Mesh(merge([{g:Cy(0.45, 0.7, LAB_TW, 8), m:M4(0, LAB_TW/2, 0), c:0xb9a27a}, {g:Co(1.1, 1.6, 8), m:M4(0, LAB_TW + 0.8, 0), c:0x7a3b2a}, {g:Cy(0.04, 0.04, 2, 5), m:M4(0, LAB_TW + 2.4, 0), c:0xeeeeee}]), toon({vertexColors:true})));
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.8), new THREE.MeshBasicMaterial({color:col, side:THREE.DoubleSide})); f.position.set(0.72, LAB_TW + 2.9, 0); G.add(f); outline(G.children[0], 0.05, true);
+    G.position.set(p.x, y, p.z); world.add(G); const l = textSprite('🗼 Tháp ' + n, {screen:0.026, color:'#ffe6a3'}); l.position.set(p.x, y + LAB_TW + 5, p.z); world.add(l); }); }
+// ---- cọc tiêu: học sinh tự cắm để đánh dấu điểm C, D ----
+function labStakeAdd(n, x, z){ const y = height(x, z), G = new THREE.Mesh(merge([{g:Cy(0.05, 0.06, 1.2, 6), m:M4(0, 0.6, 0), c:0xffffff}, {g:Cy(0.065, 0.065, 0.25, 6), m:M4(0, 1.05, 0), c:0xd94f3a}]), toon({vertexColors:true}));
+  G.position.set(x, y, z); const lab = textSprite('📍 Cọc ' + n, {screen:0.022, color:'#ffd0c0'}); lab.position.set(x, y + 2.1, z); world.add(G, lab); LAB.stakes.push({n, x, z, G, lab}); }
+function labStakeSave(){ save.labK = LAB.stakes.map(k=> ({n:k.n, x:k.x, z:k.z})); persist(); }
+function labStakeBtn(){ if(!LAB.on || LAB.sight) return; const P = player.position, L = LAB.stakes = LAB.stakes || [], i = L.findIndex(k=> Math.hypot(k.x - P.x, k.z - P.z) < 1.6);
+  if(i >= 0){ const k = L.splice(i, 1)[0]; world.remove(k.G, k.lab); disposeObj(k.G); disposeObj(k.lab); labStakeSave(); sfx('click'); toast(`📍 Đã nhổ cọc ${k.n}`, 1400); labHud(); return; }
+  if(L.length >= 4){ toast('📍 Tối đa 4 cọc — đứng sát một cọc rồi bấm 📍 để nhổ', 2200); return; }
+  if(labLakeQ(P.x, P.z, 0.5).q < 1){ toast('📍 Không cắm cọc dưới nước được', 1500); return; }
+  const n = ['C', 'D', 'E', 'F'].find(c=> !L.some(k=> k.n === c)), x = Math.round(P.x*10)/10, z = Math.round(P.z*10)/10; labStakeAdd(n, x, z); labStakeSave(); sfx('click');
+  toast(`📍 Đã cắm <b>cọc ${n}</b> — đặt giác kế sát cọc thì giác kế đứng đúng tại cọc`, 2200); labHud(); }
 async function labEnter(){ if(LAB.on || inQuiz || cine || deadT > 0) return; sfx('lvl'); flashScreen('#9ff6ff', 0.6);
   LAB.on = true; target = null; inZone = null; peerStop(true); buildLab(); player.position.set(0, 0, 2); player.rotation.y = Math.PI; yaw = 0; labHud();
   toast('🔭 Phòng thực hành đo đạc<br><span style="font-size:.6em">Đến gặp <b>Thầy Định</b> để nhận nhiệm vụ — cầm giác kế ở cạnh bàn dụng cụ</span>', 4200); }
@@ -2271,7 +2328,10 @@ async function labExit(){ if(!LAB.on) return; labSightOff(); labTapeClear(); lab
 // ---- giác kế: cầm lên / đặt xuống ----
 function labGkToggle(){ if(!LAB.on || LAB.sight) return; const K = LAB.gk; if(!K) return;
   if(LAB.carry){ const f = new THREE.Vector3(Math.sin(player.rotation.y), 0, Math.cos(player.rotation.y)), x = player.position.x + f.x*1.3, z = player.position.z + f.z*1.3;
-    world.attach(K.G); K.G.position.set(x, 0, z); K.G.rotation.set(0, 0, 0); K.G.scale.setScalar(1); K.turn.rotation.set(0, player.rotation.y, 0); K.yaw = player.rotation.y; K.el = 0; K.tube.rotation.x = 0; LAB.carry = false; sfx('click'); toast('📐 Đã đặt giác kế — đứng cạnh và bấm <b>🔭 Ngắm</b>', 1800); }
+    if(labLakeQ(x, z, 0.4).q < 1 || x < LAB_RIVER){ toast('📐 Không đặt giác kế dưới nước được', 1500); return; }
+    const st = (LAB.stakes || []).find(k=> Math.hypot(k.x - x, k.z - z) < 1.6 || Math.hypot(k.x - player.position.x, k.z - player.position.z) < 1.6);
+    world.attach(K.G); K.G.position.set(st ? st.x : x, 0, st ? st.z : z); K.st = st ? st.n : ''; K.G.rotation.set(0, 0, 0); K.G.scale.setScalar(1); K.turn.rotation.set(0, player.rotation.y, 0); K.yaw = player.rotation.y; K.base = player.rotation.y; K.el = 0; K.tube.rotation.x = 0; LAB.carry = false; sfx('click');
+    toast(st ? `📐 Đã đặt giác kế <b>tại cọc ${st.n}</b> — bấm <b>🔭 Ngắm</b>` : '📐 Đã đặt giác kế — đứng cạnh và bấm <b>🔭 Ngắm</b>', 1800); }
   else { if(K.G.position.distanceTo(player.position) > 3){ toast('📐 Lại gần giác kế để cầm lên', 1600); return; } labTapeDrop(true); player.add(K.G); K.G.position.set(0.55, 0.15, 0.1); K.G.rotation.set(0.25, 0, -0.35); K.G.scale.setScalar(0.7); LAB.carry = true; sfx('click'); }
   labHud(); }
 // ---- chế độ ngắm qua ống ngắm ----
@@ -2286,23 +2346,48 @@ function labSightDraw(){ const S = LAB.sight; if(!S) return; const cv = $('sight
   for(let d = Math.floor(e - w/2/ppd) - 1; d <= e + w/2/ppd + 1; d += 0.5){ if(d < -10 || d > 90) continue; const px = w/2 + (d - e)*ppd, big = Math.abs(d % 5) < 1e-9, mid = Math.abs(d % 1) < 1e-9;
     x.lineWidth = big ? 3 : 1.6; x.beginPath(); x.moveTo(px, h); x.lineTo(px, h - (big ? 34 : mid ? 22 : 12)); x.stroke(); if(big) x.fillText(String(d), px, h - 40); }
   x.fillStyle = '#d12a2a'; x.beginPath(); x.moveTo(w/2 - 9, 0); x.lineTo(w/2 + 9, 0); x.lineTo(w/2, 16); x.closePath(); x.fill(); x.fillRect(w/2 - 1.5, 0, 3, h);
+  const ca = $('sightAz'); if(ca){ const y = ca.getContext('2d'), W2 = ca.width, H2 = ca.height, r = labAz(S.yaw); y.clearRect(0, 0, W2, H2); y.fillStyle = 'rgba(228,240,252,.96)'; y.fillRect(0, 0, W2, H2); y.strokeStyle = '#1d3550'; y.fillStyle = '#1d3550'; y.textAlign = 'center'; y.font = 'bold 18px Arial';
+    for(let d = Math.floor(r - W2/2/ppd) - 1; d <= r + W2/2/ppd + 1; d += 0.5){ const px = W2/2 + (d - r)*ppd, big = Math.abs(d % 5) < 1e-9, mid = Math.abs(d % 1) < 1e-9, lab = ((d % 360) + 360) % 360;
+      y.lineWidth = big ? 3 : 1.6; y.beginPath(); y.moveTo(px, H2); y.lineTo(px, H2 - (big ? 28 : mid ? 18 : 10)); y.stroke(); if(big) y.fillText(String(lab), px, H2 - 33); }
+    y.fillStyle = '#d12a2a'; y.beginPath(); y.moveTo(W2/2 - 9, 0); y.lineTo(W2/2 + 9, 0); y.lineTo(W2/2, 14); y.closePath(); y.fill(); y.fillRect(W2/2 - 1.5, 0, 3, H2); }
   $('sightZoom').textContent = '×' + S.zoom; }
+// số đọc trên vòng chia ngang (0° là hướng lúc đặt giác kế, tăng khi xoay sang phải)
+function labAz(yaw){ const K = LAB.gk; return Math.round(((((K.base || 0) - yaw)*180/Math.PI) % 360 + 360) % 360*1000)/1000; }
 function labSightAdj(dyaw, del){ const S = LAB.sight; if(!S) return; S.yaw += dyaw*Math.PI/180; S.el = Math.max(-10, Math.min(85, S.el + del)); labSightDraw(); }
 function labSightZoom(k){ const S = LAB.sight; if(!S) return; S.zoom = Math.max(1, Math.min(8, k > 0 ? S.zoom*2 : S.zoom/2)); labSightDraw(); }
-function labSightRecord(){ const box = $('labNoteIn'); box.classList.remove('hidden'); const inp = $('labNoteV'); inp.value = ''; setTimeout(()=> inp.focus(), 50); }
+function labSightRecord(){ const box = $('labNoteIn'); box.classList.remove('hidden'); if(LAB.nk) $('labNoteK').value = LAB.nk; const inp = $('labNoteV'); inp.value = ''; setTimeout(()=> inp.focus(), 50); }
 function labSightSave(){ const S = LAB.sight, v = parseFloat(String($('labNoteV').value).replace(',', '.')); if(!S || !isFinite(v)){ toast('Nhập số đo em đọc được trên vạch chia (độ)', 1600); return; }
-  const where = labWhere(LAB.gk.G.position); labNote('góc', v, {u:'°', w:where, real:Math.round(S.el*100)/100}); $('labNoteIn').classList.add('hidden'); sfx('ok'); toast(`📒 Đã ghi: góc nâng ${String(v).replace('.', ',')}° ${where ? '(' + where + ')' : ''}`, 1800); }
+  const kind = LAB.nk = $('labNoteK').value, K = LAB.gk, g = K.G.position, where = labWhere(g), aim = labAim(kind), st = {x:Math.round(g.x*10)/10, z:Math.round(g.z*10)/10, n:K.st || ''};
+  const real = kind === 'el' ? Math.round(S.el*100)/100 : Math.round(labAz(S.yaw)*100)/100, nm = kind === 'el' ? 'góc nâng' : 'góc ngang';
+  labNote(kind === 'el' ? 'góc' : 'ngang', v, {u:'°', w:(where ? where + ' · ' : '') + 'ngắm ' + (aim ? aim.n : '(không rõ mục tiêu)'), real, tg:aim ? aim.id : null, te:aim ? Math.round(aim.te*100)/100 : null, tp:aim ? {x:aim.x, z:aim.z} : null, st});
+  $('labNoteIn').classList.add('hidden'); sfx('ok'); toast(`📒 Đã ghi: ${nm} ${String(v).replace('.', ',')}° ${where ? '(' + where + ')' : ''}`, 1800); }
+// các mục tiêu ngắm được; xác định mục tiêu gần tâm ngắm nhất (lệch ≤ 2,5°)
+function labTargets(){ const S = labSc(), T = [{id:'tree', n:'ngọn cây thông', x:S.tree.x, z:S.tree.z, y:S.tree.h}, {id:'mt', n:'đèn đỏ đỉnh núi', x:LAB_MT.x, z:LAB_MT.z, y:S.mt.h},
+  {id:'A', n:'cờ A', x:S.fa.x, z:S.fa.z, y:3}, {id:'B', n:'cờ B', x:S.fb.x, z:S.fb.z, y:3}, {id:'P', n:'tháp P', x:S.tp.x, z:S.tp.z, y:height(S.tp.x, S.tp.z) + LAB_TW}, {id:'Q', n:'tháp Q', x:S.tq.x, z:S.tq.z, y:height(S.tq.x, S.tq.z) + LAB_TW}];
+  (LAB.stakes || []).forEach(k=> T.push({id:'k' + k.n, n:'cọc ' + k.n, x:k.x, z:k.z, y:1.1})); return T; }
+function labAim(kind){ const S = LAB.sight, g = LAB.gk.G.position, D = 180/Math.PI; let best = null;
+  labTargets().forEach(t=>{ const dx = t.x - g.x, dz = t.z - g.z, hd = Math.hypot(dx, dz); if(hd < 1) return; const ty = Math.atan2(dx, dz), te = Math.atan2(t.y - LAB_EYE, hd)*D;
+    let dy = ((S.yaw - ty)*D) % 360; if(dy > 180) dy -= 360; if(dy < -180) dy += 360;
+    const dist = kind === 'el' ? Math.hypot(dy*Math.cos(te/D), S.el - te) : (t.id === 'mt' || t.id === 'tree' ? Math.hypot(dy, 0) : Math.abs(dy));
+    if(dist < 2.5 && (!best || dist < best.d)) best = {id:t.id, n:t.n, x:t.x, z:t.z, d:dist, te:kind === 'el' ? te : labAz(ty)}; });
+  return best; }
 // mô tả vị trí đặt giác kế (để ghi sổ)
-function labWhere(p){ const S = labSc(), dT = Math.hypot(p.x - S.tree.x, p.z - S.tree.z); if(Math.abs(p.x) < 2.6 && p.z < -4) return 'trên đường về núi'; if(dT < 60) return 'trước cây thông'; return ''; }
+function labWhere(p){ const S = labSc(), K = LAB.gk, dT = Math.hypot(p.x - S.tree.x, p.z - S.tree.z); if(K && K.st && K.G.position === p) return 'tại cọc ' + K.st;
+  if(Math.abs(p.x) < 2.6 && p.z < -4) return 'trên đường về núi'; if(labLakeQ(p.x, p.z).q < 2.6) return 'bờ hồ'; if(p.x < -40) return 'bờ sông'; if(dT < 60) return 'trước cây thông'; return ''; }
 // ---- thước dây: kéo từ điểm đầu (bắt vào giác kế / gốc cây) tới chỗ đứng, đọc độ dài theo phương nằm ngang ----
-function labSnap(p){ const S = labSc(), K = LAB.gk; if(K && !LAB.carry && Math.hypot(p.x - K.G.position.x, p.z - K.G.position.z) < 1.8) return {p:new THREE.Vector3(K.G.position.x, 0, K.G.position.z), n:'chân giác kế'};
-  if(Math.hypot(p.x - S.tree.x, p.z - S.tree.z) < 2.6) return {p:new THREE.Vector3(S.tree.x, 0, S.tree.z), n:'gốc cây'}; return {p:new THREE.Vector3(p.x, 0, p.z), n:''}; }
+function labSnap(p){ const S = labSc(), K = LAB.gk; if(K && !LAB.carry && Math.hypot(p.x - K.G.position.x, p.z - K.G.position.z) < 1.8) return {p:new THREE.Vector3(K.G.position.x, 0, K.G.position.z), n:'chân giác kế' + (K.st ? ' (cọc ' + K.st + ')' : '')};
+  if(Math.hypot(p.x - S.tree.x, p.z - S.tree.z) < 2.6) return {p:new THREE.Vector3(S.tree.x, 0, S.tree.z), n:'gốc cây'};
+  for(const [q, n] of [[S.fa, 'chân cờ A'], [S.fb, 'chân cờ B']]) if(Math.hypot(p.x - q.x, p.z - q.z) < 2.2) return {p:new THREE.Vector3(q.x, 0, q.z), n};
+  for(const k of LAB.stakes || []) if(Math.hypot(p.x - k.x, p.z - k.z) < 1.6) return {p:new THREE.Vector3(k.x, 0, k.z), n:'cọc ' + k.n};
+  return {p:new THREE.Vector3(p.x, 0, p.z), n:''}; }
 function labTapeClear(){ const T = LAB.tape; if(T){ [T.line, T.lab].forEach(o=>{ if(o){ world.remove(o); disposeObj(o); } }); } LAB.tape = null; }
 function labTapeBtn(){ if(!LAB.on || LAB.sight) return; const T = LAB.tape;
   if(!T || T.done){ labTapeClear(); const s = labSnap(player.position), line = new THREE.Mesh(new THREE.BoxGeometry(1, 0.03, 0.09), new THREE.MeshBasicMaterial({color:0xffd23a})); world.add(line);
     LAB.tape = {a:s.p, an:s.n, line, lab:null, len:0, txt:''}; sfx('click'); toast(`📏 Đã giữ đầu thước ${s.n ? 'ở <b>' + s.n + '</b>' : 'tại chỗ'} — đi tới điểm cuối rồi bấm <b>📏 Chốt thước</b>`, 2600); }
-  else { const s = labSnap(player.position); T.b = s.p; T.bn = s.n; T.done = true; const L = Math.round(Math.hypot(T.b.x - T.a.x, T.b.z - T.a.z)*10)/10; T.len = L; labTapeDraw(true);
-    labNote('dài', L, {u:'m', w:[T.an || 'điểm đầu', T.bn || 'điểm cuối'].join(' → ')}); sfx('ok'); toast(`📏 Thước dây: <b>${String(L).replace('.', ',')} m</b> (đã ghi sổ)`, 2200); }
+  else { const s = labSnap(player.position);
+    for(let i = 1; i < 40; i++){ const k = i/40, x = T.a.x + (s.p.x - T.a.x)*k, z = T.a.z + (s.p.z - T.a.z)*k; if(labLakeQ(x, z).q < 1){ labTapeClear(); sfx('bad'); toast('🌊 Thước dây không kéo qua mặt hồ được — hãy đo gián tiếp', 2400); labHud(); return; } }
+    T.b = s.p; T.bn = s.n; T.done = true; const L = Math.round(Math.hypot(T.b.x - T.a.x, T.b.z - T.a.z)*10)/10; T.len = L; labTapeDraw(true); const r1 = v=> Math.round(v*10)/10;
+    labNote('dài', L, {u:'m', w:[T.an || 'điểm đầu', T.bn || 'điểm cuối'].join(' → '), a:{x:r1(T.a.x), z:r1(T.a.z)}, b:{x:r1(T.b.x), z:r1(T.b.z)}}); sfx('ok'); toast(`📏 Thước dây: <b>${String(L).replace('.', ',')} m</b> (đã ghi sổ)`, 2200); }
   labHud(); }
 function labTapeDrop(silent){ if(LAB.tape && !LAB.tape.done){ labTapeClear(); if(!silent) toast('📏 Đã cuộn thước', 1200); } }
 function labTapeDraw(force){ const T = LAB.tape; if(!T) return; const b = T.done ? T.b : new THREE.Vector3(player.position.x, 0, player.position.z), dx = b.x - T.a.x, dz = b.z - T.a.z, L = Math.hypot(dx, dz);
@@ -2313,38 +2398,132 @@ function labTapeDraw(force){ const T = LAB.tape; if(!T) return; const b = T.done
 function labHud(){ const bar = $('labBar'); if(!bar) return; bar.classList.toggle('hidden', !LAB.on || !!LAB.sight); $('act').classList.toggle('hidden', LAB.on);
   if(!LAB.on) return; const T = LAB.tape, N = labNotes().length;
   $('lbGk').textContent = LAB.carry ? '📐 Đặt giác kế (G)' : '📐 Cầm giác kế (G)'; $('lbTape').textContent = T && !T.done ? '📏 Chốt thước (T)' : '📏 Kéo thước dây (T)';
-  $('lbNote').textContent = `📒 Sổ đo${N ? ' (' + N + ')' : ''}`; $('lbWpn').textContent = LAB.sheath ? '🗡 Rút vũ khí' : '🗡 Cất vũ khí'; }
+  $('lbNote').textContent = `📒 Sổ đo${N ? ' (' + N + ')' : ''}`; $('lbStake').textContent = (LAB.stakes || []).some(k=> Math.hypot(k.x - player.position.x, k.z - player.position.z) < 1.6) ? '📍 Nhổ cọc (K)' : '📍 Cắm cọc (K)'; $('lbWpn').textContent = LAB.sheath ? '🗡 Rút vũ khí' : '🗡 Cất vũ khí'; }
 // ---- sổ đo ----
 function labOpenNotes(){ sfx('click'); const N = labNotes(), f = v=> String(v).replace('.', ',');
   $('keeperBox').innerHTML = `<h3 style="margin:0 0 6px">📒 Sổ đo</h3><p style="margin:0 0 8px;opacity:.8;font-size:13px">Các số đo em đã ghi (mới nhất ở dưới). Ống ngắm giác kế cao <b>1,5 m</b> so với mặt đất.</p>
-    ${N.length ? `<table style="width:100%;font-size:14px">${N.map((x, i)=> `<tr><td>${i + 1}.</td><td>${x.t === 'góc' ? '📐 Góc nâng' : '📏 Thước dây'}</td><td style="text-align:right"><b>${f(x.v)}${x.u === '°' ? '°' : ' m'}</b></td><td style="font-size:12px;opacity:.75">${x.w || ''}</td><td><button class="ibtn" data-del="${i}" style="padding:2px 8px">✕</button></td></tr>`).join('')}</table>` : '<p style="opacity:.7">Chưa có số đo nào.</p>'}
+    ${N.length ? `<table style="width:100%;font-size:14px">${N.map((x, i)=> `<tr><td>${i + 1}.</td><td>${x.t === 'góc' ? '📐 Góc nâng' : x.t === 'ngang' ? '🧭 Góc ngang' : '📏 Thước dây'}</td><td style="text-align:right"><b>${f(x.v)}${x.u === '°' ? '°' : ' m'}</b></td><td style="font-size:12px;opacity:.75">${x.w || ''}</td><td><button class="ibtn" data-del="${i}" style="padding:2px 8px">✕</button></td></tr>`).join('')}</table>` : '<p style="opacity:.7">Chưa có số đo nào.</p>'}
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="ibtn" id="lnClear">🗑 Xoá hết</button><button class="ibtn" id="lnClose">Đóng</button></div>`;
   $('keeper').classList.remove('hidden');
   $('keeperBox').querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ labNotes().splice(+b.dataset.del, 1); persist(); labHud(); labOpenNotes(); });
   $('lnClear').onclick = ()=>{ if(confirm('Xoá hết sổ đo?')){ save.labN = []; persist(); labHud(); labOpenNotes(); } }; $('lnClose').onclick = ()=> $('keeper').classList.add('hidden'); }
 // ---- thầy hướng dẫn: giao nhiệm vụ, nhận đáp số, chấm theo sai số ----
-function labTrue(id){ const S = labSc(); return id === 'tree' ? S.tree.h : S.mt.h; }
+function labTrue(id){ const S = labSc(), d = (p, q)=> Math.round(Math.hypot(p.x - q.x, p.z - q.z)*10)/10; return id === 'tree' ? S.tree.h : id === 'mt' ? S.mt.h : id === 'lake' ? d(S.fa, S.fb) : d(S.tp, S.tq); }
+// nhóm thực nghiệm do thầy/cô phân trong MathBankPro: 1 = có Trợ lý AI (mặc định), 2 = chỉ báo đạt/không đạt
+const labMode = ()=> save.acct && +save.acct.labg === 2 ? 2 : 1;
+/* ===== TRỢ LÝ AI CHẨN ĐOÁN LỖI (hệ chuyên gia dựa trên mô hình toán học) =====
+   Lấy đúng các số đo em đã ghi trong sổ (góc nào ngắm mục tiêu nào, đặt giác kế ở đâu, thước đo từ đâu tới đâu),
+   tính lại đáp số theo công thức đúng và theo từng "giả thuyết lỗi"; giả thuyết khớp đáp số của em (lệch ≤ 1,5%) là lỗi em mắc.
+   Đồng thời so số em ghi với vạch kim đỏ thật (đọc sai vạch) và hướng ống ngắm với mục tiêu thật (ngắm lệch). Chỉ gợi ý, không nói đáp số. */
+const D2R = Math.PI/180, tD = a=> Math.tan(a*D2R), sD = a=> Math.sin(a*D2R), cD = a=> Math.cos(a*D2R);
+const lNear = (p, q, t = 1)=> !!p && !!q && Math.hypot(p.x - q.x, p.z - q.z) < t;
+const angD = (u, v)=>{ const c = Math.abs(u - v) % 360; return c > 180 ? 360 - c : c; };
+function labLast(f){ const N = labNotes(); for(let i = N.length - 1; i >= 0; i--) if(f(N[i])) return N[i]; return null; }
+function labTape(p, q){ return labLast(n=> n.t === 'dài' && n.a && n.b && ((lNear(n.a, p) && lNear(n.b, q)) || (lNear(n.a, q) && lNear(n.b, p)))); }
+function labMatch(ans, C){ const f = k=>{ const v = C[k]; return isFinite(v) && v > 0 ? Math.abs(ans - v)/v : 9; }; if(f('ok') <= 0.015) return 'ok';
+  let b = null; Object.keys(C).forEach(k=>{ if(k !== 'ok' && f(k) <= 0.015 && (!b || f(k) < f(b))) b = k; }); return b; }
+function labMeas(list){ const out = [], f = v=> String(v).replace('.', ','); list.forEach(n=>{ if(!n || n.real == null) return; const kind = n.t === 'góc' ? 'góc nâng' : 'góc ngang', d = n.t === 'góc' ? Math.abs(n.v - n.real) : angD(n.v, n.real);
+    if(d > 0.6) out.push({c:'R', p:`${kind} ${f(n.v)}° (${n.w || ''})`});
+    else if(n.te != null && (n.t === 'góc' ? Math.abs(n.real - n.te) : angD(n.real, n.te)) > 0.6) out.push({c:'AIM', p:`${kind} ${f(n.v)}° (${n.w || ''})`, d:Math.round((n.t === 'góc' ? Math.abs(n.real - n.te) : angD(n.real, n.te))*10)/10}); });
+  return out; }
+function labFin(m, ms, extra){ const out = (extra || []).slice(); if(!m) out.unshift({c:'L0'}); else if(m !== 'ok') out.unshift({c:m.replace(/[bc]$/, '')}); out.push(...ms); if(m === 'ok' && !out.length) out.push({c:'OKC'}); return out; }
+function labStations(f){ const L = []; labNotes().slice().reverse().forEach(n=>{ if(f(n) && n.st && !L.some(s=> lNear(s, n.st, 0.5))) L.push(n.st); }); return L; }
+function labDiag(id, ans){ const S = labSc(), N = labNotes();
+  if(id === 'tree'){ const T = {x:S.tree.x, z:S.tree.z}, a = labLast(n=> n.t === 'góc' && n.tg === 'tree');
+    if(!a) return [{c:N.some(n=> n.t === 'góc') ? 'AIM0' : 'NO_EL', p:'ngọn cây'}];
+    const d = labTape(a.st, T); if(!d) return [{c:labLast(n=> n.t === 'dài' && (lNear(n.a, T, 0.3) || lNear(n.b, T, 0.3))) ? 'D_WRONG' : 'NO_D'}];
+    const A = a.v, L = d.v, m = labMatch(ans, {ok:L*tD(A) + 1.5, L1:L*tD(A), L2:L*sD(A) + 1.5, L2b:L*cD(A) + 1.5, L2c:L/tD(A) + 1.5, L3:L*Math.tan(A) + 1.5, L8:L*tD(A) - 1.5});
+    return labFin(m, labMeas([a])); }
+  if(id === 'mt'){ const st = labStations(n=> n.t === 'góc' && n.tg === 'mt'); if(!st.length) return [{c:N.some(n=> n.t === 'góc') ? 'AIM0' : 'NO_EL', p:'đèn đỏ trên đỉnh núi'}]; if(st.length < 2) return [{c:'ONE_ST'}];
+    const C0 = {x:LAB_MT.x, z:LAB_MT.z}, dC = s=> Math.hypot(s.x - C0.x, s.z - C0.z), [sA, sB] = dC(st[0]) > dC(st[1]) ? [st[0], st[1]] : [st[1], st[0]];
+    const nA = labLast(n=> n.t === 'góc' && n.tg === 'mt' && lNear(n.st, sA, 0.5)), nB = labLast(n=> n.t === 'góc' && n.tg === 'mt' && lNear(n.st, sB, 0.5)), ab = labTape(sA, sB); if(!ab) return [{c:'NO_AB'}];
+    const a = nA.v, b = nB.v, L = ab.v, ta = tD(a), tb = tD(b), ra = Math.tan(a), rb = Math.tan(b), ex = [];
+    const ux = C0.x - sA.x, uz = C0.z - sA.z, ul = Math.hypot(ux, uz), off = Math.abs((sB.x - sA.x)*uz - (sB.z - sA.z)*ux)/ul; if(off > 2.5) ex.push({c:'COL'}); if(L < 20) ex.push({c:'SHORT'});
+    const m = labMatch(ans, {ok:L*ta*tb/(tb - ta) + 1.5, L1:L*ta*tb/(tb - ta), Ls:L*ta*tb/(tb + ta) + 1.5, L3:L*ra*rb/(rb - ra) + 1.5, L2:L*sD(a)*sD(b)/(sD(b) - sD(a)) + 1.5, L10:L*tb + 1.5, L10b:L*ta + 1.5});
+    return labFin(m, labMeas([nA, nB]), ex); }
+  if(id === 'lake'){ const st = labStations(n=> n.t === 'ngang' && (n.tg === 'A' || n.tg === 'B')); let s = null, nA = null, nB = null;
+    for(const x of st){ nA = labLast(n=> n.t === 'ngang' && n.tg === 'A' && lNear(n.st, x, 0.5)); nB = labLast(n=> n.t === 'ngang' && n.tg === 'B' && lNear(n.st, x, 0.5)); if(nA && nB){ s = x; break; } }
+    if(!s) return [{c:N.some(n=> n.t === 'góc' && n.tg == null) && !N.some(n=> n.t === 'ngang') ? 'EL_AZ' : N.some(n=> n.t === 'ngang') ? 'NO_AZ2' : 'NO_AZ'}];
+    const ca = labTape(s, S.fa), cb = labTape(s, S.fb); if(!ca || !cb) return [{c:'NO_CA'}];
+    const a = ca.v, b = cb.v, c = angD(nA.v, nB.v), q = (k, cs)=> a*a + b*b + k*2*a*b*cs;
+    const m = labMatch(ans, {ok:Math.sqrt(q(-1, cD(c))), Ls:Math.sqrt(q(1, cD(c))), Lq:q(-1, cD(c)), L3:Math.sqrt(q(-1, Math.cos(c))), Lp:Math.sqrt(a*a + b*b)});
+    return labFin(m, labMeas([nA, nB])); }
+  if(id === 'two'){ const az = (s, f)=> labLast(n=> n.t === 'ngang' && lNear(n.st, s, 0.5) && f(n)), st = labStations(n=> n.t === 'ngang'); let F = null;
+    for(const c of st){ for(const d of st){ if(c === d || lNear(c, d, 3)) continue;
+      const P1 = az(c, n=> n.tg === 'P'), Q1 = az(c, n=> n.tg === 'Q'), D1 = az(c, n=> n.tp && lNear(n.tp, d, 1.2)), P2 = az(d, n=> n.tg === 'P'), Q2 = az(d, n=> n.tg === 'Q'), C2 = az(d, n=> n.tp && lNear(n.tp, c, 1.2));
+      if(P1 && Q1 && D1 && P2 && Q2 && C2){ F = {c, d, P1, Q1, D1, P2, Q2, C2}; break; } } if(F) break; }
+    if(!F) return [{c:'TWO_MISS'}]; const cd = labTape(F.c, F.d); if(!cd) return [{c:'NO_CD'}];
+    const L = cd.v, ex = [], rS = Math.sin, rC = Math.cos;
+    // tính theo cả hai cách đặt tên (C ↔ D) để nhận ra lỗi dù em đi từ cọc nào
+    const cands = (P1, Q1, D1, P2, Q2, C2)=>{ const c1 = angD(P1.v, D1.v), c2 = angD(Q1.v, D1.v), cpq = angD(P1.v, Q1.v), d1 = angD(P2.v, C2.v), d2 = angD(Q2.v, C2.v);
+      if(L < 15 || c1 + d1 > 172 || c2 + d2 > 172) ex.push({c:'SHORT2'});
+      const run = (Sf, Cf, k, opt = {})=>{ const x1 = L*Sf(opt.sw ? c1 : d1)/Sf(c1 + d1), x2 = L*Sf(opt.sw ? c2 : d2)/Sf(c2 + d2), g = opt.g != null ? opt.g : cpq, v = x1*x1 + x2*x2 + k*2*x1*x2*Cf(g); return opt.nq ? v : Math.sqrt(Math.max(0, v)); };
+      return {ok:run(sD, cD, -1), L3:run(rS, rC, -1), Ls:run(sD, cD, 1), Lq:run(sD, cD, -1, {nq:1}), Lsr:run(sD, cD, -1, {sw:1}), Lsum:Math.abs(c1 - c2) > 1 ? run(sD, cD, -1, {g:c1 + c2}) : NaN}; };
+    const m1 = labMatch(ans, cands(F.P1, F.Q1, F.D1, F.P2, F.Q2, F.C2)), m2 = labMatch(ans, cands(F.P2, F.Q2, F.C2, F.P1, F.Q1, F.D1)), m = m1 === 'ok' || m2 === 'ok' ? 'ok' : m1 || m2;
+    if(ex.length > 1) ex.length = 1; return labFin(m, labMeas([F.P1, F.Q1, F.D1, F.P2, F.Q2, F.C2]), ex); }
+  return []; }
+// lời khuyên khi đã đạt (để em rút kinh nghiệm chọn vị trí đo)
+function labTips(id){ if(id === 'tree'){ const a = labLast(n=> n.t === 'góc' && n.tg === 'tree'); if(a && (a.v < 25 || a.v > 65)) return [{c:'T45', p:a.v}]; }
+  if(id === 'mt'){ const st = labStations(n=> n.t === 'góc' && n.tg === 'mt'); if(st.length >= 2 && Math.hypot(st[0].x - st[1].x, st[0].z - st[1].z) < 30) return [{c:'SHORT'}]; } return []; }
+const LAB_MSG = {
+  NO_EL:p=> `Sổ đo chưa có góc nâng nào ngắm vào ${p}. Đặt giác kế, bấm 🔭 Ngắm, đưa tâm ✛ trùng ${p} rồi đọc vạch chia và ghi lại.`,
+  AIM0:p=> `Các góc nâng em đã ghi chưa ngắm trúng ${p} — tâm ✛ phải trùng đúng ${p} lúc em ghi số đo. Phóng to 🔍 để ngắm chính xác hơn.`,
+  NO_D:()=> 'Em chưa đo khoảng cách từ chỗ đặt giác kế đến gốc cây bằng thước dây (đứng sát chân giác kế bấm 📏, rồi đi tới sát gốc cây bấm Chốt thước).',
+  D_WRONG:()=> 'Khoảng cách em đo bằng thước chưa xuất phát từ đúng chỗ đặt giác kế lúc em ngắm. Hai số đo phải cùng một vị trí đặt giác kế.',
+  ONE_ST:()=> 'Không đến được chân núi nên một vị trí đo là chưa đủ: cần đo góc nâng ở hai vị trí A, B khác nhau trên con đường thẳng hướng về núi.',
+  NO_AB:()=> 'Em chưa đo khoảng cách AB giữa hai vị trí đặt giác kế (giữ đầu thước ở chân giác kế tại vị trí này, dời giác kế xong thì chốt thước ở chân giác kế vị trí kia — hoặc cắm cọc 📍 đánh dấu hai vị trí).',
+  COL:()=> 'Hai vị trí đặt giác kế và chân núi chưa thẳng hàng. Công thức chỉ đúng khi A, B nằm trên cùng một đường thẳng đi tới chân núi — hãy đặt cả hai trên con đường hướng về núi.',
+  SHORT:()=> 'Hai vị trí A, B gần nhau quá nên hai góc gần bằng nhau, một sai lệch nhỏ khi đọc góc cũng làm kết quả lệch nhiều. Nên chọn AB từ 30 m trở lên.',
+  NO_AZ:()=> 'Sổ đo chưa có góc ngang nào ngắm cờ A và cờ B từ cùng một chỗ đặt giác kế. Ngắm cờ A đọc vòng chia ngang (phía trên), rồi xoay sang cờ B đọc tiếp.',
+  NO_AZ2:()=> 'Cần hai số đọc góc ngang ở <b>cùng một</b> vị trí giác kế: một lần ngắm cờ A, một lần ngắm cờ B (tâm ✛ trùng cột cờ).',
+  EL_AZ:()=> 'Góc ACB nằm trên mặt đất (góc ngang), không phải góc nâng. Khi ghi số đo hãy chọn “góc ngang (vòng chia trên)”.',
+  NO_CA:()=> 'Em chưa đo đủ hai khoảng cách từ chỗ đặt giác kế C đến chân cờ A và đến chân cờ B bằng thước dây.',
+  TWO_MISS:()=> 'Chưa đủ số đo: cần hai cọc C, D; tại C đọc góc ngang khi ngắm tháp P, tháp Q, cọc D; tại D đọc góc ngang khi ngắm P, Q, cọc C (đặt giác kế sát cọc).',
+  NO_CD:()=> 'Em chưa đo đoạn CD giữa hai cọc bằng thước dây.',
+  SHORT2:()=> 'Đoạn CD ngắn quá (hoặc hai tia ngắm gần song song) nên tam giác rất “dẹt”, sai số lớn. Hãy cắm C, D xa nhau hơn (≥ 30 m).',
+  L0:()=> 'Đáp số chưa khớp với các số đo trong sổ theo cách tính đúng hay các lỗi thường gặp. Em hãy viết lại từng bước: tam giác nào, biết những yếu tố nào, dùng hệ thức nào — rồi bấm máy lại cẩn thận.',
+  L1:()=> 'Kết quả của em mới là phần cao hơn ống ngắm. Ống ngắm đặt cao bao nhiêu so với mặt đất? Em đã tính phần đó vào chưa?',
+  L8:()=> 'Ống ngắm cao hơn mặt đất, vậy để có chiều cao tính từ mặt đất thì phải cộng hay trừ chiều cao ống ngắm?',
+  L2:()=> 'Xem lại tỉ số lượng giác: trong tam giác vuông, với góc nâng α thì chiều cao cần tìm là cạnh đối hay cạnh kề, khoảng cách đo được là cạnh nào? Tỉ số nào nối hai cạnh đó?',
+  L3:()=> 'Có vẻ máy tính của em đang ở chế độ radian (R). Chuyển sang chế độ độ (D / DEG) rồi tính lại.',
+  Ls:()=> 'Kiểm tra lại dấu trong công thức. Gợi ý: viết hai đẳng thức theo x (khoảng cách tới chân) rồi trừ vế cho vế; với định lí côsin thì c² = a² + b² − 2ab·cos C.',
+  L10:()=> 'Em mới dùng góc nâng ở một vị trí, trong khi khoảng cách từ vị trí đó đến chân núi chưa biết. Cần kết hợp cả hai góc α, β và đoạn AB.',
+  Lq:()=> 'Định lí côsin cho bình phương độ dài. Em đã khai căn chưa?',
+  Lp:()=> 'Góc ở C không phải góc vuông nên không dùng định lí Pythagore được — dùng định lí côsin với góc C đo được.',
+  Lsr:()=> 'Xem lại định lí sin trong tam giác PCD: cạnh CP đối diện với góc nào? (CP/sin D = CD/sin P).',
+  Lsum:()=> 'Hai tháp nằm cùng một phía của đường CD nên góc PCQ là <b>hiệu</b> của góc PCD và góc QCD (hoặc lấy hiệu hai số đọc khi ngắm P và Q).',
+  R:p=> `Em đọc vạch chia chưa chính xác ở số đo ${p}: số em ghi lệch hơn nửa độ so với vạch kim đỏ chỉ lúc đó. Phóng to 🔍 và đọc lại — mỗi vạch nhỏ là 0,5°.`,
+  AIM:(p, d)=> `Lúc ghi ${p}, tâm ngắm lệch khỏi mục tiêu khoảng ${String(d).replace('.', ',')}°. Phóng to 🔍 và chỉnh từng chút để tâm ✛ trùng đúng mục tiêu rồi đo lại.`,
+  OKC:()=> 'Phép tính của em đúng với số đo trong sổ, nên chỗ chưa chính xác nằm ở khâu đo. Đo lại cẩn thận: ngắm đúng mục tiêu, đọc đúng vạch, thước bắt đúng điểm.',
+  T45:p=> `Lần này em ngắm với góc nâng ${String(p).replace('.', ',')}°. Thử chọn vị trí sao cho góc nâng gần 45° xem kết quả có chính xác hơn không — em giải thích được vì sao không?`};
+function labAiHtml(dx){ if(!dx || !dx.length) return ''; const L = dx.slice(0, 3).map(x=>{ const f = LAB_MSG[x.c]; return f ? f(x.p, x.d) : ''; }).filter(Boolean);
+  return L.length ? `<div class="labAi"><b>🤖 Trợ lý AI:</b>${L.map(t=> '<br>• ' + t).join('')}</div>` : ''; }
+// ghi nhật ký từng lượt nộp (đồng bộ lên máy chủ: game/kq/{mã}/{sbd}/labLog/{thời điểm})
+function labLog(id, v, H, ok, dx){ const R = save.lab, r = R[id], codes = dx.map(x=> x.c), prev = r.lastDx || [], rep = !ok && codes.some(c=> prev.includes(c)) ? 1 : 0; r.lastDx = ok ? [] : codes;
+  const t = Date.now(), f = n=> `${n.t === 'góc' ? 'nâng' : n.t}=${n.v}${n.real != null ? '/' + n.real : ''}${n.tg ? '@' + n.tg : ''}${n.st ? '#' + n.st.x + ',' + n.st.z : ''}`;
+  save.labQ = save.labQ || {}; save.labQ[t] = {t, m:id, a:v, h:H, e:Math.round(Math.abs(v - H)/H*1000)/10, ok:ok ? 1 : 0, g:labMode(), dx:codes.join(' '), rp:rep, n:labNotes().slice(-14).map(f).join('; ')}; }
 function labOpenNpc(){ sfx('click'); const R = save.lab = save.lab || {}, f = v=> String(v).replace('.', ',');
   $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">👨‍🏫</div><div><b style="color:var(--gold);font-size:18px">Thầy Định — hướng dẫn thực hành</b><div style="font-size:13px;opacity:.8">Đo đạc gián tiếp bằng giác kế và thước dây</div></div></div>
     <details style="margin:8px 0;font-size:13.5px;line-height:1.5"><summary style="cursor:pointer"><b>📘 Cách dùng dụng cụ</b></summary>
-      • <b>📐 Cầm/Đặt giác kế</b> (phím G): mang giác kế đến chỗ cần đo rồi đặt xuống. Ống ngắm cao <b>1,5 m</b>.<br>• Đứng cạnh giác kế bấm <b>🔭 Ngắm</b> (phím E): kéo màn hình (hoặc các nút ◀ ▶ ▲ ▼, phím mũi tên) để xoay và nâng ống ngắm cho tâm ngắm trùng mục tiêu; phóng to 🔍 để ngắm chính xác. <b>Đọc góc nâng ở vạch chia</b> (kim đỏ) rồi bấm <b>📒 Ghi số đo</b>.<br>• <b>📏 Thước dây</b> (phím T): bấm ở điểm đầu (đứng sát giác kế hoặc sát gốc cây thì thước tự bắt vào đó), đi tới điểm cuối rồi bấm <b>Chốt thước</b>; độ dài tự ghi vào sổ.<br>• <b>📒 Sổ đo</b>: xem lại các số đo đã ghi.</details>
+      • <b>📐 Cầm/Đặt giác kế</b> (phím G): mang giác kế đến chỗ cần đo rồi đặt xuống. Ống ngắm cao <b>1,5 m</b>.<br>• Đứng cạnh giác kế bấm <b>🔭 Ngắm</b> (phím E): kéo màn hình (hoặc các nút ◀ ▶ ▲ ▼, phím mũi tên) để xoay và nâng ống ngắm cho tâm ngắm trùng mục tiêu; phóng to 🔍 để ngắm chính xác. <b>Đọc góc nâng ở vạch chia</b> (kim đỏ) rồi bấm <b>📒 Ghi số đo</b>.<br>• <b>📏 Thước dây</b> (phím T): bấm ở điểm đầu (đứng sát giác kế hoặc sát gốc cây thì thước tự bắt vào đó), đi tới điểm cuối rồi bấm <b>Chốt thước</b>; độ dài tự ghi vào sổ.<br>• <b>🧭 Góc ngang</b>: trong chế độ ngắm, vòng chia phía trên cho số đọc theo phương nằm ngang; góc giữa hai hướng ngắm = hiệu hai số đọc. Khi ghi số đo chọn đúng loại góc.<br>• <b>📍 Cắm cọc</b> (phím K): đánh dấu điểm C, D; đặt giác kế sát cọc thì giác kế đứng đúng cọc, thước dây cũng bắt vào cọc.<br>• <b>📒 Sổ đo</b>: xem lại các số đo đã ghi.</details>
     ${LAB_MISS.map(M=>{ const r = R[M.id] || {}; return `<div style="border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;margin:8px 0">
       <div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${M.ico}</span><b style="flex:1">${M.ten}</b>${r.ok ? `<span style="color:#7dff9a">✔ Đạt ${r.ok} lần</span>` : ''}</div>
       <div style="font-size:13.5px;margin:4px 0;line-height:1.45">${M.de} <i>Sai số cho phép: ${M.tolTxt}.</i></div>
       <details style="font-size:13px;line-height:1.45;opacity:.9"><summary style="cursor:pointer">💡 Gợi ý 1 — cách đo</summary>${M.g1}</details>
       <details style="font-size:13px;line-height:1.45;opacity:.9"><summary style="cursor:pointer">💡 Gợi ý 2 — cách tính</summary>${M.g2}</details>
       <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">Đáp số: <input id="la_${M.id}" inputmode="decimal" placeholder="m" style="width:96px;padding:6px 8px;border-radius:8px;border:0;font-size:16px"> m <button class="ibtn" data-sub="${M.id}">📨 Nộp</button><span id="lr_${M.id}" style="font-size:13px"></span></div></div>`; }).join('')}
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="ibtn" id="lnNotes">📒 Xem sổ đo</button><button class="ibtn" id="lnNew" title="Cây và núi đổi chiều cao để luyện lại">🔄 Đổi số liệu (cây, núi mới)</button><button class="ibtn" id="lnClose2">Đóng</button></div>`;
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="ibtn" id="lnNotes">📒 Xem sổ đo</button><button class="ibtn" id="lnNew" title="Cây, núi, hồ, tháp đổi số liệu để luyện lại">🔄 Đổi số liệu mới</button><button class="ibtn" id="lnClose2">Đóng</button></div>`;
   $('keeper').classList.remove('hidden');
   $('keeperBox').querySelectorAll('[data-sub]').forEach(b=> b.onclick = ()=> labSubmit(b.dataset.sub));
   $('lnNotes').onclick = labOpenNotes; $('lnClose2').onclick = ()=> $('keeper').classList.add('hidden');
-  $('lnNew').onclick = ()=>{ if(!confirm('Đổi cây và núi sang chiều cao mới? (các số đo cũ trong sổ sẽ không dùng được nữa)')) return; labSc(true); save.labN = []; persist(); const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden'); toast('🔄 Đã đổi số liệu — cây và núi có chiều cao mới', 2200); }; }
+  $('lnNew').onclick = ()=>{ if(!confirm('Đổi sang số liệu mới (cây, núi, hồ, tháp)? Các số đo cũ trong sổ sẽ bị xoá.')) return; labSc(true); save.labN = []; persist(); const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden'); toast('🔄 Đã đổi số liệu mới', 2200); }; }
 function labSubmit(id){ const M = LAB_MISS.find(x=> x.id === id), inp = $('la_' + id), out = $('lr_' + id), v = parseFloat(String(inp.value).replace(',', '.')); if(!isFinite(v) || v <= 0){ out.innerHTML = '<span style="color:#ffb0a0">Nhập đáp số (m)</span>'; return; }
   const H = labTrue(id), err = Math.abs(v - H), ok = err <= M.tol(H) + 1e-9, R = save.lab = save.lab || {}, r = R[id] = R[id] || {ok:0, n:0}; r.n++; r.last = Date.now();
+  const mode = labMode(), dx = ok ? labTips(id) : labDiag(id, v), pct = String(Math.round(err/H*1000)/10).replace('.', ','); labLog(id, v, H, ok, ok ? [] : dx);
   if(ok){ const first = !r.ok; r.ok++; r.best = Math.min(r.best ?? 99, Math.round(err/H*1000)/10); persist(); syncSoon(); sfx('lvl'); hero.victory && hero.victory(); burst(player.position, 0x7dff9a, 1.5, 24);
-    if(first) gainXp(80); out.innerHTML = `<span style="color:#7dff9a">✔ Đạt yêu cầu! Chiều cao thật là <b>${String(H).replace('.', ',')} m</b> (em lệch ${String(Math.round(err*10)/10).replace('.', ',')} m)${first ? ' · +80 KN' : ''}. Bấm 🔄 để luyện với số liệu mới.</span>`; }
-  else { persist(); syncSoon(); sfx('bad'); const N = labNotes().filter(x=> x.t === 'góc'), bad = N.filter(x=> x.real != null && Math.abs(x.v - x.real) > 0.6);
-    out.innerHTML = `<span style="color:#ffb0a0">✘ Chưa đạt — kết quả lệch quá sai số cho phép. Kiểm tra lại: ngắm đúng ${id === 'tree' ? 'ngọn cây' : 'đèn đỏ trên đỉnh'} chưa, đọc vạch chia đúng chưa, đo khoảng cách đúng chưa, đã cộng chiều cao giác kế 1,5 m chưa?${bad.length ? ' <b>Có ' + bad.length + ' góc trong sổ đọc chưa chính xác.</b>' : ''}</span>`; } }
+    if(first) gainXp(80); out.innerHTML = `<span style="color:#7dff9a">✔ Đạt yêu cầu! ${id === 'tree' || id === 'mt' ? 'Chiều cao' : 'Khoảng cách'} thật là <b>${String(H).replace('.', ',')} m</b> (em lệch ${String(Math.round(err*10)/10).replace('.', ',')} m)${first ? ' · +80 KN' : ''}. Bấm 🔄 để luyện với số liệu mới.</span>${mode === 1 ? labAiHtml(dx) : ''}`; }
+  else { persist(); syncSoon(1500); sfx('bad');
+    out.innerHTML = `<span style="color:#ffb0a0">✘ Chưa đạt — kết quả của em lệch khoảng ${pct}% so với kết quả đúng (cho phép ${M.tolTxt}).</span>${mode === 1 ? labAiHtml(dx) : ''}`; } }
 // ---- tương tác trong vòng lặp ----
 function labNear(){ if(!LAB.on){ return W._labIn && W._labIn.G.position.distanceTo(player.position) < 4 ? W._labIn : null; }
   if(LAB.sight) return null; const P = player.position;
@@ -2359,6 +2538,9 @@ function labUpdate(dt, t){
   // không vào trong chân núi
   { const dx = player.position.x - LAB_MT.x, dz = player.position.z - LAB_MT.z, d = Math.hypot(dx, dz); if(d < LAB_MT.r){ player.position.x = LAB_MT.x + dx/d*LAB_MT.r; player.position.z = LAB_MT.z + dz/d*LAB_MT.r; } }
   { const S = labSc(), dx = player.position.x - S.tree.x, dz = player.position.z - S.tree.z, d = Math.hypot(dx, dz), rr = 0.6; if(d < rr && d > 1e-3){ player.position.x = S.tree.x + dx/d*rr; player.position.z = S.tree.z + dz/d*rr; } }
+  { const Q = labLakeQ(player.position.x, player.position.z, 0.5); if(Q.q < 1){ const k = 1/Math.sqrt(Math.max(Q.q, 1e-4)), lx = Q.lx*k*1.001, lz = Q.lz*k*1.001, L = labSc().lk; player.position.x = L.x + lx*Q.c - lz*Q.s; player.position.z = L.z + lx*Q.s + lz*Q.c; } }
+  if(player.position.x < LAB_RIVER) player.position.x = LAB_RIVER;
+  { const R = save.lab = save.lab || {}; R.sec = Math.round(((R.sec || 0) + dt)*10)/10; LAB.tacc = (LAB.tacc || 0) + dt; if(LAB.tacc > 30){ LAB.tacc = 0; persist(); } }
   if(LAB.npc){ const G = LAB.npc.G, d = G.position.distanceTo(player.position); if(d < 12) G.rotation.y = Math.atan2(player.position.x - G.position.x, player.position.z - G.position.z); }
   if(LAB.back){ const d = LAB.back.G.userData.disc; if(d) d.material.opacity = 0.25 + 0.15*Math.sin(t*0.004); }
   if(LAB.mt && LAB.mt.userData.halo) LAB.mt.userData.halo.material.opacity = 0.6 + 0.35*Math.sin(t*0.005);
@@ -2374,7 +2556,7 @@ function labCamera(){ const S = LAB.sight; if(!S) return false; const g = LAB.gk
   const fov = 50/S.zoom; if(Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); } return true; }
 function labWire(){
   $('lbGk').onclick = labGkToggle; $('lbTape').onclick = labTapeBtn; $('lbNote').onclick = labOpenNotes; $('lbWpn').onclick = ()=>{ LAB.sheath = !LAB.sheath; sfx('click'); labHud(); toast(LAB.sheath ? '🗡 Đã cất vũ khí' : '🗡 Đã rút vũ khí', 1200); };
-  $('lbNpc').onclick = ()=>{ if(LAB.on) labOpenNpc(); };
+  $('lbNpc').onclick = ()=>{ if(LAB.on) labOpenNpc(); }; $('lbStake').onclick = labStakeBtn;
   $('sX').onclick = labSightOff; $('sRec').onclick = labSightRecord; $('labNoteOk').onclick = labSightSave; $('labNoteV').addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); labSightSave(); } });
   $('sZin').onclick = ()=> labSightZoom(1); $('sZout').onclick = ()=> labSightZoom(-1);
   [['sL', 1, 0], ['sR', -1, 0], ['sU', 0, 1], ['sD', 0, -1]].forEach(([id, a, b])=>{ const el = $(id); const st = e=>{ e.preventDefault(); const S = LAB.sight; if(!S) return; const k = 0.5/S.zoom; labSightAdj(a*k, b*k*0.5); S.hold = [a, b]; S.holdT = 0; }, en = ()=>{ if(LAB.sight) LAB.sight.hold = null; };
@@ -2384,7 +2566,7 @@ function labWire(){
   ['pointerup', 'pointercancel'].forEach(ev=> view.addEventListener(ev, ()=>{ if(LAB.sight) LAB.sight.drag = null; }));
   addEventListener('keydown', e=>{ if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return; const k = e.key.toLowerCase();
     if(LAB.sight){ if(k === 'escape') labSightOff(); if(k === '+' || k === '=') labSightZoom(1); if(k === '-') labSightZoom(-1); if(k === 'enter' || k === 'r') labSightRecord(); return; }
-    if(!LAB.on || inQuiz || !running) return; if(k === 'g') labGkToggle(); if(k === 't') labTapeBtn(); if(k === 'n') labOpenNotes(); });
+    if(!LAB.on || inQuiz || !running) return; if(k === 'g') labGkToggle(); if(k === 't') labTapeBtn(); if(k === 'n') labOpenNotes(); if(k === 'k') labStakeBtn(); });
 }
 
 let lastT = 0, near = null, lastFps = 0; const perfM = {t:0, n:0, skip:1}; const tmp = new THREE.Vector3(), camTarget = new THREE.Vector3(), fpos = new THREE.Vector3();
@@ -2561,7 +2743,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, labStakeBtn, labSightRecord, labDiag, labSubmit, labNotes, labTargets, labAz, labTrue, labAim, labSightSave, get labMode(){ return labMode(); }, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
