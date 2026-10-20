@@ -419,6 +419,7 @@ function syncSoon(ms = 3000){ if(!save.acct) return; clearTimeout(syncT); cloudT
 async function syncNow(){ if(!save.acct) return; clearTimeout(syncT); const {ma, sbd} = save.acct;
   const sc = {}; Object.keys(save.ch || {}).forEach(g=>{ sc[g] = {}; Object.keys(save.ch[g]).forEach(ci=>{ const C = META && META[g] && META[g][ci]; if(C) sc[g][ci] = chScore(save.ch[g][ci], C).s; }); });
   try{ await fb(`game/kq/${ma}/${sbd}`, 'PATCH', {ch:save.ch || {}, tx:save.tx || {}, prof:{ten:save.acct.ten, lv:save.lv, xp:save.xp, kills:save.kills, stars:save.stars, badges:save.badges || null, char:save.char || null, eq:save.eq || null, look:save.look || null, rv:save.reviveAt || null, last:Date.now()}, gk:save.gk || null, ac:save.ac || null, wb:save.wb || null, lab:save.lab || null, qd:save.qd || null, wq:save.wq || 0, sc});
+    if(save.labEQ && Object.keys(save.labEQ).length){ const Q = save.labEQ; await fb(`game/kq/${ma}/${sbd}/labE`, 'PATCH', Q); Object.keys(Q).forEach(k=> delete save.labEQ[k]); persist(); }
     if(save.labQ && Object.keys(save.labQ).length){ const Q = save.labQ; await fb(`game/kq/${ma}/${sbd}/labLog`, 'PATCH', Q); Object.keys(Q).forEach(k=> delete save.labQ[k]); persist(); }
     cloudTxt('☁ đã lưu lên lớp'); }
   catch(e){ cloudTxt(e.message === 'DENIED' ? '⚠ máy này bị khoá — nhờ thầy/cô mở khoá' : '⚠ chưa gửi được, sẽ thử lại'); if(e.message !== 'DENIED') syncT = setTimeout(syncNow, 20000); } }
@@ -2204,18 +2205,20 @@ const LAB_MISS = [
    g1:'Bấm <b>📍 Cắm cọc</b> để cắm hai cọc C, D trên bờ sông, cách nhau từ 30 m trở lên; đo CD bằng thước dây. Đặt giác kế sát cọc C (giác kế tự đứng đúng cọc), đọc góc ngang khi ngắm tháp P, tháp Q và cọc D. Dời giác kế sang cọc D, đọc góc ngang khi ngắm P, Q và cọc C.',
    g2:'Tam giác PCD biết CD, góc PCD, góc PDC ⇒ góc P = 180° − C − D, tính CP bằng định lí sin. Tương tự tính CQ trong tam giác QCD. Cuối cùng trong tam giác PCQ: PQ² = CP² + CQ² − 2·CP·CQ·cos PCQ (góc PCQ = hiệu hai số đọc khi ngắm P và Q từ C).'}];
 const LAB_TW = 12;   // chiều cao tháp canh
-function labSc(force){ if(!force && save.labSc && save.labSc.v === 2) return save.labSc;
-  const r = (a, b)=> a + Math.random()*(b - a), R1 = v=> Math.round(v*10)/10, d = r(22, 38), sx = r(-14, 14);
+function labSc(force){ if(LAB.exam) return LAB.exam.sc; if(!force && save.labSc && save.labSc.v === 2) return save.labSc; save.labSc = labGen(Math.random); save.labN = []; persist(); return save.labSc; }
+function labGen(rnd){ const r = (a, b)=> a + rnd()*(b - a), R1 = v=> Math.round(v*10)/10, d = r(22, 38), sx = r(-14, 14);
   const lk = {x:R1(r(72, 84)), z:R1(r(-55, -35)), rx:R1(r(18, 26)), rz:R1(r(10, 15)), rot:Math.round(r(-0.6, 0.6)*100)/100};
   const shore = t=>{ const lx = (lk.rx + 1.6)*Math.cos(t), lz = (lk.rz + 1.6)*Math.sin(t), c = Math.cos(lk.rot), s = Math.sin(lk.rot); return {x:R1(lk.x + lx*c - lz*s), z:R1(lk.z + lx*s + lz*c)}; };
   const pz = r(-75, -30);
-  save.labSc = {v:2, tree:{h:R1(r(9, 21)), x:R1(sx), z:R1(d)}, mt:{h:Math.round(r(58, 96))}, lk, fa:shore(r(-0.5, 0.5)), fb:shore(Math.PI + r(-0.5, 0.5)),
-    tp:{x:R1(r(-128, -110)), z:R1(pz)}, tq:{x:R1(r(-128, -110)), z:R1(pz + r(28, 48))}};
-  save.labN = []; persist(); return save.labSc; }
+  return {v:2, tree:{h:R1(r(9, 21)), x:R1(sx), z:R1(d)}, mt:{h:Math.round(r(58, 96))}, lk, fa:shore(r(-0.5, 0.5)), fb:shore(Math.PI + r(-0.5, 0.5)),
+    tp:{x:R1(r(-128, -110)), z:R1(pz)}, tq:{x:R1(r(-128, -110)), z:R1(pz + r(28, 48))}}; }
+// bộ sinh số ngẫu nhiên có hạt giống (mulberry32) + băm chuỗi (FNV-1a)
+function labRng(seed){ let a = seed >>> 0; return ()=>{ a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; }; }
+function labHash(str){ let h = 2166136261; for(let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 // hồ (elip xoay) — điểm (x,z) có nằm trong mặt hồ (nới thêm m mét) không
 function labLakeQ(x, z, m = 0){ const L = labSc().lk, c = Math.cos(L.rot), s = Math.sin(L.rot), dx = x - L.x, dz = z - L.z, lx = dx*c + dz*s, lz = -dx*s + dz*c; return {q:(lx/(L.rx + m))**2 + (lz/(L.rz + m))**2, lx, lz, c, s}; }
 const LAB_RIVER = -66.5;   // mép bờ sông phía tây (x)
-const labNotes = ()=> (save.labN = save.labN || []);
+const labNotes = ()=> LAB.exam ? (save.labEx.N = save.labEx.N || []) : (save.labN = save.labN || []);
 function labNote(t, v, extra){ const N = labNotes(); N.push(Object.assign({t, v, at:Date.now()}, extra || {})); if(N.length > 30) N.shift(); persist(); labHud(); }
 function labTreeMesh(h){ const G = new THREE.Group(), th = h*0.16, mk = (parts)=>{ const m = new THREE.Mesh(merge(parts), toon({vertexColors:true, flatShading:true})); outline(m, 0.05, true); m.castShadow = tier.shadow; return m; };
   const parts = [{g:Cy(0.22*h/12, 0.32*h/12, th + 0.6, 7), m:M4(0, (th + 0.6)/2 - 0.3, 0), c:TRUNK}];
@@ -2250,7 +2253,7 @@ function labPortalIn(K){ const p = K.G.position, a = Math.atan2(-p.z, -p.x), x =
   const lab = textSprite('🔭 Phòng thực hành đo đạc', {screen:0.026, color:'#9ff6ff'}); lab.position.set(x, G.position.y + 4.3, z); world.add(G, lab);
   W._labIn = {labK:'in', G, labTxt:'🔭 Vào phòng thực hành đo đạc'}; }
 function labGkDetach(){ const K = LAB.gk; if(K && K.G.parent === player){ player.remove(K.G); disposeObj(K.G); } }
-function labReset(){ if(!LAB.on) return; labSightOff(); labTapeClear(); labGkDetach(); LAB.on = false; LAB.carry = false; hero.bones.weapon.visible = true; labHud(); }
+function labReset(){ LAB.exam = null; if(!LAB.on) return; labSightOff(); labTapeClear(); labGkDetach(); LAB.on = false; LAB.carry = false; hero.bones.weapon.visible = true; labHud(); }
 function buildLab(){
   labGkDetach(); clearWorld(); W = Object.assign({}, WORLDS[6], {name:'Phòng thực hành đo đạc', wl:-100, fogR:[180, 820], amp:0.6}); grade = 10;
   skyMat.uniforms.top.value.set(W.sky); skyMat.uniforms.hor.value.set(W.fog); skyMat.uniforms.bot.value.set(W.ground[1]).lerp(new THREE.Color(W.fog), 0.5); skyMat.uniforms.sunCol.value.set(W.sunC); skyMat.uniforms.dim.value = 0;
@@ -2321,7 +2324,7 @@ function labStakeBtn(){ if(!LAB.on || LAB.sight) return; const P = player.positi
 async function labEnter(){ if(LAB.on || inQuiz || cine || deadT > 0) return; sfx('lvl'); flashScreen('#9ff6ff', 0.6);
   LAB.on = true; target = null; inZone = null; peerStop(true); buildLab(); player.position.set(0, 0, 2); player.rotation.y = Math.PI; yaw = 0; labHud();
   toast('🔭 Phòng thực hành đo đạc<br><span style="font-size:.6em">Đến gặp <b>Thầy Định</b> để nhận nhiệm vụ — cầm giác kế ở cạnh bàn dụng cụ</span>', 4200); }
-async function labExit(){ if(!LAB.on) return; labSightOff(); labTapeClear(); labGkDetach(); LAB.on = false; LAB.carry = false; sfx('lvl'); flashScreen('#ffc24a', 0.6);
+async function labExit(){ if(!LAB.on) return; LAB.exam = null; labSightOff(); labTapeClear(); labGkDetach(); LAB.on = false; LAB.carry = false; sfx('lvl'); flashScreen('#ffc24a', 0.6);
   hero.bones.weapon.visible = true; buildWorld(10); labHud();
   if(W._labIn){ const p = W._labIn.G.position; player.position.set(p.x + 2, height(p.x + 2, p.z + 2), p.z + 2); }
   peerStart(); toast('❄️ Đã về Cao Nguyên Tuyết Véc-tơ', 2200); }
@@ -2467,7 +2470,36 @@ function labDiag(id, ans){ const S = labSc(), N = labNotes();
   return []; }
 function labValid(id, v){ return !labDiag(id, v).some(x=> /^(L|NO_|TWO_MISS|AIM0|D_WRONG|ONE_ST|EL_AZ)/.test(x.c)); }
 // điểm thực hành (thang 10): mỗi nhiệm vụ làm đúng ít nhất một lần được trọng số w (cây 2, núi 2,5, hồ 2,5, hai tháp 3)
-function labScore(){ const R = save.lab || {}; return LAB_MISS.reduce((t, M)=>{ const r = R[M.id]; return t + (r && (r.okv || (r.ok && r.okv == null)) ? M.w : 0); }, 0); }
+/* ===== BÀI THỰC HÀNH TÍNH ĐIỂM: mỗi ngày 1 lần =====
+   Ngày lấy theo GIỜ MÁY CHỦ (giờ Việt Nam) — đổi giờ điện thoại không làm thêm được lượt. Số liệu sinh theo (mã lớp, SBD, ngày) nên mỗi em một bộ khác nhau,
+   vào lại trong ngày (kể cả máy khác) vẫn đúng bộ đó. Mỗi nhiệm vụ chỉ được nộp đáp số 1 lần. Điểm (thang 10) = tổng trọng số các nhiệm vụ làm đúng
+   (đáp số trong sai số cho phép VÀ tính ra được từ chính sổ đo của em). Lưu: game/kq/{mã}/{sbd}/labE/{yyyy-mm-dd} = {st, sub:{id:{a,ok,vd,e,t}}, pt}. */
+const labPt = rec=> LAB_MISS.reduce((t, M)=> t + (rec && rec.sub && rec.sub[M.id] && rec.sub[M.id].ok && rec.sub[M.id].vd ? M.w : 0), 0);
+function labBest(){ return Math.max(0, ...Object.values(save.labE || {}).map(labPt)); }
+const labDayTxt = d=> d.slice(8, 10) + '/' + d.slice(5, 7);
+async function labExamStart(){ const A = save.acct; let now = Date.now(), all = null;
+  if(A){ try{ const t = await fb(`game/kq/${A.ma}/${A.sbd}/labNow`, 'PUT', {'.sv':'timestamp'}); if(typeof t === 'number') now = t; all = await fb(`game/kq/${A.ma}/${A.sbd}/labE`) || {}; }
+    catch(e){ toast('⚠ Cần có mạng để làm bài tính điểm (lấy giờ máy chủ và lưu kết quả)', 2600); return; } }
+  else if(!TESTER){ toast('Đăng nhập vào lớp (mã lớp + SBD) để làm bài tính điểm', 2400); return; }
+  const day = new Date(now + 7*3600e3).toISOString().slice(0, 10); save.labE = save.labE || {};
+  if(all) Object.keys(all).forEach(d=>{ const a = save.labE[d], b = all[d]; save.labE[d] = Object.assign({}, b, a || {}, {sub:Object.assign({}, b.sub || {}, (a && a.sub) || {})}); });
+  let rec = save.labE[day]; const done = rec && LAB_MISS.every(M=> rec.sub && rec.sub[M.id]);
+  if(done){ toast(`📝 Hôm nay (${labDayTxt(day)}) em đã nộp đủ 4 nhiệm vụ — được <b>${String(labPt(rec)).replace('.', ',')}/10</b>. Ngày mai làm tiếp nhé!`, 3400); labOpenNpc(); return; }
+  if(!rec){ if(!confirm(`Bắt đầu BÀI THỰC HÀNH TÍNH ĐIỂM hôm nay (${labDayTxt(day)})?\n\n• Mỗi ngày chỉ có 1 bài tính điểm.\n• Số liệu của em khác hẳn các bạn.\n• Mỗi nhiệm vụ chỉ được nộp đáp số 1 LẦN — đo và tính thật cẩn thận rồi mới nộp.\n• Đáp số phải tính ra được từ chính sổ đo của em.`)) return;
+    rec = save.labE[day] = {st:now, sub:{}}; save.labEQ = save.labEQ || {}; save.labEQ[day] = rec; persist(); syncSoon(500); }
+  const A2 = A || {ma:'THU', sbd:'0'}; LAB.exam = {d:day, sc:labGen(labRng(labHash(`${A2.ma}|${A2.sbd}|${day}|lab`)))};
+  if(!save.labEx || save.labEx.d !== day) save.labEx = {d:day, N:[]}; persist();
+  const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden');
+  toast(`📝 <b>BÀI TÍNH ĐIỂM ${labDayTxt(day)}</b> — cây, núi, hồ, tháp đã đổi sang số liệu riêng của em. Sổ đo bài này để riêng. Mỗi nhiệm vụ nộp 1 lần.`, 4200); }
+function labExamStop(){ if(!LAB.exam) return; LAB.exam = null; const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden'); toast('🧪 Đã về chế độ luyện tập (không tính điểm)', 2000); }
+function labExamSubmit(id, v){ const E = LAB.exam, rec = save.labE[E.d], M = LAB_MISS.find(x=> x.id === id), out = $('lr_' + id);
+  if(rec.sub[id]){ out.innerHTML = '<span style="color:#ffd76a">Nhiệm vụ này em đã nộp rồi (mỗi nhiệm vụ chỉ nộp 1 lần).</span>'; return; }
+  if(!confirm(`Nộp đáp số ${String(v).replace('.', ',')} m cho nhiệm vụ "${M.ten}"?\nChỉ được nộp 1 lần, không sửa lại được.`)) return;
+  const H = labTrue(id), err = Math.abs(v - H), ok = err <= M.tol(H) + 1e-9, vd = ok && labValid(id, v), dx = ok ? [] : labDiag(id, v), mode = labMode();
+  const R = save.lab = save.lab || {}; R[id] = R[id] || {ok:0, n:0}; labLog(id, v, H, ok, dx, vd, 1);
+  rec.sub[id] = {a:v, ok:ok ? 1 : 0, vd:vd ? 1 : 0, e:Math.round(err/H*1000)/10, t:Date.now()}; rec.pt = labPt(rec); save.labEQ = save.labEQ || {}; save.labEQ[E.d] = rec; persist(); syncSoon(500);
+  if(ok && vd){ sfx('lvl'); burst(player.position, 0x7dff9a, 1.5, 24); } else sfx('bad');
+  labOpenNpc(); const o = $('lr_' + id); if(o && mode === 1 && dx.length) o.insertAdjacentHTML('beforeend', labAiHtml(dx)); }
 // lời khuyên khi đã đạt (để em rút kinh nghiệm chọn vị trí đo)
 function labTips(id){ if(id === 'tree'){ const a = labLast(n=> n.t === 'góc' && n.tg === 'tree'); if(a && (a.v < 25 || a.v > 65)) return [{c:'T45', p:a.v}]; }
   if(id === 'mt'){ const st = labStations(n=> n.t === 'góc' && n.tg === 'mt'); if(st.length >= 2 && Math.hypot(st[0].x - st[1].x, st[0].z - st[1].z) < 30) return [{c:'SHORT'}]; } return []; }
@@ -2505,33 +2537,38 @@ const LAB_MSG = {
 function labAiHtml(dx){ if(!dx || !dx.length) return ''; const L = dx.slice(0, 3).map(x=>{ const f = LAB_MSG[x.c]; return f ? f(x.p, x.d) : ''; }).filter(Boolean);
   return L.length ? `<div class="labAi"><b>🤖 Trợ lý AI:</b>${L.map(t=> '<br>• ' + t).join('')}</div>` : ''; }
 // ghi nhật ký từng lượt nộp (đồng bộ lên máy chủ: game/kq/{mã}/{sbd}/labLog/{thời điểm})
-function labLog(id, v, H, ok, dx, vd){ const R = save.lab, r = R[id], codes = dx.map(x=> x.c), prev = r.lastDx || [], rep = !ok && codes.some(c=> prev.includes(c)) ? 1 : 0; r.lastDx = ok ? [] : codes;
+function labLog(id, v, H, ok, dx, vd, ex){ const R = save.lab, r = R[id], codes = dx.map(x=> x.c), prev = r.lastDx || [], rep = !ok && codes.some(c=> prev.includes(c)) ? 1 : 0; r.lastDx = ok ? [] : codes;
   const t = Date.now(), f = n=> `${n.t === 'góc' ? 'nâng' : n.t}=${n.v}${n.real != null ? '/' + n.real : ''}${n.tg ? '@' + n.tg : ''}${n.st ? '#' + n.st.x + ',' + n.st.z : ''}`;
-  save.labQ = save.labQ || {}; save.labQ[t] = {t, m:id, a:v, h:H, e:Math.round(Math.abs(v - H)/H*1000)/10, ok:ok ? 1 : 0, vd:ok && vd ? 1 : 0, g:labMode(), dx:codes.join(' '), rp:rep, n:labNotes().slice(-14).map(f).join('; ')}; }
-function labOpenNpc(){ sfx('click'); const R = save.lab = save.lab || {}, f = v=> String(v).replace('.', ',');
-  $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">👨‍🏫</div><div><b style="color:var(--gold);font-size:18px">Thầy Định — hướng dẫn thực hành</b><div style="font-size:13px;opacity:.8">Đo đạc gián tiếp bằng giác kế và thước dây</div></div><div style="margin-left:auto;text-align:center;background:rgba(125,255,154,.12);border:1px solid rgba(125,255,154,.5);border-radius:12px;padding:4px 10px" title="Mỗi nhiệm vụ làm đúng (đáp số trong sai số và tính được từ chính sổ đo của em) ít nhất một lần: cây 2 · núi 2,5 · hồ 2,5 · hai tháp 3"><div style="font-size:11px;opacity:.8">Điểm thực hành</div><b style="font-size:20px;color:#7dff9a">${String(labScore()).replace('.', ',')}</b><span style="opacity:.7">/10</span></div></div>
+  save.labQ = save.labQ || {}; save.labQ[t] = {t, m:id, a:v, h:H, e:Math.round(Math.abs(v - H)/H*1000)/10, ok:ok ? 1 : 0, vd:ok && vd ? 1 : 0, x:ex ? 1 : 0, g:labMode(), dx:codes.join(' '), rp:rep, n:labNotes().slice(-14).map(f).join('; ')}; }
+function labOpenNpc(){ sfx('click'); const R = save.lab = save.lab || {}, f = v=> String(v).replace('.', ','), E = LAB.exam, ER = E ? save.labE[E.d] : null;
+  $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">👨‍🏫</div><div><b style="color:var(--gold);font-size:18px">Thầy Định — hướng dẫn thực hành</b><div style="font-size:13px;opacity:.8">Đo đạc gián tiếp bằng giác kế và thước dây</div></div><div style="margin-left:auto;text-align:center;background:rgba(125,255,154,.12);border:1px solid rgba(125,255,154,.5);border-radius:12px;padding:4px 10px" title="Điểm cao nhất trong các bài tính điểm (mỗi ngày 1 bài). Mỗi nhiệm vụ làm đúng: cây 2 · núi 2,5 · hồ 2,5 · hai tháp 3"><div style="font-size:11px;opacity:.8">Điểm thực hành</div><b style="font-size:20px;color:#7dff9a">${String(labBest()).replace('.', ',')}</b><span style="opacity:.7">/10</span></div></div>
+    ${E ? `<div style="margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(255,215,106,.14);border:1px solid rgba(255,215,106,.6);font-size:13.5px;line-height:1.5">📝 <b>BÀI TÍNH ĐIỂM ngày ${labDayTxt(E.d)}</b> — số liệu riêng của em, <b>mỗi nhiệm vụ chỉ nộp 1 lần</b>. Điểm bài này: <b>${String(labPt(ER)).replace('.', ',')}/10</b> (đã nộp ${Object.keys(ER.sub || {}).length}/4). <button class="ibtn" id="lnExOff" style="padding:3px 10px;font-size:12.5px">🧪 Về luyện tập</button></div>`
+      : `<div style="margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(120,170,255,.12);border:1px solid rgba(120,170,255,.45);font-size:13.5px;line-height:1.5">🧪 Đang <b>luyện tập</b> (không tính điểm, nộp bao nhiêu lần cũng được). <button class="ibtn" id="lnExOn" style="padding:4px 10px;font-size:13px;background:#ffd76a;color:#3a2a00">📝 Làm bài tính điểm hôm nay</button></div>`}
     <details style="margin:8px 0;font-size:13.5px;line-height:1.5"><summary style="cursor:pointer"><b>📘 Cách dùng dụng cụ</b></summary>
       • <b>📐 Cầm/Đặt giác kế</b> (phím G): mang giác kế đến chỗ cần đo rồi đặt xuống. Ống ngắm cao <b>1,5 m</b>.<br>• Đứng cạnh giác kế bấm <b>🔭 Ngắm</b> (phím E): kéo màn hình (hoặc các nút ◀ ▶ ▲ ▼, phím mũi tên) để xoay và nâng ống ngắm cho tâm ngắm trùng mục tiêu; phóng to 🔍 để ngắm chính xác. <b>Đọc góc nâng ở vạch chia</b> (kim đỏ) rồi bấm <b>📒 Ghi số đo</b>.<br>• <b>📏 Thước dây</b> (phím T): bấm ở điểm đầu (đứng sát giác kế hoặc sát gốc cây thì thước tự bắt vào đó), đi tới điểm cuối rồi bấm <b>Chốt thước</b>; độ dài tự ghi vào sổ.<br>• <b>🧭 Góc ngang</b>: trong chế độ ngắm, vòng chia phía trên cho số đọc theo phương nằm ngang; góc giữa hai hướng ngắm = hiệu hai số đọc. Khi ghi số đo chọn đúng loại góc.<br>• <b>📍 Cắm cọc</b> (phím K): đánh dấu điểm C, D; đặt giác kế sát cọc thì giác kế đứng đúng cọc, thước dây cũng bắt vào cọc.<br>• <b>📒 Sổ đo</b>: xem lại các số đo đã ghi.</details>
-    ${LAB_MISS.map(M=>{ const r = R[M.id] || {}; return `<div style="border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;margin:8px 0">
-      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${M.ico}</span><b style="flex:1">${M.ten} <span style="font-weight:400;opacity:.7;font-size:12px">(${String(M.w).replace('.', ',')} đ)</span></b>${r.ok ? `<span style="color:#7dff9a">✔ Đạt ${r.ok} lần</span>` : ''}</div>
+    ${LAB_MISS.map(M=>{ const r = R[M.id] || {}, X = ER && ER.sub[M.id]; return `<div style="border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;margin:8px 0">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-size:24px">${M.ico}</span><b style="flex:1">${M.ten} <span style="font-weight:400;opacity:.7;font-size:12px">(${String(M.w).replace('.', ',')} đ)</span></b>${E ? (X ? (X.ok && X.vd ? `<span style="color:#7dff9a">✔ +${f(M.w)} đ</span>` : '<span style="color:#ffb0a0">✘ 0 đ</span>') : '') : r.ok ? `<span style="color:#7dff9a">✔ Đạt ${r.ok} lần (luyện)</span>` : ''}</div>
       <div style="font-size:13.5px;margin:4px 0;line-height:1.45">${M.de} <i>Sai số cho phép: ${M.tolTxt}.</i></div>
       <details style="font-size:13px;line-height:1.45;opacity:.9"><summary style="cursor:pointer">💡 Gợi ý 1 — cách đo</summary>${M.g1}</details>
       <details style="font-size:13px;line-height:1.45;opacity:.9"><summary style="cursor:pointer">💡 Gợi ý 2 — cách tính</summary>${M.g2}</details>
-      <div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">Đáp số: <input id="la_${M.id}" inputmode="decimal" placeholder="m" style="width:96px;padding:6px 8px;border-radius:8px;border:0;font-size:16px"> m <button class="ibtn" data-sub="${M.id}">📨 Nộp</button><span id="lr_${M.id}" style="font-size:13px"></span></div></div>`; }).join('')}
-    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="ibtn" id="lnNotes">📒 Xem sổ đo</button><button class="ibtn" id="lnNew" title="Cây, núi, hồ, tháp đổi số liệu để luyện lại">🔄 Đổi số liệu mới</button><button class="ibtn" id="lnClose2">Đóng</button></div>`;
+      ${X ? `<div style="margin-top:6px;font-size:13.5px" id="lr_${M.id}">Em đã nộp <b>${f(X.a)} m</b> — ${X.ok && X.vd ? '<span style="color:#7dff9a">✔ đúng</span>' : X.ok ? '<span style="color:#ffd76a">⚠ trong sai số nhưng không tính ra được từ sổ đo — không tính điểm</span>' : `<span style="color:#ffb0a0">✘ chưa đúng (lệch ${f(X.e)}%)</span>`}. Kết quả đúng: <b>${f(labTrue(M.id))} m</b>.</div>`
+      : `<div style="display:flex;gap:6px;margin-top:6px;align-items:center;flex-wrap:wrap">Đáp số: <input id="la_${M.id}" inputmode="decimal" placeholder="m" style="width:96px;padding:6px 8px;border-radius:8px;border:0;font-size:16px"> m <button class="ibtn" data-sub="${M.id}">📨 Nộp${E ? ' (1 lần)' : ''}</button><span id="lr_${M.id}" style="font-size:13px"></span></div>`}</div>`; }).join('')}
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="ibtn" id="lnNotes">📒 Xem sổ đo</button>${E ? '' : '<button class="ibtn" id="lnNew" title="Cây, núi, hồ, tháp đổi số liệu để luyện lại">🔄 Đổi số liệu mới</button>'}<button class="ibtn" id="lnClose2">Đóng</button></div>`;
   $('keeper').classList.remove('hidden');
   $('keeperBox').querySelectorAll('[data-sub]').forEach(b=> b.onclick = ()=> labSubmit(b.dataset.sub));
   $('lnNotes').onclick = labOpenNotes; $('lnClose2').onclick = ()=> $('keeper').classList.add('hidden');
-  $('lnNew').onclick = ()=>{ if(!confirm('Đổi sang số liệu mới (cây, núi, hồ, tháp)? Các số đo cũ trong sổ sẽ bị xoá.')) return; labSc(true); save.labN = []; persist(); const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden'); toast('🔄 Đã đổi số liệu mới', 2200); }; }
-function labSubmit(id){ const M = LAB_MISS.find(x=> x.id === id), inp = $('la_' + id), out = $('lr_' + id), v = parseFloat(String(inp.value).replace(',', '.')); if(!isFinite(v) || v <= 0){ out.innerHTML = '<span style="color:#ffb0a0">Nhập đáp số (m)</span>'; return; }
+  if($('lnExOn')) $('lnExOn').onclick = labExamStart; if($('lnExOff')) $('lnExOff').onclick = labExamStop;
+  if($('lnNew')) $('lnNew').onclick = ()=>{ if(!confirm('Đổi sang số liệu mới (cây, núi, hồ, tháp)? Các số đo cũ trong sổ sẽ bị xoá.')) return; labSc(true); save.labN = []; persist(); const p = player.position.clone(), c = LAB.carry; buildLab(); player.position.copy(p); if(c) labGkToggle(); labHud(); $('keeper').classList.add('hidden'); toast('🔄 Đã đổi số liệu mới', 2200); }; }
+function labSubmit(id){ const M = LAB_MISS.find(x=> x.id === id), inp = $('la_' + id), out = $('lr_' + id), v = inp ? parseFloat(String(inp.value).replace(',', '.')) : NaN; if(!inp) return; if(!isFinite(v) || v <= 0){ out.innerHTML = '<span style="color:#ffb0a0">Nhập đáp số (m)</span>'; return; }
+  if(LAB.exam){ labExamSubmit(id, v); return; }
   const H = labTrue(id), err = Math.abs(v - H), ok = err <= M.tol(H) + 1e-9, R = save.lab = save.lab || {}, r = R[id] = R[id] || {ok:0, n:0}; r.n++; r.last = Date.now();
   const mode = labMode(), dx = ok ? labTips(id) : labDiag(id, v), pct = String(Math.round(err/H*1000)/10).replace('.', ',');
   // "làm đúng nhiệm vụ": đáp số phải tính ra được từ chính các số đo trong sổ của em (chặn đoán mò theo % sai lệch)
   const vd = ok && labValid(id, v); labLog(id, v, H, ok, ok ? [] : dx, vd);
   if(ok && !vd){ r.nv = (r.nv || 0) + 1; persist(); syncSoon(1500); sfx('bad');
-    out.innerHTML = `<span style="color:#ffd76a">⚠ Đáp số nằm trong sai số cho phép, nhưng <b>sổ đo của em chưa chứng minh được cách làm</b>: các số đo trong sổ (góc ngắm đúng mục tiêu, khoảng cách đo bằng thước) chưa đủ hoặc tính từ sổ đo không ra đáp số này. Lượt này chưa tính điểm thực hành — hãy đo, ghi sổ và tính lại.</span>${mode === 1 ? labAiHtml(labDiag(id, v).filter(x=> !/^(R|AIM|OKC|SHORT|COL)$/.test(x.c))) : ''}`; return; }
+    out.innerHTML = `<span style="color:#ffd76a">⚠ Đáp số nằm trong sai số cho phép, nhưng <b>sổ đo của em chưa chứng minh được cách làm</b>: các số đo trong sổ (góc ngắm đúng mục tiêu, khoảng cách đo bằng thước) chưa đủ hoặc tính từ sổ đo không ra đáp số này. Hãy đo, ghi sổ và tính lại (khi làm bài tính điểm, lượt như thế này không được điểm).</span>${mode === 1 ? labAiHtml(labDiag(id, v).filter(x=> !/^(R|AIM|OKC|SHORT|COL)$/.test(x.c))) : ''}`; return; }
   if(ok){ const first = !r.ok; r.ok++; r.okv = (r.okv || 0) + 1; r.best = Math.min(r.best ?? 99, Math.round(err/H*1000)/10); persist(); syncSoon(); sfx('lvl'); hero.victory && hero.victory(); burst(player.position, 0x7dff9a, 1.5, 24);
-    if(first) gainXp(80); out.innerHTML = `<span style="color:#7dff9a">✔ Đạt yêu cầu! ${id === 'tree' || id === 'mt' ? 'Chiều cao' : 'Khoảng cách'} thật là <b>${String(H).replace('.', ',')} m</b> (em lệch ${String(Math.round(err*10)/10).replace('.', ',')} m)${first ? ' · +80 KN' : ''}. ${r.okv === 1 ? `<b>+${String(M.w).replace('.', ',')} điểm thực hành.</b> ` : ''}Bấm 🔄 để luyện với số liệu mới.</span>${mode === 1 ? labAiHtml(dx) : ''}`; }
+    if(first) gainXp(80); out.innerHTML = `<span style="color:#7dff9a">✔ Đạt yêu cầu! ${id === 'tree' || id === 'mt' ? 'Chiều cao' : 'Khoảng cách'} thật là <b>${String(H).replace('.', ',')} m</b> (em lệch ${String(Math.round(err*10)/10).replace('.', ',')} m)${first ? ' · +80 KN' : ''}. Bấm 🔄 để luyện với số liệu mới, hoặc làm <b>📝 bài tính điểm</b> hôm nay.</span>${mode === 1 ? labAiHtml(dx) : ''}`; }
   else { persist(); syncSoon(1500); sfx('bad');
     out.innerHTML = `<span style="color:#ffb0a0">✘ Chưa đạt — kết quả của em lệch khoảng ${pct}% so với kết quả đúng (cho phép ${M.tolTxt}).</span>${mode === 1 ? labAiHtml(dx) : ''}`; } }
 // ---- tương tác trong vòng lặp ----
@@ -2753,7 +2790,7 @@ function openBook(){
   $('book').classList.remove('hidden');
 }
 
-if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, labStakeBtn, labSightRecord, labDiag, labSubmit, labNotes, labTargets, labAz, labTrue, labAim, labSightSave, get labMode(){ return labMode(); }, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
+if(/debug/.test(location.search)) window.G = {chScore, chRec, chLock, chot, chotNote, refreshKhoi, openBook, login, wbTarget, wbMonNear, get gk(){ return W._gk; }, labEnter, labExit, labGkToggle, labSightOn, labSightOff, labTapeBtn, labOpenNpc, labSc, labStakeBtn, labSightRecord, labExamStart, labExamStop, labBest, labDiag, labSubmit, labNotes, labTargets, labAz, labTrue, labAim, labSightSave, get labMode(){ return labMode(); }, get LAB(){ return LAB; }, get labIn(){ return W._labIn; }, get FB(){ return FB; }, get boss(){ return monsters.find(m=> m.boss); }, get monsters(){ return monsters; }, get q(){ return curQ; }, get cine(){ return cine; }, get tier(){ return tierName; }, get fps(){ return lastFps; }, get tut(){ return tut; }, player, hero, enterWorld, save:()=> save, openInst, emoBubble, fast:false, challenge:M=> challenge(M), kill:M=> killMonster(M), get wbo(){ return WBo; }, die:M=> die(M), setPos:(x,z)=>{ player.position.set(x, height(x,z), z); }, setTier, startCine, renderer, gA:()=> W._gA, lake:()=> W._lake, wl:()=> W.wl, zones:()=> zones, keepers:()=> keepers, setYaw:(y, p, d)=>{ yaw = y; if(p != null) pitch = p; if(d != null) dist = d; }};   // chỉ để kiểm thử
 // ----- luôn toàn màn hình (điện thoại mặc định bật): chạm bất kỳ đâu là vào lại toàn màn hình -----
 function fsOn(){ return save.opt.full == null ? mobile : !!save.opt.full; }
 function goFull(){ if(!fsOn()) return; const d = document, el = d.documentElement; if(d.fullscreenElement || d.webkitFullscreenElement) return;
