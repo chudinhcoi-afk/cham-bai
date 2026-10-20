@@ -1695,21 +1695,28 @@ function buildTigerModel(){
   [-1, 1].forEach(s=> jaw.add(mk(Co(0.05, 0.18, 4), WH, s*0.2, 0.15, 0.55, 0.01)));
   // chân: 4 chân có khớp hông
   const legs = [[-0.62, 1.25, 0], [0.62, 1.25, 1], [-0.6, -1.45, 1], [0.6, -1.45, 0]].map(([x, z, ph])=>{ const L = new THREE.Group(); L.position.set(x, 1.55, z); rig.add(L);
-    const up = mk(Cy(0.34, 0.26, 1.2, 10), ST, 0, -0.55, 0); L.add(up); L.add(mk(Sp(0.33, 10, 8), WH, 0, -1.2, 0.12)); L.userData.ph = ph; return L; });
+    L.add(mk(Cy(0.36, 0.28, 0.75, 10), ST, 0, -0.33, 0)); const K = new THREE.Group(); K.position.set(0, -0.66, 0); L.add(K);
+    K.add(mk(Cy(0.27, 0.22, 0.6, 10), WH, 0, -0.28, 0), mk(Sp(0.32, 10, 8), WH, 0, -0.58, 0.12)); L.userData.ph = ph; L.userData.knee = K; L.userData.front = z > 0; return L; });
   // đuôi khoanh đen trắng
   const tail = new THREE.Group(); tail.position.set(0, 2.15, -2.2); rig.add(tail); let par = tail; const segs = [];
   for(let i = 0; i < 6; i++){ const s = new THREE.Group(); s.position.set(0, 0, i ? -0.42 : 0); par.add(s); s.add(mk(Cy(0.15 - i*0.012, 0.15 - i*0.012, 0.46, 8), i % 2 ? DK : WH, 0, 0, -0.21, 0.02)); s.children[0].rotation.x = Math.PI/2; segs.push(s); par = s; }
-  let ph = 0, t = 0, atkT = 0, hurtT = 0, dieT = -1, sit = 0;
+  let ph = 0, t = 0, atkT = 0, hurtT = 0, dieT = -1, sit = 0, sitS = 0, lookT = 0, lookY = 0, headY = 0;
   return {G, rig, head, jaw, legs, segs, height:3.4,
     attack(){ atkT = 0.55; }, hurt(){ hurtT = 0.12; }, die(){ dieT = 0; }, setSit(v){ sit = v; },
     update(dt, speed, chew){ t += dt; ph += dt*(1.4 + speed*0.95); const mv = Math.min(1, speed/5);
       if(dieT >= 0){ dieT += dt; rig.rotation.z = Math.min(Math.PI/2, dieT*2.4); rig.position.y = -Math.min(0.9, dieT*1.2); return; }
-      const s = sit*(1 - mv); rig.position.y = -0.85*s + Math.abs(Math.sin(ph))*0.08*mv;
-      legs.forEach(L=>{ const a = Math.sin(ph + L.userData.ph*Math.PI)*0.75*mv; L.rotation.x = a*(1 - s) + (L.position.z > 0 ? -1.25 : 1.1)*s; });
-      rig.rotation.x = -0.05*s;
-      segs.forEach((sg, i)=>{ sg.rotation.y = Math.sin(t*2.2 - i*0.6)*0.28; sg.rotation.x = i ? 0.22 + 0.05*Math.sin(t*1.7 + i) : -0.5; });
+      sitS += ((sit*(1 - mv)) - sitS)*Math.min(1, dt*3); const s = sitS, run = Math.max(0, Math.min(1, (speed - 7)/4)), br = Math.sin(t*2.1);
+      rig.position.y = -0.85*s + (Math.abs(Math.sin(ph))*0.1*(1 - run) + Math.max(0, Math.sin(ph*2))*0.35*run)*mv + br*0.025*(1 - mv);
+      body.scale.set(1 + br*0.02*(1 - mv), 1, 0.92 + br*0.015*(1 - mv));
+      legs.forEach(L=>{ const f = L.userData.front, off = run > 0.5 ? (f ? 0 : 0.5) + (L.position.x > 0 ? 0.08 : 0) : L.userData.ph*0.5, p = ph + off*Math.PI*2, a = Math.sin(p)*(0.7 + 0.35*run)*mv;
+        L.rotation.x = a*(1 - s) + (f ? -1.25 : 1.1)*s; const kb = (f ? Math.max(0, Math.sin(p + 1.2)) : Math.max(0, -Math.sin(p + 1.2)))*(0.9 + 0.4*run)*mv; L.userData.knee.rotation.x = (f ? kb : -kb)*(1 - s) + (f ? 1.9 : -1.6)*s; });
+      rig.rotation.x = -0.05*s + Math.sin(ph*2)*0.07*run*mv; rig.rotation.z = Math.sin(ph)*0.045*mv*(1 - run);
+      lookT -= dt; if(lookT <= 0){ lookT = 1.5 + Math.random()*2.5; lookY = (Math.random() - 0.5)*0.9*(1 - mv); }
+      segs.forEach((sg, i)=>{ sg.rotation.y = Math.sin(t*(2.2 + 2*mv) - i*0.6)*(0.22 + 0.12*mv); sg.rotation.x = i ? 0.2 + 0.06*Math.sin(t*1.7 + i) - 0.08*run : -0.5 + 0.35*run; });
       atkT = Math.max(0, atkT - dt); const k = atkT > 0 ? Math.sin((1 - atkT/0.55)*Math.PI) : 0, ch = chew ? Math.max(0, Math.sin(t*14)) : 0;
-      head.position.z = 2.25 + k*0.7; head.rotation.x = -0.25*k + 0.35*ch + (s ? 0.15 : 0); jaw.rotation.x = 0.55*Math.max(k, ch);
+      headY += (lookY*(1 - mv) - headY)*Math.min(1, dt*2.5); head.rotation.y = headY + Math.sin(ph)*0.06*mv;
+      head.position.z = 2.25 + k*0.8; head.position.y = 2.55 - 0.12*k + Math.sin(ph*2)*0.05*mv; head.rotation.x = -0.3*k + 0.35*ch + (s ? 0.15 : 0) + br*0.02; jaw.rotation.x = 0.6*Math.max(k, ch);
+      rig.position.z = -0.25*k;
       hurtT = Math.max(0, hurtT - dt); mats.forEach(m=> m.emissive.setHex(hurtT > 0 ? 0x666666 : 0x000000)); } }; }
 function buildTigerDen(){ const H = W._tgr; if(!H) return; const y = height(H.x, H.z), parts = [], aIn = Math.atan2(-H.z, -H.x);
   for(let i = 0; i < 16; i++){ const a = i/16*Math.PI*2; if(Math.abs(Math.atan2(Math.sin(a - aIn), Math.cos(a - aIn))) < 0.5) continue; const r = 10 + Math.sin(i*2.3)*1.5, x = H.x + Math.cos(a)*r, z = H.z + Math.sin(a)*r, s = 1.4 + Math.abs(Math.sin(i*1.7))*1.6;
@@ -1725,6 +1732,8 @@ function spawnTiger(){ const H = W._tgr, m = buildTigerModel(); m.G.scale.setSca
     mode:'rest', wait:60 + Math.random()*60, cd:1, pcd:5, n:0, t:0, lastHp:TG.hp, color:0xffffff, state:'idle', ate:0, won:false};
   T.label = textSprite(`🐯 ${T.name} · Lv${T.lvl}`, {screen:0.034, color:'#e8f4ff'}); world.add(T.label);
   T.hpBar = makeBar(); T.hpBar.scale.set(2, 1.5, 1); world.add(T.hpBar); T.shadow = blob(5); world.add(T.shadow); m.setSit(1); }
+function tigerObs(){ const L = [{x:campPos.x, z:campPos.z, r:12.5}]; if(W._campusC) L.push({x:W._campusC[0], z:W._campusC[1], r:30}); return L; }
+const tigerSafe = p=> tigerObs().some(O=> Math.hypot(p.x - O.x, p.z - O.z) < O.r + 2);
 function tigerRaid(){ const T = TIGER, open = zones.filter(Z=> !Z.lock && monsters.some(M=> !M.dead && M.Z === Z && M.kind !== 'guard' && !M.boss));
   if(!open.length){ T.wait = 60; return; } T.zone = open[Math.floor(Math.random()*open.length)]; T.mode = 'go'; T.prey = null; T.model.setSit(0);
   if(running && !LAB.on) toast(`🐯 <b>Hổ trắng ham học</b> xuống núi rồi!<br><span style="font-size:.62em">Nó đang tới <b>Khu ${T.zone.idx + 1}: ${shortCh(T.zone.name)}</b> để ăn quái — cẩn thận, gặp ai là vồ!</span>`, 3600); }
@@ -1768,15 +1777,20 @@ function updTiger(dt){ const T = TIGER; if(!T) return; const P = T.g.position, p
         if(k >= 1){ T.pounce = null; T.jump = 0; shake = Math.max(shake, 0.7); sfx('thud'); shockwave(P, 0xffffff, 4); if(Math.hypot(pl.x - P.x, pl.z - P.z) < 4.2 + 0.45){ const dm = pDmg(T.atk*2.6*(0.9 + Math.random()*0.2)); pHp -= dm; floatText(pl, '-' + dm, '#ff6b6b', true); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die(T); } T.cd = 1.2; }
         break; }
       T.g.rotation.y = Math.atan2(pl.x - P.x, pl.z - P.z); T.pcd -= dt;
-      if(d > 7.5 && d < 15 && T.pcd <= 0){ tigerPounce(T); T.pcd = 7 + Math.random()*4; break; }
+      if(d > 7.5 && d < 15 && T.pcd <= 0 && !tigerSafe(pl)){ tigerPounce(T); T.pcd = 7 + Math.random()*4; break; }
       if(d > TG.reach){ goal = pl; sp = 8.2; }
       else { T.cd -= dt; if(T.cd <= 0 && !T.wind){ T.wind = 0.45; T.model.attack(); T.cd = 1.5; } }
       break; } }
   if(T.wind > 0){ T.wind -= dt; if(T.wind <= 0){ T.wind = 0; if(alive && Math.hypot(pl.x - P.x, pl.z - P.z) < TG.reach + 1.3){ const dm = pDmg(T.atk*(0.85 + Math.random()*0.3)); pHp -= dm; floatText(pl, '-' + dm, '#ff6b6b'); hurtFx(); hero.hurt(); sfx('hurt'); shake = Math.max(shake, 0.4); updHud(); if(pHp <= 0) die(T); } } }
-  if(goal){ const dx = goal.x - P.x, dz = goal.z - P.z, L = Math.hypot(dx, dz); if(L > 0.3){ const st = Math.min(L, sp*dt); P.x += dx/L*st; P.z += dz/L*st;
-      let a = Math.atan2(dx, dz) - T.g.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); T.g.rotation.y += a*Math.min(1, dt*6); } else sp = 0; }
-  // không vào trại, không ra khỏi vùng chơi
-  { const cx = P.x - campPos.x, cz = P.z - campPos.z, cd = Math.hypot(cx, cz); if(cd < 12 && cd > 1e-3){ P.x = campPos.x + cx/cd*12; P.z = campPos.z + cz/cd*12; } }
+  const OB = tigerObs();
+  if(goal){ const dx = goal.x - P.x, dz = goal.z - P.z, L = Math.hypot(dx, dz); if(L > 0.3){ let vx = dx/L, vz = dz/L, blk = false;
+      for(const O of OB){ const cx = P.x - O.x, cz = P.z - O.z, cd = Math.hypot(cx, cz); if(cd > O.r + 5 || cd < 1e-3) continue; const nx = cx/cd, nz = cz/cd, dn = vx*nx + vz*nz;
+        if(dn < 0 && Math.hypot(goal.x - O.x, goal.z - O.z) > O.r){ blk = true; if(!T.sideT){ T.side = (-nz*dx + nx*dz) >= 0 ? 1 : -1; } vx = -nz*T.side; vz = nx*T.side; } }
+      T.sideT = blk ? 2 : Math.max(0, (T.sideT || 0) - dt);
+      const st = Math.min(L, sp*dt); P.x += vx*st; P.z += vz*st;
+      let a = Math.atan2(vx, vz) - T.g.rotation.y; a = Math.atan2(Math.sin(a), Math.cos(a)); T.g.rotation.y += a*Math.min(1, dt*5); } else sp = 0; }
+  // không vào trại, không giẫm lên trường học, không ra khỏi vùng chơi
+  for(const O of OB){ const cx = P.x - O.x, cz = P.z - O.z, cd = Math.hypot(cx, cz); if(cd < O.r && cd > 1e-3){ P.x = O.x + cx/cd*O.r; P.z = O.z + cz/cd*O.r; } }
   P.x = Math.max(-PLAY, Math.min(PLAY, P.x)); P.z = Math.max(-PLAY, Math.min(PLAY, P.z)); T.kb.set(0, 0, 0);
   const gy = height(P.x, P.z); P.y = gy + (T.jump || 0); T.model.update(dt, goal ? sp : 0, chew);
   T.shadow.position.set(P.x, gy + 0.07, P.z); const top = P.y + T.model.height + 0.6;
