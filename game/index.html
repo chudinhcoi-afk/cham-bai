@@ -1741,11 +1741,12 @@ function tigerEat(M){ M.dead = true; M.dying = M.model ? 1.0 : 0.4; if(M.model) 
   burst(M.g.position, M.color, 1.2, 14); floatText(M.g.position, ['😋 Măm măm!', '📖 Ngon như sách Toán!', '🐯 Thêm một dạng nữa!'][Math.floor(Math.random()*3)], '#e8f4ff');
   if(M.g.position.distanceTo(player.position) < 30) sfx('kill'); TIGER.ate++; }
 function tigerHit(dmg){ const k = tigerArmor(); if(k < 0.9 && !save.tgTip){ save.tgTip = 1; persist(); setTimeout(()=> toast('🐯 Da Hổ trắng dày quá — đòn của em chỉ như gãi ngứa!<br><span style="font-size:.62em">Cần lên khoảng <b>cấp 100</b> mới đánh thắng. Chạy về 🏕 Trại để thoát!</span>', 3600), 300); } return dmg*k; }
-function tigerReward(kill){ const T = TIGER, S = save.tiger = save.tiger || {win:0, kill:0}, low = lowGrade(); T.won = true;
-  if(kill){ S.kill++; save.badges = save.badges || {}; save.badges.tiger = 1; } else S.win++; persist(); syncSoon();
-  const xp = low ? 0 : kill ? 60000 : 15000; if(xp) gainXp(xp); hero.victory && hero.victory(); burst(player.position, 0xbff0ff, 2, 30);
-  toast(kill ? `👑 HUYỀN THOẠI! Em đã hạ gục <b>Hổ trắng ham học</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN · ' : ''}Danh hiệu: Kẻ Thuần Phục Hổ Trắng. Hổ sẽ quay lại sau 15 phút.</span>`
-    : `🐯 Hổ trắng ham học <b>bỏ chạy về núi</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN. ' : ''}Đuổi theo hạ nó trước khi hồi đủ máu để lập chiến công huyền thoại!</span>`, 4200, kill); }
+function tigerReward(kill){ const T = TIGER, S = save.tiger = save.tiger || {win:0, kill:0}, low = lowGrade(), k = kill ? 'dk' : 'dw', first = S[k] !== today(); T.won = true;
+  if(kill){ S.kill++; save.badges = save.badges || {}; save.badges.tiger = 1; } else S.win++; S[k] = today(); persist(); syncSoon();
+  // thưởng KN mỗi ngày 1 lần cho mỗi loại (đánh đuổi / hạ gục) — tránh "nuôi hổ" cày kinh nghiệm
+  const xp = low || !first ? 0 : kill ? 60000 : 15000; if(xp) gainXp(xp); hero.victory && hero.victory(); burst(player.position, 0xbff0ff, 2, 30);
+  toast(kill ? `👑 HUYỀN THOẠI! Em đã hạ gục <b>Hổ trắng ham học</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN · ' : first ? '' : 'Hôm nay em đã nhận thưởng hạ hổ rồi · '}Danh hiệu: Kẻ Thuần Phục Hổ Trắng. Hổ sẽ quay lại sau 15 phút.</span>`
+    : `🐯 Hổ trắng ham học <b>bỏ chạy về núi</b>!<br><span style="font-size:.62em">${xp ? '+' + xp + ' KN. ' : first ? '' : '(Hôm nay em đã nhận thưởng đánh đuổi hổ rồi.) '}Đuổi theo hạ nó trước khi hồi đủ máu để lập chiến công huyền thoại!</span>`, 4200, kill); }
 function tigerDefeat(){ const T = TIGER; T.dead = true; T.dieT = 0; T.model.die(); T.hpBar.visible = false; target = null; sfx('roar'); shockwave(T.g.position, 0xffffff, 10); burst(T.g.position, 0xffffff, 2.4, 30); tigerReward(true);
   T.mode = 'gone'; T.wait = 900; if(!monsters.some(o=> !o.dead && o.state === 'fight')) mus.mode = 'explore'; }
 function tigerRespawn(){ const T = TIGER; [T.g, T.label, T.hpBar, T.shadow].forEach(o=>{ world.remove(o); disposeObj(o); }); TIGER = null; spawnTiger(); }
@@ -2279,7 +2280,7 @@ hero.on('impact', ()=>{
 });
 function faceTo(p){ player.rotation.y = Math.atan2(p.x - player.position.x, p.z - player.position.z); }
 function hit(M, dmg, crit, isSkill){
-  if(M.tiger){ if(M.dead) return; dmg = Math.max(1, tigerHit(dmg)); }
+  if(M.tiger){ if(M.dead) return; if(player.position.distanceTo(campPos) < 11){ if(!M.campTip || performance.now() - M.campTip > 3000){ M.campTip = performance.now(); floatText(M.g.position, '🛡 Trong trại không đánh hổ được', '#e8f4ff'); } return; } dmg = Math.max(1, tigerHit(dmg)); }
   dmg = Math.round(dmg); M.hp -= dmg; floatText(M.g.position, (crit && !isSkill ? 'Chí mạng! ' : '') + '-' + dmg, crit ? '#ffd76a' : '#ffffff', crit); M.flash = 0.12; target = M; M.state = 'fight'; if(mus.mode !== 'battle' && !inQuiz) mus.mode = 'battle';
   if(M.boss){ M.boss.flash(); if(isSkill) M.boss.hurt(); } else { if(M.model) M.model.hurt(); _v.copy(M.g.position).sub(player.position).setY(0).normalize().multiplyScalar(crit ? 7 : 4/M.baseScale); M.kb.copy(_v); }
   hitStop = Math.max(hitStop, crit ? 0.09 : 0.05); shake = Math.max(shake, crit ? 0.45 : 0.2); if(crit && !isSkill) sfx('crit'); else if(!isSkill) sfx('hit');
