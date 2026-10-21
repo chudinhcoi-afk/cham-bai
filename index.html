@@ -233,11 +233,12 @@ const OMR_WEAK = 0.20;          // dưới ngưỡng tô nhưng trên mức này
 function fmtVN(n){ const r = Math.round((+n||0)*100)/100; return String(r).replace('.', ','); }
 function parseVN(v){ const x = parseFloat(String(v==null?'':v).replace(',','.')); return isNaN(x) ? null : x; }
 function sameShortAnswer(hs, key){
-  const clean = t=> String(t==null?'':t).trim().replace(/\s+/g,'').replace('.',',').replace(/^\+/,'');
+  // V21.7: so theo GIÁ TRỊ SỐ khi cả hai là số viết đúng dạng (4 = 4,0 = 4,00 = 04; −0,5 = −,5 không nhận vì sai dạng) — đề yêu cầu làm tròn đến hàng phần mười mà đáp số là 4, học sinh ghi 4,0 vẫn đúng
+  const clean = t=> String(t==null?'':t).trim().replace(/\s+/g,'').replace('.',',').replace(/^\+/,'').replace(/^−/, '-');
   const a = clean(hs), b = clean(key);
   if(!a || a==='?') return false;
-  const na = parseVN(a), nb = parseVN(b);
-  if(na!=null && nb!=null) return Math.abs(na-nb) < 1e-9;
+  const isNum = t=> /^-?\d+(,\d+)?$/.test(t), num = t=> parseFloat(t.replace(',', '.'));
+  if(isNum(a) && isNum(b)) return Math.abs(num(a) - num(b)) < 1e-9;
   return a===b;
 }
 function omrGrayFromImageData(img){
@@ -532,7 +533,13 @@ function wakGrade(test, picks){ let pts = 0, max = 0, right = 0, total = 0; cons
   picks.forEach(p=>{ const r = test.rows[p.k];
     if(r.t){ p.rok = r.key ? (p.pk.state==='ok' && p.pk.v===r.key) : p.pk.state==='blank'; (grp[r.g] = grp[r.g] || []).push(p); }
     else { p.ok = p.rok = p.pk.state==='ok' && p.pk.v===r.key; max += r.pt; total++; if(p.ok){ pts += r.pt; right++; } } });
-  Object.values(grp).forEach(ps=>{ const ok = ps.every(p=> p.rok), pt = ps.reduce((s, p)=> s + test.rows[p.k].pt, 0); ps.forEach(p=> p.ok = ok); max += pt; total++; if(ok){ pts += pt; right++; } });
+  Object.values(grp).forEach(ps=>{ let ok = ps.every(p=> p.rok), pt = ps.reduce((s, p)=> s + test.rows[p.k].pt, 0);
+    if(!ok){ // V21.7: trả lời ngắn so theo giá trị số — đáp án 4 mà học sinh tô 4,0 (đề yêu cầu làm tròn đến hàng phần mười) vẫn đúng
+      const rs = ps.slice().sort((x, y)=> x.k - y.k), clean = rs.every(p=> p.pk.state==='ok' || p.pk.state==='blank'); let hs = '', gap = false, bad = false;
+      rs.forEach(p=>{ if(p.pk.state==='ok'){ if(gap) bad = true; hs += p.pk.v; } else gap = true; });
+      const key = rs.map(p=> test.rows[p.k].key || '').join('');
+      if(clean && !bad && hs && sameShortAnswer(hs, key)){ ok = true; ps.forEach(p=> p.rok = true); } }
+    ps.forEach(p=> p.ok = ok); max += pt; total++; if(ok){ pts += pt; right++; } });
   const r2 = x=> Math.round(x*100)/100; return {pts:r2(pts), max:r2(max), right, total}; }
 function wakGeom(rs, v){
   const rows = typeof rs === 'number' ? Array.from({length:rs}, ()=> ({})) : rs, nI = [], tI = []; rows.forEach((r, k)=> (r.t ? tI : nI).push(k));
