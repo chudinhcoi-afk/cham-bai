@@ -1734,6 +1734,7 @@ function spawnTiger(){ const H = W._tgr, m = buildTigerModel(); m.G.scale.setSca
   T.hpBar = makeBar(); T.hpBar.scale.set(2, 1.5, 1); world.add(T.hpBar); T.shadow = blob(5); world.add(T.shadow); m.setSit(1); }
 function tigerObs(){ const L = [{x:campPos.x, z:campPos.z, r:12.5}]; if(W._campusC) L.push({x:W._campusC[0], z:W._campusC[1], r:30}); return L; }
 const tigerSafe = p=> tigerObs().some(O=> Math.hypot(p.x - O.x, p.z - O.z) < O.r + 2);
+function tigerNearZone(P){ let best = null, bd = 1e9; zones.forEach(Z=>{ if(Z.lock || !monsters.some(M=> !M.dead && M.Z === Z && M.kind !== 'guard' && !M.boss)) return; const d = Math.hypot(Z.x - P.x, Z.z - P.z); if(d < bd){ bd = d; best = Z; } }); return best; }
 function tigerRaid(){ const T = TIGER, open = zones.filter(Z=> !Z.lock && monsters.some(M=> !M.dead && M.Z === Z && M.kind !== 'guard' && !M.boss));
   if(!open.length){ T.wait = 60; return; } T.zone = open[Math.floor(Math.random()*open.length)]; T.mode = 'go'; T.prey = null; T.model.setSit(0);
   if(running && !LAB.on) toast(`🐯 <b>Hổ trắng ham học</b> xuống núi rồi!<br><span style="font-size:.62em">Nó đang tới <b>Khu ${T.zone.idx + 1}: ${shortCh(T.zone.name)}</b> để ăn quái — cẩn thận, gặp ai là vồ!</span>`, 3600); }
@@ -1773,7 +1774,9 @@ function updTiger(dt){ const T = TIGER; if(!T) return; const P = T.g.position, p
     case 'back': goal = H; sp = 5; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = T.hp < T.hpMax ? 'heal' : 'rest'; T.wait = TG.every; T.model.setSit(1); } break;
     case 'flee': goal = H; sp = 13; if(Math.hypot(P.x - H.x, P.z - H.z) < 3){ T.mode = 'heal'; T.model.setSit(1); } break;
     case 'hunt': {
-      if(!alive || d > 42 || inCamp){ T.mode = T.prev && T.prev !== 'hunt' ? T.prev : 'back'; T.pounce = null; T.wind = 0; if(target === T) target = null; break; }
+      if(!alive || d > 42 || inCamp){ T.pounce = null; T.wind = 0; if(target === T) target = null;
+        // em chạy vào trại: hổ bỏ đi, sang khu chương gần nhất còn quái để ăn
+        const Z = inCamp ? tigerNearZone(P) : null; if(Z){ T.zone = Z; T.prey = null; T.mode = 'go'; floatText(P, '😤 Hừm… đi ăn quái vậy!', '#e8f4ff'); } else T.mode = T.prev && T.prev !== 'hunt' ? T.prev : 'back'; break; }
       if(T.pounce){ const U = T.pounce; U.t += dt; const k = Math.min(1, U.t/U.dur); P.x = U.from.x + (U.to.x - U.from.x)*k; P.z = U.from.z + (U.to.z - U.from.z)*k; T.jump = Math.sin(k*Math.PI)*3.2;
         if(k >= 1){ T.pounce = null; T.jump = 0; shake = Math.max(shake, 0.7); sfx('thud'); shockwave(P, 0xffffff, 4); if(Math.hypot(pl.x - P.x, pl.z - P.z) < 4.2 + 0.45){ const dm = pDmg(T.atk*2.6*(0.9 + Math.random()*0.2)); pHp -= dm; floatText(pl, '-' + dm, '#ff6b6b', true); hurtFx(); hero.hurt(); sfx('hurt'); updHud(); if(pHp <= 0) die(T); } T.cd = 1.2; }
         break; }
