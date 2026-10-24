@@ -349,12 +349,14 @@ const WORLDS = {
   11:{name:'Núi Lửa Lượng Giác', mood:'🌋', sky:0xff6a3a, fog:0xffc38a, sunC:0xffd8a0, ground:[0xa85a3c, 0x6e3428], patch:0xd8623a, path:0xe0a070, shore:0x4a2420, rock:0x7a4434, peak:0x4a2a24, wl:-2.0, water:0xff6a1a, lava:true, ol:0x2a0806, amp:1.15, fq:1.1, fogR:[70, 240], hemi:1.15, sun:1.45},
   12:{name:'Thung Lũng Pha Lê Giải Tích', mood:'💎', sky:0x5a3cff, fog:0xffb4ec, sunC:0xfff0ff, ground:[0x9a86f2, 0x6a58d0], patch:0xc0a8ff, path:0xffd0f4, shore:0x5a48b8, rock:0x8a7ae8, peak:0xd8ccff, wl:-2.4, water:0x9a7cff, glow:true, stars:true, ol:0x1a0a3a, amp:1, fq:1, fogR:[70, 240], hemi:1.3, sun:1.25}};
 const SAVE_KEY = 'mbp_game_v1';
+// Chế độ khách (link …/game/?lab): vào thẳng phòng thực hành đo đạc, không đăng nhập, không gửi dữ liệu lên máy chủ, không đụng bản lưu của học sinh trên máy này
+const GUEST = /(?:^|&)(lab|thuchanh)(?:=|&|$)/.test(location.search.slice(1));
 const loadSave = key=>{ try{ return JSON.parse(localStorage.getItem(key)) || null; }catch(e){ return null; } };
 const LAST_KEY = 'mbp_game_last';
 let saveKey = (()=>{ try{ return localStorage.getItem(LAST_KEY) || SAVE_KEY; }catch(e){ return SAVE_KEY; } })();
 let save = loadSave(saveKey) || loadSave(SAVE_KEY) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}};
 save.opt = Object.assign({q:'auto', music:true, sfx:true, auto:null}, save.opt || {});
-const persist = ()=>{ try{ localStorage.setItem(saveKey, JSON.stringify(save)); localStorage.setItem(LAST_KEY, saveKey); }catch(e){} };
+const persist = ()=>{ try{ localStorage.setItem(saveKey, JSON.stringify(save)); if(!GUEST) localStorage.setItem(LAST_KEY, saveKey); }catch(e){} };
 // mỗi học sinh (mã lớp + SBD) một bản lưu riêng — dùng chung máy vẫn không lẫn
 function switchSave(key){ const opt = save.opt, tut = save.tut; saveKey = key; save = loadSave(key) || {name:'', lv:1, xp:0, stars:0, kills:0, stat:{}}; eqDirty(); save.opt = Object.assign({}, opt, save.opt || {}); if(tut && !save.tut) save.tut = tut; persist(); }
 
@@ -1928,7 +1930,7 @@ function toast(t, ms = 1800, big){ const el = $('toast'); el.innerHTML = t; el.c
 /* ======================= VÀO THẾ GIỚI ======================= */
 async function enterWorld(g){
   labReset();
-  if(!save.acct && !TESTER){ toast('🎓 Vào lớp bằng mã lớp + SBD + họ tên để bắt đầu chơi', 2800); return; }
+  if(!save.acct && !TESTER && !GUEST){ toast('🎓 Vào lớp bằng mã lớp + SBD + họ tên để bắt đầu chơi', 2800); return; }
   if(rvLeft() > 0){ sfx('bad'); toast(`💀 Nhân vật đang chờ hồi sinh — còn ${mmss(rvLeft())}`, 2600); return; }
   if(g > maxGrade()){ toast(`🔒 Vùng đất Lớp ${g} chưa mở với lớp của em`, 2600); return; }
   $('loading').classList.remove('hidden'); $('loadTxt').textContent = `Đang tải ${WORLDS[g].name}…`;
@@ -2465,6 +2467,23 @@ function labStakeBtn(){ if(!LAB.on || LAB.sight) return; const P = player.positi
   if(labLakeQ(P.x, P.z, 0.5).q < 1){ toast('📍 Không cắm cọc dưới nước được', 1500); return; }
   const n = ['C', 'D', 'E', 'F'].find(c=> !L.some(k=> k.n === c)), x = Math.round(P.x*10)/10, z = Math.round(P.z*10)/10; labStakeAdd(n, x, z); labStakeSave(); sfx('click');
   toast(`📍 Đã cắm <b>cọc ${n}</b> — đặt giác kế sát cọc thì giác kế đứng đúng tại cọc`, 2200); labHud(); }
+/* ----- CHẾ ĐỘ KHÁCH: vào thẳng phòng thực hành (giới thiệu học liệu cho giáo viên, giám khảo) ----- */
+async function guestStart(){
+  switchSave(SAVE_KEY + ':demo'); save.acct = null; if(!save.name) save.name = 'Khách'; save.tut = 1; save.opt.peers = false; persist();
+  ['menuChat', 'bChat'].forEach(id=>{ const b = $(id); if(b) b.style.display = 'none'; });
+  await enterWorld(10); if(!running){ showMenu(); return; }
+  await labEnter(); cloudTxt('👀 Chế độ khách — không lưu điểm'); setTimeout(guestIntro, 700); }
+function guestIntro(){ const tch = matchMedia('(pointer:coarse)').matches;
+  $('keeperBox').innerHTML = `<div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">🔭</div><div><b style="color:var(--gold);font-size:18px">Phòng thực hành đo đạc ảo</b><div style="font-size:13px;opacity:.8">Toán 10 — Hệ thức lượng trong tam giác · chế độ khách</div></div></div>
+    <p style="font-size:15px;line-height:1.55;margin:10px 0 6px">Em là người đo đạc: tự đặt giác kế, ngắm, <b>đọc vạch chia độ</b>, kéo thước dây, ghi sổ đo rồi tính. Phần mềm không cho sẵn số đo nào.</p>
+    <ol style="font-size:14.5px;line-height:1.55;margin:4px 0 8px;padding-left:22px">
+      <li>Đến gặp <b>Thầy Định</b> ngay trước mặt để nhận 4 nhiệm vụ: 🌲 cây thông → ⛰ ngọn núi → 🏞 qua hồ → 🗼 hai tháp bên kia sông.</li>
+      <li>Bấm <b>📐 Cầm giác kế</b>, đi tới chỗ muốn đo rồi đặt xuống; bấm <b>Ngắm</b> và đọc góc trên vạch chia.</li>
+      <li>Bấm <b>📏 Kéo thước dây</b> để đo khoảng cách; mọi số đo được ghi vào <b>📒 Sổ đo</b>.</li>
+      <li>Tính bằng tỉ số lượng giác, định lí sin, định lí côsin rồi nộp đáp số cho Thầy Định. Sai thì được gợi ý lỗi cụ thể.</li></ol>
+    <div style="font-size:13.5px;opacity:.85;line-height:1.5">${tch ? 'Điều khiển: cần gạt bên trái để đi, vuốt màn hình để xoay.' : 'Điều khiển: W A S D hoặc mũi tên để đi, kéo chuột để xoay, lăn chuột để phóng to.'} Chế độ khách không cần đăng nhập và không lưu điểm lên máy chủ.</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="ibtn" id="guestGo">▶ Bắt đầu đo</button></div>`;
+  $('keeper').classList.remove('hidden'); $('guestGo').onclick = ()=> $('keeper').classList.add('hidden'); }
 async function labEnter(){ if(LAB.on || inQuiz || cine || deadT > 0) return; sfx('lvl'); flashScreen('#9ff6ff', 0.6);
   LAB.on = true; target = null; inZone = null; peerStop(true); buildLab(); player.position.set(0, 0, 2); player.rotation.y = Math.PI; yaw = 0; labHud();
   toast('🔭 Phòng thực hành đo đạc<br><span style="font-size:.6em">Đến gặp <b>Thầy Định</b> để nhận nhiệm vụ — cầm giác kế ở cạnh bàn dụng cụ</span>', 4200); }
@@ -2995,7 +3014,7 @@ if(standalone()) $('menuInstall').textContent = '📲 Hướng dẫn cài lên �
 if('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 applyTier();
 TESTER = await testerCheck(); if(/debug/.test(location.search) && !TESTER) delete window.G;
-showMenu();
+if(GUEST) guestStart(); else showMenu();
 </script>
 </body>
 </html>
