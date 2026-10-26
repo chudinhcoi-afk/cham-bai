@@ -662,6 +662,20 @@ function wakRead(img, pickTest){
   const gr = wakGrade(test, picks);
   return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr};
 }
+/* điểm TO ở góc trên bên phải của ảnh kết quả (đọc được ngay khi lướt ảnh hoặc chiếu lên lớp) */
+function scoreBadge(c, pts, max, top){
+  const ctx = c.getContext('2d'), W = c.width, big = Math.max(34, Math.min(W, c.height)*0.13), sm = big*0.42, pad = big*0.28;
+  const a = fmtVN(pts), b = '/' + fmtVN(max);
+  ctx.save(); ctx.textBaseline = 'alphabetic';
+  ctx.font = `bold ${big}px Arial`; const wa = ctx.measureText(a).width; ctx.font = `bold ${sm}px Arial`; const wb = ctx.measureText(b).width, wl = ctx.measureText('ĐIỂM').width;
+  const bw = Math.max(wa + wb + sm*0.15, wl) + pad*2, bh = big*1.05 + sm*1.1 + pad*1.2, x = W - bw - W*0.025, y = (top || 0) + W*0.025, r = big*0.22;
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + bw, y, x + bw, y + bh, r); ctx.arcTo(x + bw, y + bh, x, y + bh, r); ctx.arcTo(x, y + bh, x, y, r); ctx.arcTo(x, y, x + bw, y, r); ctx.closePath();
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = big*0.25; ctx.fillStyle = 'rgba(255,255,255,.96)'; ctx.fill(); ctx.shadowBlur = 0;
+  ctx.lineWidth = Math.max(3, big*0.07); ctx.strokeStyle = '#d0302b'; ctx.stroke();
+  ctx.fillStyle = '#7a1a16'; ctx.font = `bold ${sm}px Arial`; ctx.textAlign = 'center'; ctx.fillText('ĐIỂM', x + bw/2, y + pad*0.6 + sm*0.85);
+  const by = y + pad*0.6 + sm*1.1 + big*0.92, sx = x + (bw - (wa + wb + sm*0.15))/2; ctx.textAlign = 'left';
+  ctx.fillStyle = '#d0302b'; ctx.font = `bold ${big}px Arial`; ctx.fillText(a, sx, by); ctx.fillStyle = '#555'; ctx.font = `bold ${sm}px Arial`; ctx.fillText(b, sx + wa + sm*0.15, by);
+  ctx.restore(); return c; }
 function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô đúng, đỏ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống / tô mờ / tô nhiều ô; ghi điểm cạnh khung
   const k = Math.min(1, 1700/canvas.width), c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
   const ctx = c.getContext('2d'); ctx.drawImage(canvas, 0, 0, c.width, c.height);
@@ -680,8 +694,8 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
   ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(-tw - 10, -fs*1.05, tw + 14, fs*1.35); ctx.fillStyle = RED; ctx.fillText(txt, -tw - 3, 0); ctx.restore();
   // ảnh chụp ngang hoặc ngược: xoay lại cho khung nằm đúng chiều để dễ đọc tên
   const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
-  if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); return o; }
-  return c;
+  if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); return scoreBadge(o, res.pts, res.max); }
+  return scoreBadge(c, res.pts, res.max);
 }
 
 /* ===== Mã đáp án bài kiểm tra: MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
@@ -743,7 +757,7 @@ function examAnnotate(canvas, res, ex, g){   // xanh = đúng, đỏ ✕ = tô s
   if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); c = o; ctx = c.getContext('2d'); }
   const st = ex.students[res.sbd], l1 = `${fmtVN(g.pts)}/${fmtVN(g.max)} điểm   ·   I ${g.c[0]}/${g.c[1]}  II ${g.c[2]}/${g.c[3]}  III ${g.c[4]}/${g.c[5]}`, l2 = `SBD ${res.sbd || '?'}${st ? ' · ' + st.name + (st.lop ? ' · ' + st.lop : '') : ' · (không có trong danh sách)'} · Mã đề ${res.made}`;
   const fs = Math.max(15, c.width/36); ctx.fillStyle = 'rgba(255,255,255,.94)'; ctx.fillRect(0, 0, c.width, fs*2.9); ctx.fillStyle = RED; ctx.font = `bold ${fs}px Arial`; ctx.fillText(l1, fs*0.5, fs*1.15); ctx.fillStyle = '#141c3a'; ctx.font = `600 ${fs*0.8}px Arial`; ctx.fillText(l2, fs*0.5, fs*2.4);
-  return c;
+  return scoreBadge(c, g.pts, g.max, fs*2.9);
 }
 
 /* ===== Trạng thái ===== */
