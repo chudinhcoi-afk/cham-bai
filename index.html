@@ -541,8 +541,35 @@ function wakGrade(test, picks){ let pts = 0, max = 0, right = 0, total = 0; cons
       if(clean && !bad && hs && sameShortAnswer(hs, key)){ ok = true; ps.forEach(p=> p.rok = true); } }
     ps.forEach(p=> p.ok = ok); max += pt; total++; if(ok){ pts += pt; right++; } });
   const r2 = x=> Math.round(x*100)/100; return {pts:r2(pts), max:r2(max), right, total}; }
+// Bố cục khung v3 (từ V1.31): trả lời ngắn như phiếu giữa kỳ — mỗi câu 4 CỘT (mỗi cột một kí tự), ô tô xếp dọc: hàng trên là dấu − (cột 1) / dấu phẩy (cột 2, 3), rồi 0 – 9.
+// Các khối trả lời ngắn đặt cạnh phần trắc nghiệm, đúng – sai khi còn chỗ (chọn cách xếp thấp nhất).
+const WAK3 = {tp:3.8, bw:19, lab:3.6, gapB:6.5, dy:3.4};
+function wakGeom3(rows){
+  const nI = [], tI = []; rows.forEach((r, k)=> (r.t ? tI : nI).push(k)); const G = [];
+  tI.forEach(k=>{ let g = G.find(x=> x.g===rows[k].g); if(!g) G.push(g = {g:rows[k].g, ks:[]}); g.ks.push(k); });
+  const n = nI.length, nt = G.length, tp = WAK3.tp, y0 = WAK.y0 + (nt ? WAK3.dy : 0), bh = 10*tp + WAK3.gapB + WAK3.lab, rEdge = WAK.W - 5;
+  const tnEnd = c=> c ? WAK.x0 + (c - 1)*WAK.colW + WAK.bx + 3*WAK.bp + 1.75 : WAK.x0 - 2;   // mép phải ô cuối của phần trắc nghiệm c cột
+  const fitP = x0=> Math.max(0, Math.floor((rEdge - x0 - 1.75 - 3*tp)/WAK3.bw) + 1);                // số khối trả lời ngắn một hàng khi khối đầu bắt đầu ở x0
+  let best = null; const tryL = (c, side)=>{ const R = n ? Math.ceil(n/c) : 0;
+    const yTn = n ? y0 + (R - 1)*WAK.pitchY : y0 - 4; let tx0, tY, p;
+    if(!nt){ const o = {c, R, side:false, yEnd:yTn}; if(!best || o.yEnd < best.yEnd - 0.01) best = o; return; }
+    if(side){ tx0 = tnEnd(c) + 5.5; tY = y0; } else { tx0 = WAK.x0 + 4; tY = yTn + 1.75 + WAK3.lab + 3.5; }
+    p = fitP(tx0); if(p < 1) return; const L = Math.ceil(nt/p), yEnd = Math.max(yTn, tY + (L - 1)*bh + 10*tp), o = {c, R, side, tx0, tY, p, yEnd};
+    if(!best || o.yEnd < best.yEnd - 0.01) best = o; };
+  if(n){ const c0 = n <= 10 ? Math.max(1, Math.min(5, n)) : 5; tryL(c0, false); for(let c = 1; c <= 5; c++) if(c <= n) tryL(c, true); } else tryL(0, true);
+  const {c, R} = best, P = {}, S = {};
+  nI.forEach((k, i)=>{ const cc = Math.floor(i/R), r = i % R; P[k] = {x:WAK.x0 + cc*WAK.colW + WAK.bx, y:y0 + r*WAK.pitchY}; });
+  const labs = [];
+  G.forEach((g, b)=>{ const cc = b % best.p, L = Math.floor(b/best.p), bx = best.tx0 + cc*WAK3.bw, by = best.tY + L*bh;
+    labs.push({g:g.g, x:bx + 1.5*tp, y:by - WAK3.lab});
+    g.ks.forEach((k, r)=>{ P[k] = {x:bx + r*tp, y:by}; S[k] = rows[k].n === 10 ? 1 : 0; }); });
+  const H = Math.round((best.yEnd + 8.5)*10)/10;
+  return {ncol:c, R, H, tY:nt ? best.tY : null, v:3, bg:1.9, tlabs:labs, side:best.side, tx0:best.tx0,
+    pos:(k, j)=> rows[k].t ? {x:P[k].x, y:P[k].y + (j + S[k])*tp} : {x:P[k].x + j*WAK.bp, y:P[k].y}};
+}
 function wakGeom(rs, v){
   const rows = typeof rs === 'number' ? Array.from({length:rs}, ()=> ({})) : rs, nI = [], tI = []; rows.forEach((r, k)=> (r.t ? tI : nI).push(k));
+  if(+v >= 3) return wakGeom3(rows);
   const n = nI.length, ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = n ? Math.ceil(n/ncol) : 0, P = {}, BP = {};
   nI.forEach((k, i)=>{ const c = Math.floor(i/R), r = i % R; P[k] = {x:WAK.x0 + c*WAK.colW + WAK.bx, y:WAK.y0 + r*WAK.pitchY}; BP[k] = WAK.bp; });
   const v2 = +v >= 2, per = v2 ? 3 : 2, cw = v2 ? WAK.tColW2 : WAK.tColW, blk = v2 ? WAK.tBlk2 : WAK.tBlk, tbx = v2 ? WAK.tBx2 : 4 + WAK.bx, tbp = v2 ? WAK.tBp2 : WAK.bp;
@@ -550,7 +577,7 @@ function wakGeom(rs, v){
   if(tI.length){ tY = n ? yEnd + 10 : WAK.y0 + 3; const G = []; tI.forEach(k=>{ let g = G.find(x=> x.g===rows[k].g); if(!g) G.push(g = {g:rows[k].g, ks:[]}); g.ks.push(k); });
     G.forEach((g, b)=>{ const c = b % per, L = Math.floor(b/per); g.ks.forEach((k, r)=>{ P[k] = {x:WAK.x0 + tbx + c*cw, y:tY + L*blk + r*WAK.pitchY}; BP[k] = tbp; }); yEnd = Math.max(yEnd, tY + L*blk + (g.ks.length - 1)*WAK.pitchY); }); }
   const H = Math.round((yEnd + 8.5)*10)/10;
-  return {ncol, R, H, tY, v:v2 ? 2 : 1, pos:(k, j)=> ({x:P[k].x + j*BP[k], y:P[k].y})};
+  return {ncol, R, H, tY, v:v2 ? 2 : 1, bg:2.6, pos:(k, j)=> ({x:P[k].x + j*BP[k], y:P[k].y})};
 }
 function wakLocate(gray, w, h, pickTest){
   const {cands} = omrFindMarkerCandidates(gray, w, h); if(cands.length < 4) return null;
@@ -580,7 +607,7 @@ function wakLocate(gray, w, h, pickTest){
       if(test){ const G = wakGeom(test.rows, test.v), vs = G.H - 4, mp = (x, y)=> map((x-2)/span, (y-2)/vs); let hit = 0, tot = 0;
         const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
         for(let k = 0; k < test.rows.length; k++) for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j); let ring = 0; for(let t = 0; t < 12; t++){ const an = t*Math.PI/6; ring += px(p.x + 1.65*Math.cos(an), p.y + 1.65*Math.sin(an)); } ring /= 12;
-          const bg = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]].map(([dx,dy])=> px(p.x+dx, p.y+dy)).sort((x,y)=> y-x)[1]; tot++; if(bg - ring > 0.12*(paper - ink)) hit++; }
+          const bo = G.bg || 2.6, bg = [[bo,bo],[-bo,bo],[bo,-bo],[-bo,-bo]].map(([dx,dy])=> px(p.x+dx, p.y+dy)).sort((x,y)=> y-x)[1]; tot++; if(bg - ring > 0.12*(paper - ink)) hit++; }
         const fit = hit/Math.max(1, tot); if(fit < 0.55) continue; score += 1000*fit; }
       if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span};
     } }
@@ -591,7 +618,7 @@ function wakLocate(gray, w, h, pickTest){
 // dịch tối đa ±2 mm để các vòng tròn in sẵn khớp nhất (vòng tối hơn giấy quanh nó), rồi làm trơn với hai hàng kề cùng cột.
 function wakRefine(gray, w, h, mp, test, G){
   const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
-  const RING = Array.from({length:16}, (_, t)=> [1.65*Math.cos(t*Math.PI/8), 1.65*Math.sin(t*Math.PI/8)]), BG = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]];
+  const RING = Array.from({length:16}, (_, t)=> [1.65*Math.cos(t*Math.PI/8), 1.65*Math.sin(t*Math.PI/8)]), bo = G.bg || 2.6, BG = [[bo,bo],[-bo,bo],[bo,-bo],[-bo,-bo]];
   const fitAt = (k, dx, dy)=>{ let s = 0; for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j), x = p.x + dx, y = p.y + dy;
       let ring = 0; for(const [a, b] of RING) ring += px(x + a, y + b); ring /= RING.length;
       const bg = BG.map(([a, b])=> px(x + a, y + b)).sort((u, v)=> v - u)[1]; s += bg - ring; } return s/test.rows[k].n; };
@@ -601,7 +628,7 @@ function wakRefine(gray, w, h, mp, test, G){
     const [cx, cy] = best; for(const dy of [-0.25, 0, 0.25]) for(const dx of [-0.25, 0, 0.25]) if(dx || dy) tryAt(cx + dx, cy + dy);   // rồi tinh chỉnh 0,25 mm
     return best; });
   // làm trơn: trung vị với hàng trên / dưới trong cùng cột (độ cong biến đổi chậm), tránh một hàng nhảy sai
-  const col = k=> Math.round(G.pos(k, 0).x/5)*1000 + (test.rows[k].t ? 1 : 0), byCol = {};
+  const col = k=> (G.v >= 3 ? Math.round(G.pos(k, 0).x*4) : Math.round(G.pos(k, 0).x/5))*1000 + (test.rows[k].t ? 1 : 0), byCol = {};
   test.rows.forEach((r, k)=> (byCol[col(k)] = byCol[col(k)] || []).push(k));
   const med3 = (a, b, c)=> a + b + c - Math.max(a, b, c) - Math.min(a, b, c);
   const sm = off.map(o=> o.slice());
@@ -618,7 +645,7 @@ function wakScores(gray, w, h, loc, test, G){
   const rIn = Math.max(1.5, 1.0*ppm), rBg = Math.max(1, 0.4*ppm);
   const raw = test.rows.map((r, k)=> Array.from({length:r.n}, (_, j)=>{ const p = G.pos(k, j), [cx, cy] = mp(p.x, p.y), m = disc(cx, cy, rIn);
     // giấy quanh ô: 4 điểm chéo (giữa các ô, không chạm vòng tròn in và số câu), lấy điểm sáng thứ nhì
-    const bg = [[2.6,2.6],[-2.6,2.6],[2.6,-2.6],[-2.6,-2.6]].map(([dx,dy])=>{ const [qx,qy] = mp(p.x+dx, p.y+dy); return disc(qx, qy, rBg); }).sort((a,b)=> b-a)[1];
+    const bo = G.bg || 2.6, bg = [[bo,bo],[-bo,bo],[bo,-bo],[-bo,-bo]].map(([dx,dy])=>{ const [qx,qy] = mp(p.x+dx, p.y+dy); return disc(qx, qy, rBg); }).sort((a,b)=> b-a)[1];
     return {m, bg, c: Math.max(0, (bg - m)/Math.max(30, bg))}; }));
   // Nền của ô TRỐNG (vòng tròn + chữ in sẵn lọt vào vùng đo). Mỗi chữ có lượng mực khác nhau (B, Đ đậm hơn C, S) nên tính riêng từng cột phương án:
   // lấy phân vị thấp của cột đó, nhưng kẹp quanh giá trị chuẩn của chữ (đo trên phiếu trắng) để không bị lệch khi cả cột đều được tô.
