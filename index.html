@@ -260,7 +260,14 @@ function omrOtsu(hist, total){
   }
   return thr;
 }
-function omrFindMarkerCandidates(gray, w, h){
+// Ảnh "mực" dự phòng để tìm ô định vị khi ô góc bị tô lại bằng bút màu (đỏ, xanh) hoặc mực in bong lốm đốm:
+// lấy kênh màu tối nhất (ô đỏ vẫn tối), rồi lọc min (lấp các đốm trắng nhỏ trong ô vuông). Chỉ dùng khi cách tìm thường thất bại.
+function omrInkGray(img){ const {width:w, height:h, data:d} = img, n = w*h, a = new Uint8Array(n), b = new Uint8Array(n), r = Math.max(1, Math.round(Math.max(w, h)/900));
+  for(let i = 0, j = 0; i < n; i++, j += 4){ const x = d[j] < d[j+1] ? d[j] : d[j+1]; a[i] = x < d[j+2] ? x : d[j+2]; }
+  for(let y = 0; y < h; y++){ const o = y*w; for(let x = 0; x < w; x++){ let m = 255; for(let k = Math.max(0, x - r), e = Math.min(w - 1, x + r); k <= e; k++){ const v = a[o + k]; if(v < m) m = v; } b[o + x] = m; } }
+  for(let x = 0; x < w; x++) for(let y = 0; y < h; y++){ let m = 255; for(let k = Math.max(0, y - r), e = Math.min(h - 1, y + r); k <= e; k++){ const v = b[k*w + x]; if(v < m) m = v; } a[y*w + x] = m; }
+  return a; }
+function omrFindMarkerCandidates(gray, w, h, relax){
   // Thu nhỏ ảnh để tìm vùng đen liền khối (connected components) cho nhanh.
   const step = Math.max(1, Math.round(Math.max(w,h)/1400));
   const W = Math.floor(w/step), H = Math.floor(h/step);
@@ -290,7 +297,7 @@ function omrFindMarkerCandidates(gray, w, h){
     const bw = maxx-minx+1, bh = maxy-miny+1;
     if(bw < 5 || bh < 5) continue;
     const asp = bw/bh, fill = cnt/(bw*bh);
-    if(asp < 0.7 || asp > 1.43 || fill < 0.75) continue;
+    if(asp < 0.7 || asp > 1.43 || fill < (relax ? 0.55 : 0.75)) continue;   // relax: ô góc tô lại bằng bút có nét thừa lòi ra
     comps.push({x:(minx+maxx+1)/2*step, y:(miny+maxy+1)/2*step, side:Math.sqrt(cnt)*step, area:cnt});
   }
   comps.sort((a,b)=> b.area - a.area);
@@ -383,8 +390,8 @@ function omrAllBubbles(){
   L.p2.forEach(q=>q.forEach(g=>out.push(...g))); L.p3.forEach(q=>q.forEach(g=>out.push(...g)));
   return out;
 }
-function omrLocateSheet(gray, w, h){
-  const {cands} = omrFindMarkerCandidates(gray, w, h);
+function omrLocateSheet(gray, w, h, cg){
+  const {cands} = omrFindMarkerCandidates(cg || gray, w, h, !!cg);
   if(cands.length < 4) return null;
   const M = OMR_MARKERS;
   const sheetW = M.TR[0]-M.TL[0], sheetH = M.BL[1]-M.TL[1];
@@ -470,7 +477,8 @@ function omrReadImageData(img, counts){
   const nTN = counts.nTN ?? 12, nDS = counts.nDS ?? 0, nTLN = counts.nTLN ?? 0;
   const {width:w, height:h} = img;
   const gray = omrGrayFromImageData(img);
-  const loc = omrLocateSheet(gray, w, h);
+  let loc = omrLocateSheet(gray, w, h);
+  if(!loc || loc.score < 120){ const l2 = omrLocateSheet(gray, w, h, omrInkGray(img)); if(l2 && (!loc || l2.score > loc.score)) loc = l2; }   // ô góc tô lại bằng bút màu / mực lốm đốm (hoặc chỉ bắt được bộ 4 ô sai): thử ảnh mực
   if(!loc) return {ok:false, error:'Không tìm thấy đủ 4 ô vuông định vị ở góc phiếu (ảnh bị cắt góc, quá mờ, hoặc đây không phải trang phiếu trả lời).'};
   const map = loc.map;
   const M = OMR_MARKERS;
@@ -624,8 +632,8 @@ function wakGeom(rs, v){
   const H = Math.round((yEnd + 8.5)*10)/10;
   return {ncol, R, H, tY, v:v2 ? 2 : 1, bg:2.6, pos:(k, j)=> ({x:P[k].x + j*BP[k], y:P[k].y})};
 }
-function wakLocate(gray, w, h, pickTest){
-  const {cands} = omrFindMarkerCandidates(gray, w, h); if(cands.length < 4) return null;
+function wakLocate(gray, w, h, pickTest, cg){
+  const {cands} = omrFindMarkerCandidates(cg || gray, w, h, !!cg); if(cands.length < 4) return null;
   const span = WAK.W - 4, us = []; for(let i=0;i<WAK.idN;i++) us.push((WAK.idX + i*WAK.idP + WAK.idW/2 - 2)/span);
   const ru = 0.9/span; let best = null; const n = cands.length;
   for(let a=0;a<n;a++) for(let b=a+1;b<n;b++) for(let c=b+1;c<n;c++) for(let e=c+1;e<n;e++){
@@ -718,7 +726,7 @@ function wakPick2(opts, s, T){
   return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:s1 < 1.3*thr};
 }
 function wakRead(img, pickTest){
-  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h, pickTest);
+  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h, pickTest) || wakLocate(gray, w, h, pickTest, omrInkGray(img));
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
   const test = pickTest(loc.id);
   if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
