@@ -567,8 +567,53 @@ function wakGeom3(rows){
   return {ncol:c, R, H, tY:nt ? best.tY : null, v:3, bg:1.9, tlabs:labs, side:best.side, tx0:best.tx0,
     pos:(k, j)=> rows[k].t ? {x:P[k].x, y:P[k].y + (j + S[k])*tp} : {x:P[k].x + j*WAK.bp, y:P[k].y}};
 }
+// Bố cục khung v4 / v5 (từ V1.32): chia PHẦN I – II – III có khung kẻ như phiếu giữa kỳ, cuối kỳ. v4: trả lời ngắn xếp NGANG (mỗi hàng một kí tự); v5: xếp ĐỨNG (mỗi cột một kí tự).
+// Mọi ô tô cách đường kẻ ≥ 3,7 mm (bộ đọc ảnh dò ô trong ±2 mm không chạm đường kẻ). Các khung được xếp thành từng tầng, chọn cách xếp thấp nhất.
+const WAK5 = {P:5.2, M:3.7, tp:3.8, tpH:4.2, ttl:3.6, gap:2.5, xL:7, xR:169, tnW:28.5, dsW:15, tvW:18.8, thW:54};
+function wakGeom45(rows, v){
+  const S = WAK5, ngang = +v === 4, TN = [], DSg = [], TLg = [];
+  rows.forEach((r, k)=>{ if(r.t){ let g = TLg.find(x=> x.g===r.g); if(!g) TLg.push(g = {g:r.g, ks:[]}); g.ks.push(k); }
+    else if((r.n || (r.opts || []).length) === 2){ const q = String(r.lab||'').replace(/[a-d]$/, ''); let g = DSg.find(x=> x.g===q); if(!g) DSg.push(g = {g:q, ks:[]}); g.ks.push(k); }
+    else TN.push(k); });
+  const n = TN.length, dsH = 6.2 + 3*S.P + S.M, tlW = ngang ? S.thW : S.tvW, tlH = ngang ? 2*S.M + 3*S.P : 6.2 + 10*S.tp + S.M, Wi = S.xR - S.xL;
+  const y0 = TLg.length ? 11.4 : 8.4;
+  const plan = (R, brD, brT)=>{ const L = []; let shelf = null; const sh = [];
+    const place = (kind, cnt, sw, sh1, fixedW, brk)=>{ if(!cnt) return true;
+      let avail = shelf && !brk ? S.xR - shelf.x : 0, k;
+      const fitK = w=> Math.min(cnt, Math.floor((w + 0.01)/sw));
+      if(fixedW){ if(avail < fixedW - 0.01){ shelf = null; avail = Wi; if(avail < fixedW) return false; } k = null; }
+      else { k = fitK(avail); if(k < 1){ shelf = null; avail = Wi; k = fitK(avail); } if(k < 1) return false; }
+      if(!shelf){ const top = sh.length ? sh[sh.length-1].bot + 1.6 : y0; shelf = {x:S.xL, top, bot:top}; sh.push(shelf); }
+      const w = fixedW || k*sw, rowsN = fixedW ? 1 : Math.ceil(cnt/k), h = fixedW ? sh1 : rowsN*sh1, bx = shelf.x, by = shelf.top + S.ttl;
+      L.push({kind, x:bx, y:by, w, h, k, rowsN, sw, sh:sh1}); shelf.x = bx + w + S.gap; shelf.bot = Math.max(shelf.bot, by + h); return true; };
+    const ncol = n ? Math.ceil(n/R) : 0, tnH = n ? 2*S.M + (R - 1)*S.P : 0;
+    if(n && !place('TN', n, 0, tnH, ncol*S.tnW, false)) return null;
+    if(!place('DS', DSg.length, S.dsW, dsH, 0, brD)) return null;
+    if(!place('TL', TLg.length, tlW, tlH, 0, brT)) return null;
+    return {L, R, ncol, bot:sh.length ? sh[sh.length-1].bot : y0, shelves:sh.length}; };
+  let best = null;
+  for(let R = n ? Math.ceil(n/5) : 1; R <= Math.max(1, n); R++) for(const brD of [false, true]) for(const brT of [false, true]){
+    const p = plan(R, brD, brT); if(p && (!best || p.bot < best.bot - 0.01 || (Math.abs(p.bot - best.bot) < 0.01 && p.shelves < best.shelves))) best = p; }
+  const P = {}, draw = {rect:[], line:[], text:[]}, T = (x, y, s, o)=> draw.text.push(Object.assign({x, y, s}, o || {}));
+  const TITLE = {TN:'PHẦN I. Trắc nghiệm', DS:'PHẦN II. Đúng – sai', TL:'PHẦN III. Trả lời ngắn'};
+  best.L.forEach(b=>{ draw.rect.push([b.x, b.y, b.w, b.h]); T(b.x + 0.3, b.y - 1.9, TITLE[b.kind], {t:1, w:b.w});
+    if(b.kind === 'TN'){ for(let c = 1; c < best.ncol; c++) draw.line.push([b.x + c*S.tnW, b.y, b.x + c*S.tnW, b.y + b.h]);
+      TN.forEach((k, i)=>{ const c = Math.floor(i/best.R), r = i % best.R, x = b.x + c*S.tnW + 9.2, y = b.y + S.M + r*S.P; P[k] = {x, y, dx:S.P, dy:0, s:0}; T(x - 2.4, y, rows[k].lab, {r:1, b:1}); }); }
+    else { const G = b.kind === 'DS' ? DSg : TLg;
+      for(let r = 1; r < b.rowsN; r++) draw.line.push([b.x, b.y + r*b.sh, b.x + b.w, b.y + r*b.sh]);
+      G.forEach((g, i)=>{ const c = i % b.k, r = Math.floor(i/b.k), sx = b.x + c*b.sw, sy = b.y + r*b.sh;
+        if(c) draw.line.push([sx, sy, sx, sy + b.sh]);
+        if(b.kind === 'DS'){ T(sx + b.sw/2, sy + 2.5, 'Câu ' + g.g, {c:1, b:1}); g.ks.forEach((k, j)=>{ const x = sx + 6, y = sy + 6.2 + j*S.P; P[k] = {x, y, dx:S.P, dy:0, s:0}; T(x - 3.6, y, 'abcd'[j], {c:1}); }); }
+        else if(ngang){ T(sx + 3.6, sy + b.sh/2 - 1.7, 'Câu', {c:1}); T(sx + 3.6, sy + b.sh/2 + 1.7, g.g, {c:1, b:1});
+          g.ks.forEach((k, j)=>{ P[k] = {x:sx + 8.3, y:sy + S.M + j*S.P, dx:S.tpH, dy:0, s:0}; }); }
+        else { T(sx + b.sw/2, sy + 2.5, 'Câu ' + g.g, {c:1, b:1}); g.ks.forEach((k, j)=>{ P[k] = {x:sx + S.M + j*S.tp, y:sy + 6.2, dx:0, dy:S.tp, s:(rows[k].n || (rows[k].opts || []).length) === 10 ? 1 : 0}; }); } }); } });
+  const H = Math.round((best.bot + 4.6)*10)/10;
+  return {ncol:best.ncol, R:best.R, H, tY:TLg.length ? 1 : null, v:ngang ? 4 : 5, bg:ngang ? 2.6 : 1.9, draw, y0,
+    pos:(k, j)=>{ const p = P[k], q = j + p.s; return {x:p.x + q*p.dx, y:p.y + q*p.dy}; }};
+}
 function wakGeom(rs, v){
   const rows = typeof rs === 'number' ? Array.from({length:rs}, ()=> ({})) : rs, nI = [], tI = []; rows.forEach((r, k)=> (r.t ? tI : nI).push(k));
+  if(+v >= 4) return wakGeom45(rows, v);
   if(+v >= 3) return wakGeom3(rows);
   const n = nI.length, ncol = n <= 10 ? Math.max(1, Math.min(5, n)) : 5, R = n ? Math.ceil(n/ncol) : 0, P = {}, BP = {};
   nI.forEach((k, i)=>{ const c = Math.floor(i/R), r = i % R; P[k] = {x:WAK.x0 + c*WAK.colW + WAK.bx, y:WAK.y0 + r*WAK.pitchY}; BP[k] = WAK.bp; });
