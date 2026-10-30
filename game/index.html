@@ -629,8 +629,37 @@ const pMaxHp = ()=> Math.round((100 + save.lv*20)*(1 + eqStat('hp')/100)), pAtk 
 const pCrit = base=> base + eqStat('crit')/100, pDmg = d=> Math.max(1, Math.round(d*(1 - eqStat('def')/100))), skMax = ()=> 7*(1 - eqStat('cd')/100);
 let META = null; const PACK = {};
 const DATA_V = '20261014d';   // đổi khi cập nhật ngân hàng câu hỏi để máy học sinh tải bản mới
-async function loadMeta(){ if(!META) META = await (await fetch('q/meta.json?v=' + DATA_V, {cache:'no-cache'})).json(); return META; }
-async function loadPack(g){ if(!PACK[g]) PACK[g] = await (await fetch('q/q' + g + '.json?v=' + DATA_V, {cache:'no-cache'})).json(); return PACK[g]; }
+/* Câu hỏi sinh từ BỘ SINH DÙNG CHUNG của MathBank (engine.js trên GitHub Pages của IMs): mỗi lần vào vùng đất là một bộ số mới.
+   Không tải được bộ sinh (mất mạng…) thì dùng bộ câu làm sẵn trong q/ như trước. */
+const ENGINE = 'https://chudinhcoi-afk.github.io/ims/', PER = 6;
+let GM = null, _eng = null;
+async function loadMeta(){
+  if(META) return META;
+  try{ GM = await (await fetch(ENGINE + 'genmeta.json', {cache:'no-cache'})).json(); if(GM && GM.meta) META = GM.meta; }catch(e){ GM = null; }
+  if(!META) META = await (await fetch('q/meta.json?v=' + DATA_V, {cache:'no-cache'})).json();
+  return META;
+}
+function loadEngine(){
+  if(!_eng) _eng = new Promise((ok, no)=>{
+    if(typeof GENLIB !== 'undefined') return ok();
+    const s = document.createElement('script'); s.src = ENGINE + 'engine.js?v=' + (GM ? GM.app : DATA_V);
+    s.onload = ()=> typeof GENLIB !== 'undefined' ? ok() : no(new Error('engine thiếu GENLIB')); s.onerror = ()=> no(new Error('không tải được engine'));
+    document.head.appendChild(s);
+  }).catch(e=>{ _eng = null; throw e; });
+  return _eng;
+}
+function buildPack(g){      // PER câu cho mỗi dạng trắc nghiệm (bỏ dạng có hình vì game chưa vẽ hình), cùng định dạng với q/q*.json
+  const G = GENLIB.GEN, L = ['A','B','C','D'], out = [];
+  Object.keys(G).forEach(k=>{ const x = G[k]; if(x.grade !== g || (x.kind||'TN') !== 'TN') return;
+    for(let i = 0; i < PER; i++){ const b = GENLIB.genBuild(x, (Math.random()*2147483647)|0); if(!b) continue; const q = b.q; if(q.hinhVe) break;
+      out.push({c:x.ci, b:x.bi, m:x.mucdo, k:k.split('|')[2], q:q.cauhoi, o:L.map(l=> q[l]), a:L.indexOf(q.dapan), s:q.loigiai || ''}); } });
+  return out;
+}
+async function loadPack(g){
+  if(GM){ try{ await loadEngine(); const p = buildPack(+g); if(p.length) return PACK[g] = p; }catch(e){ console.warn(e); } }
+  if(!PACK[g]) PACK[g] = await (await fetch('q/q' + g + '.json?v=' + DATA_V, {cache:'no-cache'})).json();
+  return PACK[g];
+}
 
 /* ======================= ÂM THANH (tự tổng hợp, không cần tệp) ======================= */
 const AU = {ctx:null};
