@@ -741,7 +741,7 @@ function wakRead(img, pickTest){
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, keyIdx:O.indexOf(r.key)}; });
   const gr = wakGrade(test, picks);
-  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr};
+  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr, comment:wakComment(test, picks, gr)};
 }
 /* điểm TO ở góc trên bên phải của ảnh kết quả (đọc được ngay khi lướt ảnh hoặc chiếu lên lớp) */
 function scoreBadge(c, pts, max, top){
@@ -757,6 +757,34 @@ function scoreBadge(c, pts, max, top){
   const by = y + pad*0.6 + sm*1.1 + big*0.92, sx = x + (bw - (wa + wb + sm*0.15))/2; ctx.textAlign = 'left';
   ctx.fillStyle = '#d0302b'; ctx.font = `bold ${big}px Arial`; ctx.fillText(a, sx, by); ctx.fillStyle = '#555'; ctx.font = `bold ${sm}px Arial`; ctx.fillText(b, sx + wa + sm*0.15, by);
   ctx.restore(); return c; }
+/* nhận xét tự động (cùng cách viết với MathBank V1.65): khen theo mức điểm, chỉ câu sai theo dạng, gợi ý cần cải thiện */
+function wakComment(test, picks, gr){
+  const Q = {}, qn = lab=> parseInt(String(lab)) || 0;
+  picks.forEach(p=>{ const r = test.rows[p.k], n = qn(r.lab); if(!n) return; const q = Q[n] || (Q[n] = {n, ok:true, blank:true, kind:r.t ? 'TLN' : r.n === 2 ? 'DS' : 'TN', sub:0, subBad:0});
+    const ok = p.rok != null ? p.rok : p.ok; if(!r.t || r.key){ if(p.pk.state !== 'blank') q.blank = false; } else if(p.pk.state !== 'blank') q.blank = false;
+    if(q.kind === 'DS'){ q.sub++; if(!ok) q.subBad++; } if(!ok) q.ok = false; });
+  const qs = test.qs || [], list = Object.values(Q).sort((a, b)=> a.n - b.n); if(!list.length) return '';
+  const meta = q=> qs[q.n - 1] || {}, MDN = {NB:'nhận biết', TH:'thông hiểu', VD:'vận dụng', VDC:'vận dụng cao'};
+  const bad = list.filter(q=> !q.ok), blank = bad.filter(q=> q.blank), ratio = gr.max ? gr.pts/gr.max : 0, out = [];
+  if(blank.length === list.length) return `Em chưa làm phần trắc nghiệm (bỏ trống cả ${list.length} câu). Hãy cố gắng làm hết, không để trống câu nào.` + (qs.some(x=> x.k === 'TL') ? ' (Phần tự luận giáo viên chấm riêng.)' : '');
+  out.push(ratio >= 0.9 ? 'Xuất sắc! Em làm bài rất chắc chắn.' : ratio >= 0.8 ? 'Bài làm tốt, em nắm vững kiến thức.' : ratio >= 0.65 ? 'Bài làm khá.' : ratio >= 0.5 ? 'Bài đạt yêu cầu nhưng còn nhiều chỗ cần cố gắng.' : 'Bài chưa đạt, em cần ôn lại kiến thức cơ bản.');
+  const byMd = {}; list.forEach(q=>{ const m = meta(q).md; if(!m) return; (byMd[m] = byMd[m] || {n:0, ok:0}); byMd[m].n++; if(q.ok) byMd[m].ok++; });
+  const good = Object.keys(MDN).filter(m=> byMd[m] && byMd[m].ok === byMd[m].n && byMd[m].n >= 2);
+  if(good.length && bad.length) out.push(`Em làm đúng hết các câu ${good.map(m=> MDN[m]).join(', ')}.`);
+  if(bad.length){
+    const named = bad.filter(q=> !q.blank).slice(0, 3).map(q=> `câu ${q.n}${meta(q).dg ? ` (${meta(q).dg})` : ''}`);
+    if(named.length) out.push(`Còn sai ${named.join('; ')}${bad.filter(q=> !q.blank).length > 3 ? ` và ${bad.filter(q=> !q.blank).length - 3} câu khác` : ''}.`);
+    const tips = [], vdBad = bad.filter(q=> /^VD/.test(meta(q).md)).length, nbBad = bad.filter(q=> meta(q).md === 'NB' || meta(q).md === 'TH').length;
+    if(nbBad >= 2) tips.push('xem lại lí thuyết, công thức của bài');
+    else if(vdBad) tips.push('luyện thêm các bài vận dụng');
+    if(bad.some(q=> q.kind === 'DS' && q.subBad === 1)) tips.push('đọc kĩ từng mệnh đề đúng – sai (chỉ sai một ý cũng mất điểm)');
+    if(bad.some(q=> q.kind === 'TLN' && !q.blank)) tips.push('kiểm tra lại phép tính và cách ghi đáp số trả lời ngắn');
+    if(blank.length) tips.push(`không bỏ trống (còn ${blank.length} câu chưa làm)`);
+    if(tips.length) out.push('Cần ' + tips.slice(0, 3).join(', ') + '.');
+  } else out.push('Không sai câu nào — tiếp tục phát huy!');
+  if(qs.some(x=> x.k === 'TL')) out.push('(Phần tự luận giáo viên chấm riêng.)');
+  return out.join(' ');
+}
 function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô đúng, đỏ = tô sai (khoanh xanh đáp án đúng), cam = bỏ trống / tô mờ / tô nhiều ô; ghi điểm cạnh khung
   const k = Math.min(1, 1700/canvas.width), c = document.createElement('canvas'); c.width = Math.round(canvas.width*k); c.height = Math.round(canvas.height*k);
   const ctx = c.getContext('2d'); ctx.drawImage(canvas, 0, 0, c.width, c.height);
@@ -773,6 +801,17 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
   ctx.font = `bold ${fs}px Arial`; const tw = ctx.measureText(txt).width, [tx, ty] = P(WAK.W - 6, res.G.H - 0.7);
   const [ax, ay] = P(WAK.W - 6 - 10, res.G.H - 0.7), ang = Math.atan2(ty-ay, tx-ax);
   ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(-tw - 10, -fs*1.05, tw + 14, fs*1.35); ctx.fillStyle = RED; ctx.fillText(txt, -tw - 3, 0); ctx.restore();
+  // V1.65: ô ĐIỂM + NHẬN XÉT bên trái, đặt ngay dưới khung trả lời
+  if(res.comment){ const [ox, oy] = P(2, res.G.H + 1.5), [rx, ry] = P(WAK.W - 2, res.G.H + 1.5), a2 = Math.atan2(ry - oy, rx - ox), wTot = Math.hypot(rx - ox, ry - oy), sw = 30*mm, fz = Math.max(12, 3.1*mm), lh = fz*1.3, pad = 1.6*mm;
+    ctx.save(); ctx.translate(ox, oy); ctx.rotate(a2); ctx.font = `${fz}px Arial`;
+    const words = String(res.comment).split(' '), maxW = wTot - sw - 3*pad, lines = []; let cur = '';
+    words.forEach(wd=>{ const t = cur ? cur + ' ' + wd : wd; if(ctx.measureText(t).width > maxW && cur){ lines.push(cur); cur = wd; } else cur = t; }); if(cur) lines.push(cur);
+    const h = Math.max(lines.length*lh + 2*pad + fz*1.1, 18*mm);
+    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(0, 0, wTot, h); ctx.lineWidth = Math.max(1.5, 0.35*mm); ctx.strokeStyle = RED; ctx.strokeRect(0, 0, wTot - sw - pad, h); ctx.strokeRect(wTot - sw, 0, sw, h);
+    ctx.fillStyle = RED; ctx.font = `bold ${fz}px Arial`; ctx.fillText('Nhận xét:', pad, pad + fz); ctx.font = `${fz}px Arial`; lines.forEach((ln, i)=> ctx.fillText(ln, pad, pad + fz*2.15 + i*lh));
+    ctx.font = `bold ${fz}px Arial`; const lab = 'ĐIỂM'; ctx.fillText(lab, wTot - sw/2 - ctx.measureText(lab).width/2, pad + fz);
+    const big = `${fmtVN(res.pts)}/${fmtVN(res.max)}`, bz = Math.min(9*mm, sw/Math.max(3, big.length)*1.7); ctx.font = `bold ${bz}px Arial`; ctx.fillText(big, wTot - sw/2 - ctx.measureText(big).width/2, h/2 + bz*0.55);
+    ctx.restore(); }
   // ảnh chụp ngang hoặc ngược: xoay lại cho khung nằm đúng chiều để dễ đọc tên
   const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
   if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); return scoreBadge(o, res.pts, res.max); }
@@ -782,14 +821,14 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
 /* ===== Mã đáp án bài kiểm tra: MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
 const ptDec = s=> s[0] === '_' ? parseInt(s.slice(1), 36)/100 : parseInt(s, 36)/4;   // điểm: 1 kí tự = điểm×4; _xx = điểm×100 (MathBank V1.68, điểm lẻ 0,1; 0,2…)
 function parsePayload(s){
-  let lv = 1; const s0 = String(s||'').trim().replace(/;L(\d+)$/, (_, d)=>{ lv = +d; return ''; });   // ;L2 = khung in theo bố cục v2
+  let lv = 1, qs = null; const s0 = String(s||'').trim().replace(/;Q([A-Za-z0-9_-]+)$/, (_, b)=>{ try{ qs = JSON.parse(new TextDecoder().decode(b64u(b))).map(a=> ({k:a[0], md:a[1], dg:a[2]})); }catch(e){} return ''; }).replace(/;L(\d+)$/, (_, d)=>{ lv = +d; return ''; });   // ;Q = dạng, mức độ từng câu (chỉ có khi tải từ máy chủ)   // ;L2 = khung in theo bố cục v2
   const m = s0.match(/^MBP1;(\d+);([^;]*);(.+)$/s); if(!m) return null;
   const rows = [];
   for(const tok of m[3].split(',')){ const u = tok.trim().match(/^([0-9]+)=(-?[0-9.]{1,4})\/([0-9a-z]|_[0-9a-z]{1,3})$/);
     if(u){ const key = wakTlnKey(u[2]); if(!key) return null; wakTlnRows(u[1], key, ptDec(u[3])).forEach(r=> rows.push(r)); continue; }   // trả lời ngắn
     const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z]|_[0-9a-z]{1,3})$/); if(!t) return null;
     const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:ptDec(t[3])}); }
-  return rows.length ? {id:+m[1], name:m[2], rows, v:lv, at:Date.now()} : null;
+  return rows.length ? Object.assign({id:+m[1], name:m[2], rows, v:lv, at:Date.now()}, qs ? {qs} : {}) : null;
 }
 /* ===== Đề thi: chuỗi mã QR MBPX;<id>;<i>;<n>;<mảnh> → ghép → giải nén → MBPE… ===== */
 async function unpack(packed){
@@ -928,7 +967,7 @@ function capture(){
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).filter(w=> !(pendSrc && pendSrc.sbdManual && /^Số báo danh/.test(w))); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
     return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
-  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
+  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', cmt:r.comment || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
 }
 // bỏ một bản ghi đã lưu (đúng đối tượng đó) khỏi danh sách kết quả
 function unkeep(rec){ if(!rec) return; if(rec.kind==='exam'){ const a = xres[rec.exId] || [], i = a.indexOf(rec); if(i >= 0){ a.splice(i, 1); saveX(); } } else { const i = results.indexOf(rec); if(i >= 0){ results.splice(i, 1); saveResults(); } } }
@@ -947,7 +986,7 @@ function drawShot(){
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
-  $('shotWarn').textContent = pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '';
+  $('shotWarn').innerHTML = (pending.cmt ? '<div style="color:#7a1a16;background:#fdf3f2;border-left:3px solid #d0302b;border-radius:6px;padding:6px 8px;margin:4px 0 6px;font-weight:400;line-height:1.4"><b>Nhận xét:</b> ' + esc(pending.cmt) + '</div>' : '') + esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét hiện cả bằng chữ (ảnh chụp sát khung có thể không còn chỗ vẽ ô nhận xét)
   const fx = $('shotFix'), S = pendSrc;
   if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId), parts = [];
     // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
