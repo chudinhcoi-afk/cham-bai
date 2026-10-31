@@ -810,17 +810,6 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
   ctx.font = `bold ${fs}px Arial`; const tw = ctx.measureText(txt).width, [tx, ty] = P(WAK.W - 6, res.G.H - 0.7);
   const [ax, ay] = P(WAK.W - 6 - 10, res.G.H - 0.7), ang = Math.atan2(ty-ay, tx-ax);
   ctx.save(); ctx.translate(tx, ty); ctx.rotate(ang); ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.fillRect(-tw - 10, -fs*1.05, tw + 14, fs*1.35); ctx.fillStyle = RED; ctx.fillText(txt, -tw - 3, 0); ctx.restore();
-  // V1.65: ô ĐIỂM + NHẬN XÉT bên trái, đặt ngay dưới khung trả lời
-  if(res.comment){ const [ox, oy] = P(2, res.G.H + 1.5), [rx, ry] = P(WAK.W - 2, res.G.H + 1.5), a2 = Math.atan2(ry - oy, rx - ox), wTot = Math.hypot(rx - ox, ry - oy), sw = 30*mm, fz = Math.max(12, 3.1*mm), lh = fz*1.3, pad = 1.6*mm;
-    ctx.save(); ctx.translate(ox, oy); ctx.rotate(a2); ctx.font = `${fz}px Arial`;
-    const words = String(res.comment).split(' '), maxW = wTot - sw - 3*pad, lines = []; let cur = '';
-    words.forEach(wd=>{ const t = cur ? cur + ' ' + wd : wd; if(ctx.measureText(t).width > maxW && cur){ lines.push(cur); cur = wd; } else cur = t; }); if(cur) lines.push(cur);
-    const h = Math.max(lines.length*lh + 2*pad + fz*1.1, 18*mm);
-    ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fillRect(0, 0, wTot, h); ctx.lineWidth = Math.max(1.5, 0.35*mm); ctx.strokeStyle = RED; ctx.strokeRect(0, 0, wTot - sw - pad, h); ctx.strokeRect(wTot - sw, 0, sw, h);
-    ctx.fillStyle = RED; ctx.font = `bold ${fz}px Arial`; ctx.fillText('Nhận xét:', pad, pad + fz); ctx.font = `${fz}px Arial`; lines.forEach((ln, i)=> ctx.fillText(ln, pad, pad + fz*2.15 + i*lh));
-    ctx.font = `bold ${fz}px Arial`; const lab = 'ĐIỂM'; ctx.fillText(lab, wTot - sw/2 - ctx.measureText(lab).width/2, pad + fz);
-    const big = `${fmtVN(res.pts)}/${fmtVN(res.max)}`, bz = Math.min(9*mm, sw/Math.max(3, big.length)*1.7); ctx.font = `bold ${bz}px Arial`; ctx.fillText(big, wTot - sw/2 - ctx.measureText(big).width/2, h/2 + bz*0.55);
-    ctx.restore(); }
   // ảnh chụp ngang hoặc ngược: xoay lại cho khung nằm đúng chiều để dễ đọc tên
   const q = ((Math.round(Math.atan2(res.corners[1].y - res.corners[0].y, res.corners[1].x - res.corners[0].x)/(Math.PI/2)) % 4) + 4) % 4;
   if(q){ const o = document.createElement('canvas'); o.width = q % 2 ? c.height : c.width; o.height = q % 2 ? c.width : c.height; const x = o.getContext('2d'); x.translate(o.width/2, o.height/2); x.rotate(-q*Math.PI/2); x.drawImage(c, -c.width/2, -c.height/2); return scoreBadge(o, res.pts, res.max); }
@@ -854,7 +843,9 @@ function parseExam(text){
       // ánh xạ về câu của ĐỀ GỐC (để thống kê câu sai theo đề gốc, không theo vị trí đã trộn): R<đề gốc>:<TN>:<ĐS câu-thứ tự ý>:<TLN>
       if(a[4] && a[4][0]==='R'){ const nums = t=> t ? t.split(',').map(Number) : []; ex.variants[a[0]].map = {root:a[4].slice(1), tn:nums(a[5]), ds:(a[6] ? a[6].split(',') : []).map(x=>{ const [q, p] = x.split('-'); return {q:+q, p:p||'abcd'}; }), tln:nums(a[7])}; } }
     else if(l[0]==='S' && a.length >= 2){ ex.students[a[0]] = {name:a[1], lop:a[2]||''}; ex.order.push(a[0]); }
-    else if(l[0]==='K') ex.ak = +l.slice(1) || 0; });   // mã bài in trên phiếu (MathBank V1.74)
+    else if(l[0]==='K') ex.ak = +l.slice(1) || 0;
+    else if(l[0]==='Q'){ const pq = t=> t ? t.split('|').map(x=>{ const [md, ...d] = x.split('~'); return {md, dg:d.join('~')}; }) : []; (ex.qmeta = ex.qmeta || {})[a[0]] = {tn:pq(a[1]), ds:pq(a[2]), tln:pq(a[3])}; }   // dạng, mức độ câu của đề gốc (MathBank V1.75)
+    else if(l[0]==='C'){ ex.cont = +a[0]; ex.tl = a[1] === '1'; } });   // mã bài in trên phiếu (MathBank V1.74)
   let h = 0; for(let i = 0; i < text.length; i++) h = (h*31 + text.charCodeAt(i)) >>> 0; ex.id = h.toString(36);
   return Object.keys(ex.variants).length ? ex : null;
 }
@@ -980,10 +971,116 @@ function capture(){
   if(!f.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 120); return; }
   showShot(full, f);
 }
+/* ===== NHẬN XÉT ĐỘNG VIÊN (MathBank V1.75): khen điểm mạnh, chỉ rõ dạng cần xem lại, lời khuyên cụ thể, mục tiêu lần sau — mỗi ý một bong bóng chat có icon =====
+   qs: [{n: số câu in trên đề, part:'TN'|'DS'|'TLN', ok, blank, sub, subBad, md:'NB'|'TH'|'VD'|'VDC'|'', dg: tên dạng, pt: điểm tối đa, got: điểm đạt}] */
+function cmtRich(qs, pts, max, extra){
+  if(!qs || !qs.length) return null; extra = extra || {};
+  const pick = a=> a[Math.floor(Math.random()*a.length)], f = x=> String(Math.round(x*100)/100).replace('.', ',');
+  const MDN = {NB:'nhận biết', TH:'thông hiểu', VD:'vận dụng', VDC:'vận dụng cao'}, PN = {TN:'trắc nghiệm', DS:'đúng – sai', TLN:'trả lời ngắn'};
+  const s10 = max ? pts/max*10 : 0, bad = qs.filter(q=> !q.ok), blank = qs.filter(q=> q.blank), wrong = bad.filter(q=> !q.blank), L = [], add = (k, i, t)=> L.push({k, i, t});
+  const cq = a=> a.length === 1 ? 'câu ' + a[0] : 'câu ' + a.slice(0, -1).join(', ') + ' và ' + a[a.length - 1];
+  if(blank.length === qs.length){
+    add('open', '🤔', 'Em chưa tô câu nào trong phần chấm máy.'); add('tip', '✏️', 'Lần sau hãy thử làm hết các câu nhé — đọc kĩ đề, loại trừ phương án sai rồi chọn, đoán có căn cứ vẫn hơn để trống.');
+    add('cheer', '🤝', 'Thầy cô luôn sẵn sàng giúp em. Bắt đầu từ những câu dễ nhất, em sẽ thấy mình làm được!'); return cmtPack(L, 'low'); }
+  // 1. Mở đầu theo mức điểm
+  const mood = s10 >= 9 ? 'great' : s10 >= 8 ? 'good' : s10 >= 6.5 ? 'fair' : s10 >= 5 ? 'pass' : s10 >= 3.5 ? 'grow' : 'low';
+  const OPEN = {
+    great:[['🌟', 'Xuất sắc! Bài làm rất chắc chắn và cẩn thận.'], ['🏆', 'Tuyệt vời! Em đã thể hiện phong độ rất cao.'], ['🌟', 'Quá giỏi! Kết quả này xứng đáng với sự chăm chỉ của em.']],
+    good:[['🎉', 'Rất tốt! Em nắm vững phần lớn kiến thức.'], ['👏', 'Bài làm tốt lắm, em đang đi đúng hướng!'], ['🎉', 'Kết quả rất đáng khen!']],
+    fair:[['👍', 'Bài làm khá! Em đã nắm được kiến thức cơ bản.'], ['😊', 'Khá lắm! Chỉ cần cẩn thận thêm một chút là em lên mức tốt.']],
+    pass:[['💪', 'Em đã đạt yêu cầu — một nền móng để bứt phá.'], ['🙂', 'Em đã qua mức trung bình, cố thêm chút nữa nhé!']],
+    grow:[['🌱', 'Em đang tiến bộ dần, đừng bỏ cuộc nhé!'], ['🌱', 'Kết quả chưa như mong muốn, nhưng em đã làm được một số câu — đó là khởi đầu tốt.']],
+    low:[['🤝', 'Đừng nản nhé! Ai cũng từng bắt đầu từ chỗ khó.'], ['🌤️', 'Lần này chưa tốt, nhưng mỗi bài làm là một lần em mạnh lên.']]};
+  const o = pick(OPEN[mood]); add('open', o[0], o[1] + ` Em được ${f(pts)}/${f(max)} điểm${extra.tl ? ' phần chấm máy' : ''}.`);
+  // 2. Điểm mạnh
+  const parts = ['TN', 'DS', 'TLN'].map(p=>{ const a = qs.filter(q=> q.part === p); return {p, n:a.length, ok:a.filter(q=> q.ok).length}; }).filter(x=> x.n);
+  const good = [];
+  parts.forEach(x=>{ if(x.n >= 2 && x.ok/x.n >= 0.8) good.push(`làm rất chắc phần ${PN[x.p]} (${x.ok}/${x.n} câu)`); });
+  const byMd = {}; qs.forEach(q=>{ if(!q.md) return; const m = byMd[q.md] || (byMd[q.md] = {n:0, ok:0}); m.n++; if(q.ok) m.ok++; });
+  const mdGood = Object.keys(MDN).filter(m=> byMd[m] && byMd[m].n >= 2 && byMd[m].ok === byMd[m].n);
+  if(mdGood.length && bad.length) good.push(`đúng hết các câu ${mdGood.map(m=> MDN[m]).join(', ')}`);
+  if(byMd.VD && byMd.VD.ok && (byMd.VD.ok/byMd.VD.n) >= 0.5) good.push(`đã chinh phục được ${byMd.VD.ok} câu vận dụng — rất đáng khen`);
+  const dgOk = [...new Set(qs.filter(q=> q.ok && q.dg).map(q=> q.dg))].filter(d=> !bad.some(q=> q.dg === d));
+  if(good.length < 2 && dgOk.length && bad.length) good.push(`làm tốt dạng “${dgOk[0]}”`);
+  const nOk = qs.filter(q=> q.ok).length;
+  if(good.length) add('good', '✅', 'Điểm mạnh: em ' + good.slice(0, 3).join('; ') + '.');
+  else if(nOk) add('good', '✅', `Em đã làm đúng ${nOk} câu — đó là những viên gạch đầu tiên, rất đáng trân trọng.`);
+  // 3. Cần xem lại — gom theo dạng
+  if(wrong.length){ const G = new Map(); wrong.forEach(q=>{ const k = q.dg || ''; if(!G.has(k)) G.set(k, []); G.get(k).push(q.n); });
+    const items = [...G.entries()].sort((a, b)=> b[1].length - a[1].length).slice(0, 3).map(([d, ns])=> cq(ns) + (d ? ` (${d})` : ''));
+    const more = [...G.values()].slice(3).reduce((t, a)=> t + a.length, 0);
+    add('fix', '🔍', 'Cần xem lại: ' + items.join('; ') + (more ? ` và ${more} câu khác` : '') + '.'); }
+  // 4. Lời khuyên cụ thể (tối đa 2)
+  const tips = [], ds1 = wrong.filter(q=> q.part === 'DS' && q.subBad === 1), tln = wrong.filter(q=> q.part === 'TLN');
+  const nbBad = wrong.filter(q=> q.md === 'NB' || q.md === 'TH').length, vdBad = wrong.filter(q=> /^VD/.test(q.md || '')).length;
+  if(ds1.length) tips.push(['📝', `Đúng – sai: em chỉ hụt đúng 1 ý ở ${cq(ds1.map(q=> q.n))} — tiếc lắm! Đọc kĩ từng mệnh đề, thử lại bằng tính toán trước khi tô.`]);
+  if(nbBad >= 2) tips.push(['📚', 'Ôn lại định nghĩa, công thức của bài: các câu nhận biết – thông hiểu là điểm “dễ ăn” nhất, đừng để mất.']);
+  else if(vdBad && !nbBad) tips.push(['🧠', 'Kiến thức nền của em đã vững — luyện thêm vài bài vận dụng mỗi ngày để lên điểm cao.']);
+  if(tln.length) tips.push(['🧮', `Trả lời ngắn: kiểm tra lại phép tính, cách làm tròn và cách tô dấu “−”, dấu phẩy (${cq(tln.map(q=> q.n))}).`]);
+  if(blank.length) tips.push(['✏️', `Đừng bỏ trống: còn ${blank.length} câu chưa làm (${cq(blank.map(q=> q.n).slice(0, 4))}${blank.length > 4 ? '…' : ''}). Phân bổ thời gian, câu khó để sau nhưng nhớ quay lại.`]);
+  tips.slice(0, 2).forEach(t=> add('tip', t[0], t[1]));
+  // 5. Mục tiêu lần sau: mốc kế tiếp, cần đúng thêm bao nhiêu câu (ưu tiên câu dễ, câu bỏ trống)
+  if(bad.length){ const marks = [5, 6.5, 8, 9, 10], tg = marks.find(m=> m > s10 + 0.001) || 10, need = tg*max/10 - pts;
+    const cand = bad.slice().sort((a, b)=> ((a.md === 'NB' || a.md === 'TH') ? 0 : 1) - ((b.md === 'NB' || b.md === 'TH') ? 0 : 1) || (b.pt - b.got) - (a.pt - a.got));
+    let acc = 0; const take = []; for(const q of cand){ if(acc >= need - 1e-9) break; acc += q.pt - q.got; take.push(q.n); }
+    const ten = Math.abs(max - 10) < 0.01, ex3 = cq(take.slice(0, 3).sort((a, b)=> a - b));   // thang 10 → nêu mốc điểm; phần chấm máy (còn tự luận) → nêu số điểm cộng thêm
+    if(acc >= need - 1e-9 && take.length) add('goal', '🎯', ten ? `Mục tiêu lần sau: ${f(tg)} điểm — chỉ cần làm đúng thêm ${take.length} câu (như ${ex3}). Em hoàn toàn làm được!` : `Mục tiêu lần sau: làm đúng thêm ${take.length} câu (như ${ex3}) là em có thêm ${f(acc)} điểm, lên ${f(pts + acc)}/${f(max)}. Em hoàn toàn làm được!`); }
+  // 6. Lời chúc
+  const END = {great:['🚀 Giữ vững phong độ này nhé — em là tấm gương cho cả lớp!', '💎 Tiếp tục chinh phục những bài khó hơn nhé!'],
+    good:['🚀 Thêm chút cẩn thận là em chạm mốc xuất sắc!', '🔥 Cố lên, điểm 9 – 10 đang ở rất gần!'],
+    fair:['💡 Mỗi lỗi sai là một bài học — sửa xong là em giỏi hơn hôm qua.', '🔥 Cố gắng thêm một chút, em sẽ bứt phá!'],
+    pass:['💪 Kiên trì mỗi ngày một chút, kết quả sẽ đến!', '🌈 Thầy cô tin em sẽ tiến bộ rõ ở bài sau.'],
+    grow:['🌈 Chậm mà chắc — mỗi ngày làm thêm vài câu, em sẽ ngạc nhiên về mình.', '🤗 Đừng ngại hỏi thầy cô và bạn bè khi chưa hiểu nhé!'],
+    low:['🤗 Thầy cô luôn ở bên em. Hãy bắt đầu lại từ những câu cơ bản nhất!', '🌤️ Sau cơn mưa trời lại sáng — bài sau sẽ tốt hơn!']};
+  const e = pick(END[mood]); add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1));
+  return cmtPack(L, mood); }
+function cmtPack(L, mood){ return {mood, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
+const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], cheer:['#ffe3ef', '#e0457b']};
+/* bong bóng chat ở màn hình kết quả */
+function cmtHtml(cm){ if(!cm || !cm.lines) return '';
+  return '<div style="display:flex;flex-direction:column;gap:7px;margin:6px 0 8px">' + cm.lines.map((l, i)=>{ const [bg, bd] = CMT_COL[l.k] || CMT_COL.tip;
+    return '<div style="display:flex;gap:8px;align-items:flex-start">' + (i === 0 ? '<div style="flex:0 0 34px;height:34px;border-radius:50%;background:#fff;border:2px solid ' + bd + ';display:flex;align-items:center;justify-content:center;font-size:20px">🧑‍🏫</div>' : '<div style="flex:0 0 34px"></div>')
+      + '<div style="background:' + bg + ';border:2px solid ' + bd + ';border-radius:16px;' + (i === 0 ? 'border-top-left-radius:4px;' : '') + 'padding:8px 12px;font-size:1.02rem;font-weight:600;line-height:1.45;color:#1d2433"><span style="font-size:1.15em;margin-right:5px">' + l.i + '</span>' + String(l.t).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div></div>'; }).join('') + '</div>'; }
+/* bong bóng chat vẽ thêm vào DƯỚI ảnh kết quả (ảnh gửi Zalo vẫn thấy đầy đủ, chữ to rõ) */
+function cmtPanel(canvas, cm){ if(!cm || !cm.lines || !cm.lines.length) return canvas;
+  const W = canvas.width, fz = Math.round(Math.max(22, W/30)), pad = Math.round(fz*0.75), av = Math.round(fz*2.1), bx = pad + av + pad*0.6, maxW = W - bx - pad - pad*1.6, lh = Math.round(fz*1.38);
+  const t = document.createElement('canvas').getContext('2d'), font = `600 ${fz}px "Segoe UI", Roboto, Arial, sans-serif`; t.font = font;
+  const wrap = s=>{ const out = []; let cur = ''; String(s).split(' ').forEach(w=>{ const x = cur ? cur + ' ' + w : w; if(t.measureText(x).width > maxW && cur){ out.push(cur); cur = w; } else cur = x; }); if(cur) out.push(cur); return out; };
+  const B = cm.lines.map(l=> ({l, rows:wrap(l.i + '  ' + l.t)})), hd = Math.round(fz*1.9), gap = Math.round(fz*0.5);
+  const H = hd + B.reduce((s, b)=> s + b.rows.length*lh + pad*1.3 + gap, 0) + pad;
+  const c = document.createElement('canvas'); c.width = W; c.height = canvas.height + H; const x = c.getContext('2d');
+  x.drawImage(canvas, 0, 0); const y0 = canvas.height; const g = x.createLinearGradient(0, y0, 0, y0 + H); g.addColorStop(0, '#fffaf0'); g.addColorStop(1, '#fdf1ff'); x.fillStyle = g; x.fillRect(0, y0, W, H);
+  x.fillStyle = '#7a3e00'; x.font = `800 ${Math.round(fz*1.05)}px "Segoe UI", Roboto, Arial, sans-serif`; x.textBaseline = 'middle'; x.fillText('💬 Nhận xét của thầy cô', pad, y0 + hd/2 + 2);
+  const rr = (X, Y, w, h, r, tl)=>{ x.beginPath(); x.moveTo(X + (tl ? 4 : r), Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, tl ? 4 : r); x.closePath(); };
+  let y = y0 + hd;
+  x.beginPath(); x.arc(pad + av/2, y + av/2, av/2, 0, Math.PI*2); x.fillStyle = '#fff'; x.fill(); x.lineWidth = Math.max(2, fz*0.12); x.strokeStyle = '#f0a500'; x.stroke();
+  x.font = `${Math.round(av*0.62)}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`; x.textAlign = 'center'; x.fillStyle = '#000'; x.fillText('🧑‍🏫', pad + av/2, y + av/2 + 2); x.textAlign = 'left';
+  B.forEach((b, i)=>{ const [bg, bd] = CMT_COL[b.l.k] || CMT_COL.tip; x.font = font; const w = Math.min(maxW, Math.max(...b.rows.map(r=> t.measureText(r).width))) + pad*1.6, h = b.rows.length*lh + pad*1.3;
+    rr(bx, y, w, h, fz*0.8, i === 0); x.fillStyle = bg; x.fill(); x.lineWidth = Math.max(2, fz*0.11); x.strokeStyle = bd; x.stroke();
+    x.fillStyle = '#1d2433'; b.rows.forEach((r, j)=> x.fillText(r, bx + pad*0.8, y + pad*0.65 + lh*(j + 0.5)));
+    y += h + gap; });
+  return c; }
+/* thông tin từng câu cho nhận xét — bài ôn luyện (khung trả lời) */
+function wsCmtInfo(test, picks){ const Q = {}, qn = lab=> parseInt(String(lab)) || 0;
+  picks.forEach(p=>{ const r = test.rows[p.k], n = qn(r.lab); if(!n) return; const q = Q[n] || (Q[n] = {n, part:r.t ? 'TLN' : r.n === 2 ? 'DS' : 'TN', ok:true, blank:true, sub:0, subBad:0, pt:0, got:0});
+    const ok = p.rok != null ? p.rok : p.ok; if(p.pk.state !== 'blank') q.blank = false;
+    if(q.part === 'DS'){ q.sub++; if(!ok) q.subBad++; } if(!ok) q.ok = false; q.pt += r.pt; if(ok && !r.t) q.got += r.pt; });
+  return Object.values(Q).map(q=>{ if(q.part === 'TLN' && q.ok) q.got = q.pt; const m = (test.qs||[])[q.n - 1] || {}; q.md = m.md || ''; q.dg = m.dg || ''; return q; }).sort((a, b)=> a.n - b.n); }
+/* thông tin từng câu cho nhận xét — bài định kỳ (phiếu trả lời đề thi); dạng, mức độ lấy theo câu tương ứng của đề gốc */
+function examCmtInfo(ex, r, g){ const v = g.v, M = v.map || null, Qm = M && ex.qmeta ? ex.qmeta[M.root] : null, cont = ex.cont !== 0, out = []; let n = 0;
+  const meta = (part, i)=>{ if(!Qm) return {}; if(part === 'TN') return (Qm.tn||[])[(M.tn[i]||0) - 1] || {}; if(part === 'DS') return (Qm.ds||[])[((M.ds[i]||{}).q||0) - 1] || {}; return (Qm.tln||[])[(M.tln[i]||0) - 1] || {}; };
+  [...v.tn].forEach((k, i)=>{ n++; out.push(Object.assign({n, part:'TN', ok:g.tn[i], blank:!r.tn[i] || r.tn[i] === '?', pt:ex.p.TN, got:g.tn[i] ? ex.p.TN : 0}, meta('TN', i))); });
+  if(!cont) n = 0;
+  for(let q = 0; q < v.ds.length/4; q++){ n++; const bad = [0, 1, 2, 3].filter(j=> !g.ds[q*4 + j]).length, bl = [0, 1, 2, 3].every(j=> !r.ds[q*4 + j] || r.ds[q*4 + j] === '?');
+    out.push(Object.assign({n, part:'DS', ok:!bad, blank:bl, sub:4, subBad:bad, pt:4*ex.p.DSy, got:(4 - bad)*ex.p.DSy}, meta('DS', q))); }
+  if(!cont) n = 0;
+  v.tln.forEach((k, i)=>{ n++; out.push(Object.assign({n, part:'TLN', ok:g.tl[i], blank:!String((r.tln||[])[i]||'').trim(), pt:ex.p.TLN, got:g.tl[i] ? ex.p.TLN : 0}, meta('TLN', i))); });
+  return out; }
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).filter(w=> !(pendSrc && pendSrc.sbdManual && /^Số báo danh/.test(w))); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
-    return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, at:Date.now(), url:examAnnotate(canvas, f.r, f.ex, g).toDataURL('image/jpeg', 0.85)}; }
-  const r = f.r; return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', cmt:r.comment || '', qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:wakAnnotate(canvas, r).toDataURL('image/jpeg', 0.85)};
+    const cm = cmtRich(examCmtInfo(f.ex, f.r, g), g.pts, g.max, {tl:!!f.ex.tl});   // nhận xét động viên (bong bóng chat dưới ảnh)
+    return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, cmt:cm ? cm.text : '', cm, at:Date.now(), url:cmtPanel(examAnnotate(canvas, f.r, f.ex, g), cm).toDataURL('image/jpeg', 0.85)}; }
+  const r = f.r, cm = cmtRich(wsCmtInfo(r.test, r.picks), r.pts, r.max, {tl:(r.test.qs||[]).some(q=> q.k === 'TL')}); return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', cmt:cm ? cm.text : '', cm, qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:cmtPanel(wakAnnotate(canvas, r), cm).toDataURL('image/jpeg', 0.85)};
 }
 // bỏ một bản ghi đã lưu (đúng đối tượng đó) khỏi danh sách kết quả
 function unkeep(rec){ if(!rec) return; if(rec.kind==='exam'){ const a = xres[rec.exId] || [], i = a.indexOf(rec); if(i >= 0){ a.splice(i, 1); saveX(); } } else { const i = results.indexOf(rec); if(i >= 0){ results.splice(i, 1); saveResults(); } } }
@@ -1002,7 +1099,7 @@ function drawShot(){
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
-  $('shotWarn').innerHTML = (pending.cmt ? '<div style="color:#7a1a16;background:#fdf3f2;border-left:3px solid #d0302b;border-radius:6px;padding:6px 8px;margin:4px 0 6px;font-weight:400;line-height:1.4"><b>Nhận xét:</b> ' + esc(pending.cmt) + '</div>' : '') + esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét hiện cả bằng chữ (ảnh chụp sát khung có thể không còn chỗ vẽ ô nhận xét)
+  $('shotWarn').innerHTML = (pending.cm ? cmtHtml(pending.cm) : '') + esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét hiện cả bằng chữ (ảnh chụp sát khung có thể không còn chỗ vẽ ô nhận xét)
   const fx = $('shotFix'), S = pendSrc;
   if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId), parts = [];
     // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
