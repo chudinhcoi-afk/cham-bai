@@ -650,10 +650,11 @@ function wakLocate(gray, w, h, pickTest, cg){
       const map = omrSolveHomography([[0,0],[1,0],[1,1],[0,1]], [[TL.x,TL.y],[TR.x,TR.y],[BR.x,BR.y],[BL.x,BL.y]]); if(!map) continue;
       const ink = [[0,0],[1,0],[1,1],[0,1]].reduce((t,[u,v])=> t + omrMeanGray(gray,w,h,map,u,v,ru), 0)/4;
       const topM = us.map(u=> omrMeanGray(gray,w,h,map,u,0,ru)), botM = us.map(u=> omrMeanGray(gray,w,h,map,u,1,ru));
-      const paper = topM.reduce((t,x)=> t+x, 0)/topM.length, mid = (ink + paper)/2;
-      if(paper - ink < 45 || Math.min(...topM) < mid || botM[0] > mid) continue;   // hàng trên phải trắng, ô đầu hàng dưới phải đen
+      const paperM = [90, 110, 130, 150].map(x=> omrMeanGray(gray,w,h,map,(x-2)/span,0,ru)), paper = paperM.reduce((t,x)=> t+x, 0)/paperM.length, mid = (ink + paper)/2;   // dải trên bên phải luôn trống
+      if(paper - ink < 45 || topM[0] < mid || botM[0] > mid) continue;   // ô đầu hàng trên trắng, ô đầu hàng dưới đen (xác định chiều)
       const bits = botM.map(m=> m < mid ? 1 : 0); let id = 0, ones = 0; for(let i=0;i<10;i++){ id |= bits[i+1] << i; ones += bits[i+1]; }
       if(bits[11] !== (ones % 2 ? 0 : 1)) continue;
+      { const tb = topM.map(m=> m < mid ? 1 : 0); if(tb.some(x=> x)){ let hi = 0, o2 = 0; for(let i=0;i<10;i++){ hi |= tb[i+1] << i; o2 += tb[i+1]; } if(tb[11] !== (o2 % 2 ? 0 : 1)) continue; id = hi*1024 + id; } }   // mã bài ≥ 1024 (MathBank V1.66): hàng ô thứ hai ở đỉnh khung
       // Kiểm chứng bằng chính bố cục khung: tại vị trí mỗi ô phải có VÒNG TRÒN in sẵn (tối hơn giấy ở giữa các ô).
       // Bộ bốn điểm ghép nhầm từ các ô học sinh tô đậm sẽ không khớp bố cục này.
       let score = paper - botM[0]; const test = pickTest ? pickTest(id) : null;
