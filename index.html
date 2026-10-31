@@ -780,14 +780,15 @@ function wakAnnotate(canvas, res){   // vẽ kết quả lên ảnh: xanh = tô 
 }
 
 /* ===== Mã đáp án bài kiểm tra: MBP1;<mã bài>;<tên>;<nhãn>:<đáp án><điểm×4 hệ 36>,… — T/F thay cho Đ/S ===== */
+const ptDec = s=> s[0] === '_' ? parseInt(s.slice(1), 36)/100 : parseInt(s, 36)/4;   // điểm: 1 kí tự = điểm×4; _xx = điểm×100 (MathBank V1.68, điểm lẻ 0,1; 0,2…)
 function parsePayload(s){
   let lv = 1; const s0 = String(s||'').trim().replace(/;L(\d+)$/, (_, d)=>{ lv = +d; return ''; });   // ;L2 = khung in theo bố cục v2
   const m = s0.match(/^MBP1;(\d+);([^;]*);(.+)$/s); if(!m) return null;
   const rows = [];
-  for(const tok of m[3].split(',')){ const u = tok.trim().match(/^([0-9]+)=(-?[0-9.]{1,4})\/([0-9a-z])$/);
-    if(u){ const key = wakTlnKey(u[2]); if(!key) return null; wakTlnRows(u[1], key, parseInt(u[3], 36)/4).forEach(r=> rows.push(r)); continue; }   // trả lời ngắn
-    const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z])$/); if(!t) return null;
-    const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:parseInt(t[3], 36)/4}); }
+  for(const tok of m[3].split(',')){ const u = tok.trim().match(/^([0-9]+)=(-?[0-9.]{1,4})\/([0-9a-z]|_[0-9a-z]{1,3})$/);
+    if(u){ const key = wakTlnKey(u[2]); if(!key) return null; wakTlnRows(u[1], key, ptDec(u[3])).forEach(r=> rows.push(r)); continue; }   // trả lời ngắn
+    const t = tok.trim().match(/^([0-9]+[a-d]?):([ABCDTF])([0-9a-z]|_[0-9a-z]{1,3})$/); if(!t) return null;
+    const tf = 'TF'.includes(t[2]); rows.push({lab:t[1], n:tf ? 2 : 4, key:tf ? (t[2]==='T' ? 'Đ' : 'S') : t[2], pt:ptDec(t[3])}); }
   return rows.length ? {id:+m[1], name:m[2], rows, v:lv, at:Date.now()} : null;
 }
 /* ===== Đề thi: chuỗi mã QR MBPX;<id>;<i>;<n>;<mảnh> → ghép → giải nén → MBPE… ===== */
@@ -902,6 +903,7 @@ function readFrame(img){
   let r; try{ r = wakRead(img, pickTest); }catch(e){ r = {ok:false}; }
   if(!r.ok && r.id >= 1024 && akKeys.length){ cloudTest(r.id); return {ok:false, load:r.id, why:cloudWhy(r.id)}; }   // tự tải đáp án theo mã bài
   if(!r.ok) return {ok:false, why: r.id != null ? ['Mã bài ' + r.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'] : ['Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.']};
+  if(r.id >= 1024) cloudRefresh(r.id);
   if(pinTest != null && r.id !== pinTest) return {ok:false, corners:r.corners, why:['Bài này thuộc đề khác: mã bài ' + r.id + ' · ' + esc(r.test.name || ''), 'Đang chấm mã bài ' + pinTest + '. Chạm tên đề ở trên để đổi.']};
   return {ok:true, kind:'ws', r, corners:r.corners, sig:r.id + '|' + r.picks.map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state[0]).join(''), label:'Mã bài ' + r.id + ' · ' + r.test.name};
 }
@@ -1041,20 +1043,31 @@ async function fbToken(){ const c = ls('mbpscan_fbtok', null); if(c && c.t && c.
     if(r.ok){ const d = await r.json(); lsSet('mbpscan_fbtok', {t:d.id_token, rt:d.refresh_token, exp:Date.now() + (+d.expires_in || 3600)*1000}); return d.id_token; } }catch(e){} }
   const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_KEY, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"returnSecureToken":true}'}); const d = await r.json();
   if(!r.ok) throw new Error('Không đăng nhập được máy chủ'); lsSet('mbpscan_fbtok', {t:d.idToken, rt:d.refreshToken, exp:Date.now() + (+d.expiresIn || 3600)*1000}); return d.idToken; }
+async function cloudFetch(id){ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
+  const r = await fetch(FB_DB + '/mbp/' + id + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
+  const d = await r.json(); if(!d || !d.c) return null;
+  for(const k of akKeys){ try{ const key = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); const t = parsePayload(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, key, b64u(d.c)))); if(t && t.id === id){ t.cloud = 1; return t; } }catch(e){} }
+  throw new Error('Đáp án mã bài ' + id + ' thuộc máy tính chưa liên kết với điện thoại này'); }
+/* thầy sửa thang điểm trên máy tính → điện thoại nhận bản mới và tính lại điểm các bài đã chấm của mã đó (dựa trên kết quả từng ô đã lưu) */
+function rescore(t){ let n = 0; results.forEach(r=>{ if(r.kind !== 'ws' || r.id !== t.id || !r.qa || r.qa.length !== t.rows.length) return;
+    const pts = Math.round(t.rows.reduce((s, x, k)=> s + (r.qa[k] === 'o' ? x.pt : 0), 0)*100)/100, max = Math.round(t.rows.reduce((s, x)=> s + x.pt, 0)*100)/100;
+    if(pts !== r.pts || max !== r.max){ r.pts = pts; r.max = max; r.rescored = 1; n++; } });
+  if(n){ saveResults(); try{ drawResults(); }catch(e){} } return n; }
+function putTest(t){ const i = tests.findIndex(x=> x.id === t.id), same = i >= 0 && JSON.stringify(tests[i].rows) === JSON.stringify(t.rows); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); return {isNew:i < 0, changed:i >= 0 && !same}; }
+const cloudChk = {};
+function cloudRefresh(id){ if(!akKeys.length || cloudChk[id] && Date.now() - cloudChk[id] < 60000) return; cloudChk[id] = Date.now();
+  cloudFetch(id).then(t=>{ if(!t) return; const c = putTest(t); if(c.changed){ const n = rescore(t); drawTests(); toast('Thang điểm mã bài ' + id + ' vừa được sửa trên máy tính — đã cập nhật' + (n ? ', tính lại ' + n + ' bài đã chấm.' : '.'), 3500); } }, ()=>{}); }
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') tests.filter(t=> t.id >= 1024).slice(-10).forEach(t=> cloudRefresh(t.id)); });
 function cloudTest(id){ if(!akKeys.length || !(id >= 1024)) return Promise.resolve(null); const w = cloudWait[id];
   if(w && w.p) return w.p; if(w && Date.now() - w.at < 15000) return Promise.resolve(null);   // vừa thử không có: 15 giây sau mới hỏi lại
-  const p = (async()=>{ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
-    const r = await fetch(FB_DB + '/mbp/' + id + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
-    const d = await r.json(); if(!d || !d.c) return null;
-    for(const k of akKeys){ try{ const key = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); const t = parsePayload(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, key, b64u(d.c)))); if(t && t.id === id) return t; }catch(e){} }
-    throw new Error('Đáp án mã bài ' + id + ' thuộc máy tính chưa liên kết với điện thoại này'); })()
-  .then(t=>{ cloudWait[id] = {at:Date.now(), miss:!t}; if(t){ const i = tests.findIndex(x=> x.id === t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); if(pinTest != null && pinTest !== t.id){ pinTest = null; lsSet('mbpscan_pin', null); } drawTests(); toast('Đã tải đáp án mã bài ' + id + ' từ máy chủ.', 2200); } return t; },
+  const p = cloudFetch(id)
+  .then(t=>{ cloudWait[id] = {at:Date.now(), miss:!t}; if(t){ putTest(t); cloudChk[id] = Date.now(); if(pinTest != null && pinTest !== t.id){ pinTest = null; lsSet('mbpscan_pin', null); } drawTests(); toast('Đã tải đáp án mã bài ' + id + ' từ máy chủ.', 2200); } return t; },
         e=>{ cloudWait[id] = {at:Date.now(), err:e.message}; return null; });
   cloudWait[id] = {p, at:Date.now()}; return p; }
 function cloudWhy(id){ const w = cloudWait[id] || {}; return w.err ? ['Không tải được đáp án mã bài ' + id, esc(w.err)] : w.miss ? ['Mã bài ' + id + ' chưa có đáp án trên máy chủ', 'Trên máy tính: in xong bấm “Lưu đáp án” (cần có mạng). Hoặc quét mã QR của đề.'] : ['Đang tải đáp án mã bài ' + id + '…', 'Giữ yên phiếu.']; }
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
-function addTest(t){ const i = tests.findIndex(x=> x.id===t.id); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); pinTest = t.id; lsSet('mbpscan_pin', t.id); setMode('ws'); drawTests(); toast('Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
+function addTest(t){ const c = putTest(t), nr = c.changed ? rescore(t) : 0; pinTest = t.id; lsSet('mbpscan_pin', t.id); setMode('ws'); drawTests(); toast((nr ? 'Đã tính lại ' + nr + ' bài theo thang điểm mới. ' : '') + 'Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
 function addExam(ex){ const i = exams.findIndex(x=> x.id===ex.id); if(i >= 0) exams[i] = ex; else exams.push(ex); if(exams.length > 12) exams.shift(); activeExam = ex.id; saveExams(); setMode('exam'); drawTests(); toast('Đã nạp đề thi: ' + Object.keys(ex.variants).length + ' mã đề, ' + ex.order.length + ' học sinh.', 3200); }
 async function takeCode(raw){   // trả về true nếu đã nạp xong một đề
   raw = String(raw||'').trim();
