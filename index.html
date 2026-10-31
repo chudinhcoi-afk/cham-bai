@@ -359,6 +359,14 @@ function omrPickGroup(opts, scores){
   return {v:opts[idx[0]].v, state:'ok', i:idx[0]};
 }
 const OMR_MARKERS = {TL:[3.9,4.2], TR:[139.9,4.2], BL:[3.9,99.1], BR:[139.9,99.1], size:4.2};
+/* V1.74: MÃ BÀI trên phiếu đề thi giữa kỳ, cuối kỳ — dải ô vuông ở mép đáy, xen giữa 5 vạch định vị: 20 bit mã + 6 bit kiểm tra.
+   Phiếu cũ (không có ô nào) đọc ra mã 0 → chấm như trước. Mã lấy từ bộ đếm chung như phiếu ôn luyện. */
+const OMR_AK = (()=>{ const xs = []; [[7.6, 29.4], [34.4, 50.3], [55.7, 71.6], [77.0, 92.9], [98.4, 114.3], [119.6, 135.6]].forEach(([a, b])=>{ for(let x = a + 1.1; x + 1.1 <= b + 0.01; x += 3) xs.push(Math.round(x*100)/100); }); return xs.slice(0, 26); })();
+function omrAkCheck(id){ return ((id ^ (id >> 6) ^ (id >> 12) ^ (id >> 18)) & 63) ^ 42; }
+function omrAkBits(id){ if(!(id > 0)) return []; const c = omrAkCheck(id), b = []; for(let i = 0; i < 20; i++) b.push((id >> i) & 1); for(let i = 0; i < 6; i++) b.push((c >> i) & 1); return b; }
+function omrReadAk(gray, w, h, map, loc){ const mid = (loc.dark + loc.paper)/2, ms = OMR_AK.map(x=> omrMeanGray(gray, w, h, map, x, 98.1, 0.6)), bits = ms.map(m=> m < mid ? 1 : 0);
+  if(!bits.some(x=> x)) return 0; let id = 0, c = 0; for(let i = 0; i < 20; i++) id |= bits[i] << i; for(let i = 0; i < 6; i++) c |= bits[20 + i] << i;
+  return c === omrAkCheck(id) && id > 0 ? id : -1; }   // -1: có dải mã nhưng đọc không chắc
 function omrLayout(){
   const digits = '0123456789'.split('');
   const L = {sbd:[], made:[], p1:[], p2:[], p3:[]};
@@ -526,7 +534,8 @@ function omrReadImageData(img, counts){
     L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; sel.push(r.state==='ok' ? r.i : -1); if(r.state==='weak' || r.state==='multi') bad = r.state; });
     tln.push(s); tlnSel.push(sel); if(bad) unsure.push({k:'tln', q, why:bad});
   }
-  return {ok:true, source:'offline', sbd, made, tn, ds, tln, tlnSel, unsure, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts};
+  let ak = 0; try{ ak = omrReadAk(gray, w, h, map, loc); }catch(e){}
+  return {ok:true, source:'offline', sbd, made, tn, ds, tln, tlnSel, unsure, warnings, marks, corners:loc.corners, map, ink, paper, L, shifts, ak};
 }
 const WAK = {W:176, y0:12.5, pitchY:5.2, x0:8, colW:33, bx:10.5, bp:5.2, idX:14, idP:5, idW:3.2, idN:12, tColW:86, tBlk:26.8, tColW2:55, tBlk2:22.6, tBx2:9, tBp2:4.2};
 // Bố cục khung v2 (từ 10/2026): trả lời ngắn xếp 3 câu một hàng, ô sát hơn (4,2 mm), khối thấp hơn → tiết kiệm giấy. Phiếu in trước đó (v1) vẫn chấm theo bố cục cũ.
@@ -844,7 +853,8 @@ function parseExam(text){
     if(l[0]==='V' && a.length >= 4){ ex.variants[a[0]] = {tn:a[1], ds:a[2].replace(/T/g,'Đ').replace(/F/g,'S'), tln:a[3] ? a[3].split('|') : []};
       // ánh xạ về câu của ĐỀ GỐC (để thống kê câu sai theo đề gốc, không theo vị trí đã trộn): R<đề gốc>:<TN>:<ĐS câu-thứ tự ý>:<TLN>
       if(a[4] && a[4][0]==='R'){ const nums = t=> t ? t.split(',').map(Number) : []; ex.variants[a[0]].map = {root:a[4].slice(1), tn:nums(a[5]), ds:(a[6] ? a[6].split(',') : []).map(x=>{ const [q, p] = x.split('-'); return {q:+q, p:p||'abcd'}; }), tln:nums(a[7])}; } }
-    else if(l[0]==='S' && a.length >= 2){ ex.students[a[0]] = {name:a[1], lop:a[2]||''}; ex.order.push(a[0]); } });
+    else if(l[0]==='S' && a.length >= 2){ ex.students[a[0]] = {name:a[1], lop:a[2]||''}; ex.order.push(a[0]); }
+    else if(l[0]==='K') ex.ak = +l.slice(1) || 0; });   // mã bài in trên phiếu (MathBank V1.74)
   let h = 0; for(let i = 0; i < text.length; i++) h = (h*31 + text.charCodeAt(i)) >>> 0; ex.id = h.toString(36);
   return Object.keys(ex.variants).length ? ex : null;
 }
@@ -933,13 +943,19 @@ function drawQuad(corners, s, col){ const c = $('ov'), v = $('vid'); c.width = v
   x.lineWidth = 4; x.strokeStyle = col; x.beginPath(); corners.forEach((p,i)=>{ const px = ox + p.x*s*k, py = oy + p.y*s*k; i ? x.lineTo(px, py) : x.moveTo(px, py); }); x.closePath(); x.stroke(); }
 /* đọc một khung hình theo chế độ đang chọn → {ok, sig, corners, label, …} hoặc {ok:false, why:[tiêu đề, gợi ý]} */
 function readFrame(img){
-  if(mode==='exam'){ const ex = curExam(); if(!ex) return {ok:false, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính.']};
-    let r; try{ r = omrReadImageData(img, ex.n); }catch(e){ r = {ok:false}; }
+  if(mode==='exam'){ let ex = curExam(); if(!ex && !akKeys.length) return {ok:false, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính.']};
+    let r; try{ r = omrReadImageData(img, ex ? ex.n : {nTN:12, nDS:4, nTLN:6}); }catch(e){ r = {ok:false}; }
     if(!r.ok) return {ok:false, why:['Đưa cả phiếu trả lời vào màn hình', 'Thấy đủ 4 ô vuông đen ở góc phiếu; giữ máy yên một chút.']};
+    if(r.ak > 0){ const e2 = exams.find(e=> e.ak === r.ak);   // phiếu có mã bài: tự chọn đúng đề thi, chưa có thì tải từ máy chủ
+      if(e2 && e2 !== ex){ activeExam = e2.id; saveExams(); drawTests(); ex = e2; try{ r = omrReadImageData(img, ex.n); }catch(e){ r = {ok:false}; } if(!r.ok) return {ok:false, why:['Giữ yên phiếu', '']}; }
+      else if(!e2 && akKeys.length && r.ak >= 1024){ cloudExam(r.ak); return {ok:false, load:r.ak, exam:1, corners:r.corners, why:cloudWhy('e' + r.ak).map(x=> x.replace(/([mM])ã bài e(\d+)/, '$1ã bài $2 (đề thi)'))}; } }
+    if(!ex) return {ok:false, corners:r.corners, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính (phiếu in từ MathBank V1.74 trở lên có mã bài thì tự tải).']};
     if(!ex.variants[r.made]) return {ok:false, corners:r.corners, why:['Mã đề “' + (r.made || '?') + '” không có trong đề đang chấm', 'Kiểm tra ô mã đề học sinh tô, hoặc chọn đúng đề ở thẻ “Đề”.']};
     return {ok:true, kind:'exam', r, ex, corners:r.corners, sig:[r.sbd, r.made, r.tn, r.ds, (r.tln||[]).join('|')].join('/'), label:'SBD ' + (r.sbd || '?') + ' · mã đề ' + r.made}; }
   if(!tests.length && !akKeys.length) return {ok:false, why:['Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án (hoặc mã liên kết) từ máy tính.']};
   let r; try{ r = wakRead(img, pickTest); }catch(e){ r = {ok:false}; }
+  // không thấy khung ôn luyện (hoặc nhận nhầm mã cũ trên phiếu đề thi): thử đọc phiếu đề thi có mã bài
+  if(!r.ok && !(r.id >= 1024) && akKeys.length && (readFrame.k = (readFrame.k || 0) + 1) % 2 === 0){ let o = null; try{ o = omrReadImageData(img, {nTN:12, nDS:4, nTLN:6}); }catch(e){} if(o && o.ok && o.ak > 0){ setMode('exam'); return readFrame(img); } }
   if(!r.ok && r.id >= 1024 && akKeys.length){ cloudTest(r.id); return {ok:false, load:r.id, why:cloudWhy(r.id)}; }   // tự tải đáp án theo mã bài
   if(!r.ok) return {ok:false, why: r.id != null ? ['Mã bài ' + r.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'] : ['Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.']};
   if(r.id >= 1024) cloudRefresh(r.id);
@@ -1065,7 +1081,7 @@ $('fPick').onchange = async e=>{
   for(const file of files){
     const img = await new Promise(res=>{ const im = new Image(); im.onload = ()=> res(im); im.onerror = ()=> res(null); im.src = URL.createObjectURL(file); }); if(!img) continue;
     const k = Math.min(1, 2400/Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width*k); c.height = Math.round(img.height*k); const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, c.width, c.height);
-    let f = readFrame(cx.getImageData(0, 0, c.width, c.height)); if(!f.ok && f.load){ await cloudTest(f.load); f = readFrame(cx.getImageData(0, 0, c.width, c.height)); if(!f.ok && f.load) f.why = cloudWhy(f.load); } if(!f.ok){ if(files.length===1) toast(f.why[0], 3200); continue; }
+    let f = readFrame(cx.getImageData(0, 0, c.width, c.height)); if(!f.ok && f.load){ await (f.exam ? cloudExam(f.load) : cloudTest(f.load)); f = readFrame(cx.getImageData(0, 0, c.width, c.height)); if(!f.ok && f.load) f.why = cloudWhy(f.load); } if(!f.ok){ if(files.length===1) toast(f.why[0], 3200); continue; }
     okN++; if(files.length===1) last = {c, f}; else keep(makeRecord(c, f));
   }
   if(last){ showShot(last.c, last.f); return; }
@@ -1082,11 +1098,16 @@ async function fbToken(){ const c = ls('mbpscan_fbtok', null); if(c && c.t && c.
     if(r.ok){ const d = await r.json(); lsSet('mbpscan_fbtok', {t:d.id_token, rt:d.refresh_token, exp:Date.now() + (+d.expires_in || 3600)*1000}); return d.id_token; } }catch(e){} }
   const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_KEY, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"returnSecureToken":true}'}); const d = await r.json();
   if(!r.ok) throw new Error('Không đăng nhập được máy chủ'); lsSet('mbpscan_fbtok', {t:d.idToken, rt:d.refreshToken, exp:Date.now() + (+d.expiresIn || 3600)*1000}); return d.idToken; }
-async function cloudFetch(id){ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
-  const r = await fetch(FB_DB + '/mbp/' + id + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
+async function cloudFetch(id){ const txt = await cloudDecrypt(String(id)); if(txt == null) return null; const t = parsePayload(txt); if(t && t.id === id){ t.cloud = 1; return t; } throw new Error('Đáp án mã bài ' + id + ' không đọc được'); }
+/* đề thi giữa kỳ, cuối kỳ (MathBank V1.74): mbp/e<mã bài> chứa đáp án mọi mã đề + danh sách SBD */
+function cloudExam(ak){ const key = 'e' + ak, w = cloudWait[key]; if(w && w.p) return w.p; if(w && Date.now() - w.at < 15000) return Promise.resolve(null);
+  const p = cloudDecrypt(key).then(txt=>{ const ex = txt ? parseExam(txt) : null; if(ex){ ex.ak = ak; addExam(ex); } cloudWait[key] = {at:Date.now(), miss:!ex}; return ex; }, e=>{ cloudWait[key] = {at:Date.now(), err:e.message}; return null; });
+  cloudWait[key] = {p, at:Date.now()}; return p; }
+async function cloudDecrypt(key){ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
+  const r = await fetch(FB_DB + '/mbp/' + key + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
   const d = await r.json(); if(!d || !d.c) return null;
-  for(const k of akKeys){ try{ const key = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); const t = parsePayload(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, key, b64u(d.c)))); if(t && t.id === id){ t.cloud = 1; return t; } }catch(e){} }
-  throw new Error('Đáp án mã bài ' + id + ' thuộc máy tính chưa liên kết với điện thoại này'); }
+  for(const k of akKeys){ try{ const ck = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, ck, b64u(d.c))); }catch(e){} }
+  throw new Error('Đáp án mã bài ' + key.replace(/^e/, '') + ' thuộc máy tính chưa liên kết với điện thoại này'); }
 /* thầy sửa thang điểm trên máy tính → điện thoại nhận bản mới và tính lại điểm các bài đã chấm của mã đó (dựa trên kết quả từng ô đã lưu) */
 function rescore(t){ let n = 0; results.forEach(r=>{ if(r.kind !== 'ws' || r.id !== t.id || !r.qa || r.qa.length !== t.rows.length) return;
     const pts = Math.round(t.rows.reduce((s, x, k)=> s + (r.qa[k] === 'o' ? x.pt : 0), 0)*100)/100, max = Math.round(t.rows.reduce((s, x)=> s + x.pt, 0)*100)/100;
