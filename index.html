@@ -133,7 +133,11 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 #zoom{display:none;position:fixed;inset:0;background:#0d1226;z-index:60;overflow:auto}
 #zoom.on{display:block}
 #zoom img{width:100%;display:block}
-#zoom .zb{position:sticky;bottom:0;background:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+#zoom .zb{position:sticky;bottom:0;background:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:8px}
+#zoom .zb .cmini{flex:1 0 100%}
+.cmini{background:#fffaf0;border:1px solid #ecd9a8;border-radius:10px;padding:6px 10px;font-size:.84rem;line-height:1.35;color:#1d2433;max-height:5.6em;overflow:auto;margin-top:6px}
+.cmini div{display:flex;gap:6px;padding:1px 0}.cmini div>span:first-child{flex:none}.cmini div>span+span{flex:1;min-width:0}
+.cmini.open{max-height:40vh}
 .tb{width:100%;border-collapse:collapse;font-size:.86rem}
 .tb th,.tb td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .tb th{position:sticky;top:0;background:#f0f2f8;font-weight:700}
@@ -187,7 +191,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 13/10b · đọc phiếu v3</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11 · đọc phiếu v3</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -1042,6 +1046,9 @@ function cmtRich(qs, pts, max, extra){
   return cmtPack(L, mood); }
 function cmtPack(L, mood){ return {mood, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
 const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], cheer:['#ffe3ef', '#e0457b']};
+/* khung nhận xét gọn (chữ nhỏ, một thẻ, chạm để mở hết) — dùng ở màn hình sau khi chấm và mục Kết quả */
+function cmtMini(r){ const cm = r && (r.cm || (r.cmt ? {lines:[{i:'💬', t:r.cmt}]} : null)); if(!cm || !cm.lines || !cm.lines.length) return '';
+  return '<div class="cmini" onclick="this.classList.toggle(\'open\')">' + cm.lines.map(l=> '<div><span>' + l.i + '</span><span>' + esc(l.t) + '</span></div>').join('') + '</div>'; }
 /* bong bóng chat ở màn hình kết quả */
 function cmtHtml(cm){ if(!cm || !cm.lines) return '';
   return '<div style="display:flex;flex-direction:column;gap:7px;margin:6px 0 8px">' + cm.lines.map((l, i)=>{ const [bg, bd] = CMT_COL[l.k] || CMT_COL.tip;
@@ -1105,7 +1112,7 @@ function drawShot(){
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
-  $('shotWarn').innerHTML = esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét (bong bóng chat) đã vẽ dưới ảnh bởi cmtPanel — kéo ảnh xuống để xem; không lặp lại ở thanh dưới để ảnh có chỗ hiện
+  $('shotWarn').innerHTML = cmtMini(pending) + esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét (bong bóng chat) đã vẽ dưới ảnh bởi cmtPanel — kéo ảnh xuống để xem; không lặp lại ở thanh dưới để ảnh có chỗ hiện
   const fx = $('shotFix'), S = pendSrc;
   if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId), parts = [];
     // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
@@ -1421,7 +1428,7 @@ async function sendToPc(ex){ const list = xres[ex.id] || [];
   try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
   try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } }
 let zi = -1;
-function zoom(i){ zi = i; $('zoomImg').src = curList()[i].url; $('zSbd').style.display = rv && rv.kind==='x' ? '' : 'none'; $('zoom').classList.add('on'); }
+function zoom(i){ zi = i; const r = curList()[i]; $('zoomImg').src = r.url; { const zb = $('zoom').querySelector('.zb'), old = zb.querySelector('.cmini'); if(old) old.remove(); zb.insertAdjacentHTML('afterbegin', cmtMini(r)); } $('zSbd').style.display = rv && rv.kind==='x' ? '' : 'none'; $('zoom').classList.add('on'); }
 $('zSbd').onclick = ()=>{ const ex = rvExam(), r = curList()[zi]; if(!ex || !r) return;
   const v = prompt('Nhập số báo danh của bài này' + (r.sbd ? ' (máy đọc: ' + r.sbd + ')' : ' (phiếu không tô SBD)') + ':', r.sbd || ''); if(v === null) return;
   const sb = v.trim(); if(!sb) return; if(!ex.students[sb] && !confirm('SBD ' + sb + ' không có trong danh sách. Vẫn gán?')) return;
