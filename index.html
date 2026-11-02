@@ -191,7 +191,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11b · đọc phiếu v3</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11c · đọc phiếu v3</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -1121,11 +1121,11 @@ function parentCard(crop, pts, max, cm){   // ảnh cắt (họ tên, mã bài/m
   return cmtPanel(c, cm, {pts, max}); }
 /* bài kiểm tra (khung trả lời ở đầu trang): lấy cả phần họ tên, lớp, ngày phía trên khung */
 function wsParentImg(canvas, r, cm){ const {c, k} = wakAnnotate(canvas, r, true), map = (X, Y)=>{ const [px, py] = r.mapMm(X, Y); return [px*k, py*k]; };
-  const crop = trimTop(warpCrop(c, map, -3, -42, WAK.W + 3, r.G.H + 2, 1080), 1080/(WAK.W + 6)*3);   // phần họ tên, lớp, ngày, mã bài in cách khung ~36 mm; xén bớt giấy trắng thừa phía trên
+  const crop = trimTop(warpCrop(c, map, -3, -55, WAK.W + 3, r.G.H + 2, 1080), 1080/(WAK.W + 6)*7);   // phần họ tên, lớp, ngày, mã bài in cách khung ~36 mm (lấy dư tới 55 mm); xén giấy trắng thừa, chừa lề trên 7 mm
   return parentCard(crop, r.pts, r.max, cm); }
 /* đề thi (phiếu trả lời chung): cả tờ phiếu, nắn thẳng */
 function examParentImg(canvas, f, g, st, cm){ const {c, k} = examAnnotate(canvas, f.r, f.ex, g, true), map = (X, Y)=>{ const [px, py] = f.r.map(X, Y); return [px*k, py*k]; };
-  const crop = warpCrop(c, map, -1.5, -1.5, 145.5, 104.5, 1080);
+  const crop = warpCrop(c, map, -1.5, -7, 145.5, 104.5, 1080);
   return parentCard(crop, g.pts, g.max, cm); }
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).filter(w=> !(pendSrc && pendSrc.sbdManual && /^Số báo danh/.test(w))); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
