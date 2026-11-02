@@ -227,7 +227,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 02/11h · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 02/11i · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -240,6 +240,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
         <div class="stats" id="gStats"></div>
         <div class="row" id="gActs" style="margin-top:12px"></div>
       </div>
+      <div class="card" id="gSum"></div>
       <div class="card" id="gMiss"></div>
       <div class="card" id="xCard" style="display:none;padding:0;overflow:hidden">
         <div style="overflow:auto;max-height:58vh"><table class="tb" id="xTable"></table></div>
@@ -1471,19 +1472,50 @@ const fileName = (r, i)=>{ const d = new Date(r.at || Date.now()), p = x=> Strin
   return (r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_' + tm : 'Ma' + r.id + '_' + tm + '_' + p(i+1)) + '_' + fmtVN(r.pts) + 'diem.jpg'; };
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
 function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
-async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); markSent(list.map(x=> x[0]), true); if(view==='res') drawResults(); if(view==='tests') drawTests(); toast('Đã gửi ' + list.length + ' ảnh — đánh dấu “đã gửi”.', 2200); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
+/* GỬI ẢNH (Zalo…): Chrome chỉ cho chia sẻ tối đa 10 tệp mỗi lần và phải gọi ngay sau khi bấm → chia đợt 10 ảnh, chuẩn bị tệp sẵn; gửi xong đợt nào đánh dấu đợt đó.
+   Máy không chia sẻ được (trình duyệt trong Zalo, trình duyệt cũ…) → tải ảnh về máy và hiện nút “Tôi đã gửi thủ công”. */
+const SHARE_MAX = 10;
+const canShareFiles = files=>{ try{ return !!(navigator.canShare && navigator.share && navigator.canShare({files})); }catch(e){ return false; } };
+function dlFile(f){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(a.href), 30000); }
+async function share(list, sum){   // list: [[bài, chỉ số]]; sum: {key, n, file:()=>Promise<File>} — ảnh nhận xét cả lớp, gửi làm ảnh cuối
+  const items = list.map(([r, i])=> ({r, i})); if(sum) items.push({sum}); if(!items.length) return;
+  const chunks = []; for(let k = 0; k < items.length; k += SHARE_MAX) chunks.push(items.slice(k, k + SHARE_MAX));
+  chunks.forEach(c=>{ c.p = Promise.all(c.map(x=> x.sum ? x.sum.file() : toFile(x.r, x.i))); c.p.catch(()=>{}); });
+  if(chunks.length === 1){ const c = chunks[0]; let files = null; try{ files = await c.p; }catch(e){}
+    if(files && canShareFiles(files)){ try{ await navigator.share({files, title:'Bài đã chấm'}); shareDone(c); toast('Đã gửi ' + files.length + ' ảnh — đánh dấu “đã gửi”.', 2200); return; }catch(e){ if(e && e.name==='AbortError') return; } } }
+  shareSheet(chunks); }
+function shareDone(c){ c.done = true; markSent(c.filter(x=> x.r).map(x=> x.r), true); c.filter(x=> x.sum).forEach(x=> sumMark(x.sum)); if(view==='res') drawResults(); if(view==='tests') drawTests(); }
+function shareSheet(chunks){ const sh = $('sheet'), many = chunks.length > 1, total = chunks.reduce((t, c)=> t + c.length, 0); let pos = 0;
+  const rng = chunks.map(c=>{ const a = pos + 1; pos += c.length; return c.length > 1 ? a + '–' + pos : String(a); });
+  const row = (c, k)=> '<div class="mrow"><div class="tx"><b>' + (many ? 'Đợt ' + (k + 1) + ': ' : '') + 'ảnh ' + rng[k] + '</b><small>' + c.length + ' ảnh' + (c.some(x=> x.sum) ? ' · có ảnh nhận xét cả lớp' : '') + '</small></div>'
+    + (c.done ? '<span class="pill sent">✓ Đã gửi</span>' : c.dl ? '<button class="btn gold" data-k="' + k + '" data-a="ok">✓ Tôi đã gửi</button>' : '<button class="btn gold" data-k="' + k + '" data-a="go">📤 Gửi</button>') + '</div>';
+  const draw = ()=>{ const left = chunks.filter(c=> !c.done).length;
+    sh.innerHTML = '<div class="shBox"><div class="shHead"><small class="mut">GỬI ẢNH QUA ZALO…</small><b style="display:block">' + total + ' ảnh' + (many ? ' · ' + chunks.length + ' đợt' : '') + '</b></div><div class="shBody">'
+      + '<p class="mut" style="margin:0 0 8px">' + (many ? 'Điện thoại chỉ cho gửi tối đa ' + SHARE_MAX + ' ảnh mỗi lần: bấm <b>📤 Gửi</b> từng đợt, chọn Zalo → nhóm hoặc người nhận. Đợt nào gửi xong app tự đánh dấu.' : 'Bấm <b>📤 Gửi</b>, chọn Zalo → nhóm hoặc người nhận.')
+      + (chunks.some(c=> c.dl) ? '<br><span style="color:#8a5a00">Máy không mở được bảng chia sẻ nên ảnh đã được <b>tải về máy</b>. Gửi thủ công qua Zalo xong, bấm <b>✓ Tôi đã gửi</b>. (Mở app bằng Chrome để gửi thẳng được.)</span>' : '') + '</p>'
+      + '<div class="mlist">' + chunks.map(row).join('') + '</div></div><div class="shFoot"><button class="fab" id="sdAll">⬇ Tải hết</button><button class="fab go" id="sdClose">' + (left ? 'Để sau' : 'Xong') + '</button></div></div>';
+    sh.querySelectorAll('.mlist .btn').forEach(b=> b.onclick = async ()=>{ const c = chunks[+b.dataset.k];
+      if(b.dataset.a === 'ok'){ shareDone(c); return draw(); }
+      let files = null; try{ files = await c.p; }catch(e){ toast('Không chuẩn bị được ảnh: ' + e.message, 3000); return; }
+      if(canShareFiles(files)){ try{ await navigator.share({files, title:'Bài đã chấm'}); shareDone(c); return draw(); }catch(e){ if(e && e.name==='AbortError') return; } }
+      c.dl = true; files.forEach((f, j)=> setTimeout(()=> dlFile(f), j*250)); draw(); });
+    $('sdAll').onclick = async ()=>{ for(const c of chunks){ try{ const files = await c.p; files.forEach((f, j)=> setTimeout(()=> dlFile(f), j*250)); if(!c.done) c.dl = true; }catch(e){} } draw(); toast('Đang tải ' + total + ' ảnh về máy…', 2400); };
+    $('sdClose').onclick = sheetClose; };
+  draw(); sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target===sh) sheetClose(); }; }
 /* Thống kê câu sai nhiều trong một lần chấm: tỉ lệ học sinh làm sai (kể cả bỏ trống) theo từng câu */
 function missStats(list, ex){
-  const M = {}, add = (key, label, st)=>{ const o = M[key] || (M[key] = {label, n:0, wrong:0, blank:0}); o.n++; if(st==='x') o.wrong++; else if(st==='-') o.blank++; };
+  const M = {}, add = (key, label, st, md)=>{ const o = M[key] || (M[key] = {label, n:0, wrong:0, blank:0, md:''}); if(md && !o.md) o.md = md; o.n++; if(st==='x') o.wrong++; else if(st==='-') o.blank++; };
   if(ex){ const roots = new Set(Object.values(ex.variants).map(v=> v.map ? v.map.root : null)), multi = roots.size > 1, rt = v=> multi && v.map ? ' · đề gốc ' + v.map.root : '';
-    list.forEach(r=>{ const v = ex.variants[r.made]; if(!v) return; const g = gradeExam(ex, r); if(!g) return; const mp = v.map;
+    list.forEach(r=>{ const v = ex.variants[r.made]; if(!v) return; const g = gradeExam(ex, r); if(!g) return; const mp = v.map, Qm = mp && ex.qmeta ? ex.qmeta[mp.root] : null, qm = (p, k)=> Qm && k ? ((Qm[p] || [])[k - 1] || {}).md : '';
       [...v.tn].forEach((k,i)=>{ const o = mp && mp.tn[i] ? mp.tn[i] : null, st = g.tn[i] ? 'o' : 'ABCD'.includes(r.tn[i]||'?') ? 'x' : '-';
-        add(o ? 'I:' + mp.root + ':' + o : r.made + ':I:' + (i+1), o ? 'Phần I · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần I câu ' + (i+1), st); });
+        add(o ? 'I:' + mp.root + ':' + o : r.made + ':I:' + (i+1), o ? 'Phần I · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần I câu ' + (i+1), st, qm('tn', o)); });
       [...v.ds].forEach((k,i)=>{ const q = Math.floor(i/4), j = i % 4, d = mp && mp.ds[q] ? mp.ds[q] : null, lab = d ? d.q + (d.p[j] || 'abcd'[j]) : null, st = g.ds[i] ? 'o' : 'ĐS'.includes(r.ds[i]||'?') ? 'x' : '-';
-        add(lab ? 'II:' + mp.root + ':' + lab : r.made + ':II:' + (q+1) + 'abcd'[j], lab ? 'Phần II · câu ' + lab + rt(v) : 'Mã ' + r.made + ' · phần II câu ' + (q+1) + 'abcd'[j], st); });
+        add(lab ? 'II:' + mp.root + ':' + lab : r.made + ':II:' + (q+1) + 'abcd'[j], lab ? 'Phần II · câu ' + lab + rt(v) : 'Mã ' + r.made + ' · phần II câu ' + (q+1) + 'abcd'[j], st, qm('ds', d && d.q)); });
       v.tln.forEach((k,i)=>{ const o = mp && mp.tln[i] ? mp.tln[i] : null, st = g.tl[i] ? 'o' : String((r.tln||[])[i]||'').trim() ? 'x' : '-';
-        add(o ? 'III:' + mp.root + ':' + o : r.made + ':III:' + (i+1), o ? 'Phần III · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần III câu ' + (i+1), st); }); }); }
-  else list.forEach(r=>{ const t = pickTest(r.id); if(!t || !r.qa) return; t.rows.forEach((row,i)=> add('w' + row.lab, 'Câu ' + row.lab, r.qa[i] || '-')); });
+        add(o ? 'III:' + mp.root + ':' + o : r.made + ':III:' + (i+1), o ? 'Phần III · câu ' + o + rt(v) : 'Mã ' + r.made + ' · phần III câu ' + (i+1), st, qm('tln', o)); }); }); }
+  else list.forEach(r=>{ const t = pickTest(r.id); if(!t || !r.qa) return; const tl = {}, qmd = q=> ((t.qs || [])[q - 1] || {}).md || '';   // trả lời ngắn: 4 hàng chữ số gộp thành một câu
+    t.rows.forEach((row,i)=>{ const st = r.qa[i] || '-'; if(row.t){ (tl[row.g] = tl[row.g] || []).push(st); return; } add('w' + row.lab, 'Câu ' + row.lab, st, qmd(parseInt(row.lab) || 0)); });
+    Object.keys(tl).forEach(gq=>{ const a = tl[gq], st = a.every(x=> x==='o') ? 'o' : a.includes('x') ? 'x' : '-'; add('wt' + gq, 'Câu ' + gq, st, qmd(parseInt(gq) || 0)); }); });
   return Object.values(M).filter(o=> o.wrong + o.blank > 0).sort((a,b)=> (b.wrong + b.blank)/b.n - (a.wrong + a.blank)/a.n || b.n - a.n);
 }
 function missHtml(list, ex){
@@ -1494,6 +1526,64 @@ function missHtml(list, ex){
     + a.slice(0, 12).map(o=>{ const pc = Math.round(100*(o.wrong + o.blank)/o.n); return '<div class="miss"><div class="ml"><b>' + esc(o.label) + '</b><small>sai ' + o.wrong + (o.blank ? ' · trống ' + o.blank : '') + ' / ' + o.n + ' bài</small></div><div class="mb"><i style="width:' + pc + '%;background:' + (pc >= 50 ? '#d0302b' : pc >= 30 ? '#e08a00' : '#b8892b') + '"></i></div><div class="mp">' + pc + '%</div></div>'; }).join('')
     + (a.length > 12 ? '<p class="mut" style="margin:6px 0 0">… và ' + (a.length - 12) + ' câu khác có học sinh sai.</p>' : '');
 }
+/* ===== NHẬN XÉT CHUNG CẢ LỚP (ảnh gửi kèm cuối lượt gửi): chất lượng chung, phân bố điểm, câu sai nhiều, câu dễ nhưng vẫn sai, hướng khắc phục — không ghi tên học sinh ===== */
+let sumSent = ls('mbpscan_sumsent', {});
+function sumMark(sm){ sumSent[sm.key] = sm.n; lsSet('mbpscan_sumsent', sumSent); }
+const MDN2 = {NB:'nhận biết', TH:'thông hiểu', VD:'vận dụng', VDC:'vận dụng cao'};
+function classStats(list, ex){ const n = list.length, s10 = list.map(r=> r.max ? r.pts/r.max*10 : 0), avg10 = s10.reduce((a, b)=> a + b, 0)/n, cnt = f=> s10.filter(f).length;
+  const bins = [['Từ 8 trở lên', x=> x >= 8, '#12a150'], ['6,5 – dưới 8', x=> x >= 6.5 && x < 8, '#2f6fdf'], ['5 – dưới 6,5', x=> x >= 5 && x < 6.5, '#e0a000'], ['3,5 – dưới 5', x=> x >= 3.5 && x < 5, '#f06a1f'], ['Dưới 3,5', x=> x < 3.5, '#d0302b']].map(([l, f, c])=> ({l, c, k:cnt(f)}));
+  const ms = missStats(list, ex), rate = o=> (o.wrong + o.blank)/o.n, hard = ms.filter(o=> rate(o) >= 0.3).slice(0, 5);
+  const easy = ms.filter(o=> !hard.includes(o) && (o.md === 'NB' || o.md === 'TH' || (o.n - o.wrong - o.blank)/o.n >= 0.7)).sort((a, b)=> (b.wrong + b.blank) - (a.wrong + a.blank)).slice(0, 5);
+  const pass = cnt(x=> x >= 5)/n, good = cnt(x=> x >= 8)/n, low = cnt(x=> x < 3.5), blanks = ms.reduce((t, o)=> t + o.blank, 0), cells = ms.reduce((t, o)=> t + o.n, 0) || 1;
+  const verdict = avg10 >= 8 && pass >= 0.9 ? ['🌟', 'Lớp làm bài rất tốt: đa số nắm chắc kiến thức của bài.'] : avg10 >= 6.5 ? ['👍', 'Kết quả khá: phần lớn lớp nắm được bài, còn một số chỗ cần củng cố.'] : avg10 >= 5 ? ['📌', 'Kết quả trung bình: lớp cần ôn lại các câu sai nhiều dưới đây.'] : ['⚠️', 'Kết quả chưa đạt yêu cầu: cả lớp cần ôn lại bài này trước khi học tiếp.'];
+  const notes = []; if(good >= 0.3) notes.push(Math.round(good*100) + '% bài đạt từ 8 điểm.'); if(low) notes.push(low + ' bài dưới 3,5 điểm — các em này cần được kèm cặp thêm.'); else if(pass >= 0.95) notes.push('Không có bài nào dưới 3,5 điểm.');
+  const tips = [];
+  if(hard.length) tips.push('Chữa kĩ trên lớp ' + hard.slice(0, 3).map(o=> o.label.replace(/^Câu /, 'câu ')).join(', ') + ' — nhiều bạn chưa làm được.');
+  if(easy.some(o=> o.wrong)) tips.push('Các câu dễ vẫn còn bạn sai: chủ yếu do chưa cẩn thận — nhắc các em đọc kĩ đề, kiểm tra lại trước khi tô.');
+  if(blanks/cells > 0.1) tips.push('Nhiều câu bị bỏ trống: nhắc các em phân bổ thời gian và làm hết bài.');
+  if(pass < 0.5) tips.push('Ôn lại kiến thức trọng tâm của bài rồi cho làm một bài kiểm tra ngắn để củng cố.');
+  else if(avg10 >= 8) tips.push('Có thể giao thêm bài vận dụng để các em khá, giỏi bứt phá.');
+  return {n, avg10, bins, hard, easy, pass, verdict, notes, tips, detail:ms.length > 0, rate}; }
+function classSummaryCanvas(list, ex, title, sub){
+  const S = classStats(list, ex), W = 1080, pad = 44, F = 'Roboto, "Segoe UI", Arial, sans-serif', c = document.createElement('canvas'); c.width = W; c.height = 4200; const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 4200); g.addColorStop(0, '#fffaf0'); g.addColorStop(1, '#f6f0ff'); x.fillStyle = g; x.fillRect(0, 0, W, 4200); x.textBaseline = 'alphabetic';
+  const wrap = (t, font, maxW)=>{ x.font = font; const out = []; let cur = ''; String(t).split(' ').forEach(w=>{ const z = cur ? cur + ' ' + w : w; if(x.measureText(z).width > maxW && cur){ out.push(cur); cur = w; } else cur = z; }); if(cur) out.push(cur); return out; };
+  const rr = (X, Y, w, h, r)=>{ x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); };
+  // đầu trang
+  const tl = wrap(title, `700 38px ${F}`, W - 2*pad), hh = 120 + tl.length*48 + 50; x.fillStyle = '#141c3a'; x.fillRect(0, 0, W, hh);
+  x.fillStyle = '#e0b030'; x.font = `800 30px ${F}`; x.fillText('📊 NHẬN XÉT CHUNG CẢ LỚP', pad, 70);
+  x.fillStyle = '#fff'; x.font = `700 38px ${F}`; tl.forEach((l, i)=> x.fillText(l, pad, 128 + i*48)); x.fillStyle = 'rgba(255,255,255,.75)'; x.font = `500 27px ${F}`; x.fillText(sub, pad, 128 + tl.length*48 + 4);
+  let y = hh + 34;
+  // ô số liệu
+  const pts = list.map(r=> r.pts), tiles = [[fmtVN(avgOf(list)), 'điểm TB'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất'], [Math.round(S.pass*100) + '%', 'từ 5 điểm']], tw = (W - 2*pad - 3*18)/4;
+  tiles.forEach(([v, l], i)=>{ const X = pad + i*(tw + 18); rr(X, y, tw, 132, 18); x.fillStyle = '#fff'; x.fill(); x.lineWidth = 2; x.strokeStyle = '#ecd9a8'; x.stroke(); x.textAlign = 'center';
+    x.fillStyle = i === 0 ? '#d0302b' : '#141c3a'; x.font = `800 52px ${F}`; x.fillText(v, X + tw/2, y + 70); x.fillStyle = '#5a6378'; x.font = `600 25px ${F}`; x.fillText(l, X + tw/2, y + 110); x.textAlign = 'left'; });
+  y += 132 + 64;
+  // phân bố điểm
+  x.fillStyle = '#7a3e00'; x.font = `800 32px ${F}`; x.fillText('Phân bố điểm (' + S.n + ' bài)', pad, y); y += 22;
+  const mx = Math.max(1, ...S.bins.map(b=> b.k)), bx = pad + 230, bw = W - bx - pad - 200;
+  S.bins.forEach(b=>{ y += 54; x.fillStyle = '#1d2433'; x.font = `600 27px ${F}`; x.fillText(b.l, pad, y); rr(bx, y - 28, bw, 32, 10); x.fillStyle = '#eceef4'; x.fill();
+    if(b.k){ rr(bx, y - 28, Math.max(18, bw*b.k/mx), 32, 10); x.fillStyle = b.c; x.fill(); } x.fillStyle = '#1d2433'; x.font = `700 27px ${F}`; x.fillText(b.k + ' bài · ' + Math.round(100*b.k/S.n) + '%', bx + bw + 14, y); });
+  y += 44;
+  // các khối nhận xét
+  const block = (bg, bd, head, lines)=>{ const L = []; lines.forEach(t=> wrap(t, `600 30px ${F}`, W - 2*pad - 60).forEach((l, j)=> L.push([l, j === 0]))); const h = 74 + L.length*42 + 18;
+    rr(pad, y, W - 2*pad, h, 24); x.fillStyle = bg; x.fill(); x.lineWidth = 3; x.strokeStyle = bd; x.stroke();
+    x.fillStyle = '#1d2433'; x.font = `800 31px ${F}`; x.fillText(head, pad + 28, y + 52); x.font = `600 30px ${F}`; L.forEach(([l], i)=> x.fillText(l, pad + 30, y + 100 + i*42)); y += h + 26; };
+  block('#fff3cd', '#f0a500', S.verdict[0] + ' Đánh giá chung', ['Điểm trung bình ' + fmtVN(avgOf(list)) + '/' + fmtVN(list[0].max) + '. ' + S.verdict[1]].concat(S.notes));
+  if(!S.detail) block('#eef0f7', '#b8bfd1', 'ℹ️ Thống kê theo câu', ['Các bài này chấm từ bản cũ, chưa lưu chi tiết từng câu nên chưa thống kê được câu sai.']);
+  else {
+    block('#ffe8d6', '#f06a1f', '🔍 Câu sai nhiều', S.hard.length ? S.hard.map(o=> '• ' + o.label + (o.md ? ' (' + MDN2[o.md] + ')' : '') + ': ' + Math.round(100*S.rate(o)) + '% chưa làm được (' + o.wrong + ' sai' + (o.blank ? ', ' + o.blank + ' bỏ trống' : '') + ')') : ['Không có câu nào bị từ 30% số bài trở lên làm sai — lớp làm đều tay.']);
+    const ez = S.easy.filter(o=> o.wrong + o.blank);
+    block('#e3eeff', '#2f6fdf', '💡 Câu dễ nhưng vẫn sai', ez.length ? ez.map(o=> '• ' + o.label + (o.md ? ' (' + MDN2[o.md] + ')' : ' (đa số lớp làm đúng)') + ': ' + (o.wrong + o.blank) + '/' + o.n + ' bài sai') : ['Không có — các câu dễ cả lớp đều làm đúng. 👏']); }
+  block('#f1e6ff', '#8a4fd6', '🎯 Hướng khắc phục', S.tips.length ? S.tips.map(t=> '• ' + t) : ['• Duy trì nề nếp ôn bài như hiện nay.']);
+  x.fillStyle = '#9aa0b3'; x.font = `500 24px ${F}`; x.fillText('MBP Chấm bài · ' + dayVN(dayKey(Date.now())) + ' · nhận xét tự động, không nêu tên học sinh', pad, y + 6); y += 34;
+  const o = document.createElement('canvas'); o.width = W; o.height = Math.ceil(y); o.getContext('2d').drawImage(c, 0, 0); return o; }
+const slugVN = t=> String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+function groupSum(g, list, ex){ if(!list.length) return null; const key = g.kind + g.key; let url = null;
+  const make = ()=> url || (url = classSummaryCanvas(list, ex, g.title, dayVN(dayKey(g.at)) + ' · ' + (ex ? list.length + '/' + g.total : list.length) + ' bài đã chấm').toDataURL('image/jpeg', 0.9));
+  return {key, n:list.length, url:make, file:async ()=> new File([await (await fetch(make())).blob()], 'Nhan_xet_ca_lop_' + slugVN(g.title) + '.jpg', {type:'image/jpeg'})}; }
+function sumView(sm){ const sh = $('sheet'); sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">NHẬN XÉT CHUNG CẢ LỚP</small><b style="display:block">Ảnh gửi kèm cuối lượt gửi</b></div><div class="shBody" style="padding:0;background:#0d1226"><img src="' + sm.url() + '" style="width:100%;display:block" alt=""></div><div class="shFoot"><button class="fab" id="svClose">Đóng</button><button class="fab" id="svSave">⬇ Tải</button><button class="fab go" id="svShare">📤 Gửi</button></div></div>';
+  sh.classList.add('on'); $('svClose').onclick = sheetClose; $('svSave').onclick = async ()=> dlFile(await sm.file()); $('svShare').onclick = ()=>{ sheetClose(); share([], sm); }; }
 function xRows(ex){ const list = xres[ex.id] || [], by = {}; list.forEach(r=>{ if(r.sbd) by[r.sbd] = r; }); const rows = ex.order.map(sbd=> ({sbd, st:ex.students[sbd], r:by[sbd]||null})); list.forEach(r=>{ if(!r.sbd || !ex.students[r.sbd]) rows.push({sbd:r.sbd || '?', st:null, r}); }); return rows; }
 const curList = ()=> !rv ? [] : rv.kind==='x' ? (xres[rv.key] || []) : wList(rv.key), rvExam = ()=> rv && rv.kind==='x' ? exams.find(e=> e.id===rv.key) : null;
 function drawResults(){
@@ -1512,12 +1602,14 @@ function drawResults(){
   $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
   $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('gMiss').innerHTML = missHtml(list, ex); $('gMiss').style.display = $('gMiss').innerHTML ? '' : 'none';
-  const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent);
-  $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi (Zalo…)</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
+  const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
+  $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi' + (sumDue ? ' + nhận xét cả lớp' : '') + '</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
     + '<button class="btn" id="bShare">📤 ' + (uns.length === list.length ? 'Gửi tất cả' : 'Gửi lại tất cả') + '</button><button class="btn" id="bSave">⬇ Tải ảnh</button><button class="btn" id="bMark">' + (uns.length ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button>'
     + (ex ? '<button class="btn" id="bXSend">💻 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '');
-  if($('bShareNew')) $('bShareNew').onclick = ()=> share(uns);
-  $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i])); $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
+  if($('bShareNew')) $('bShareNew').onclick = ()=> share(uns, sumDue ? sm : null);
+  $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i]), sm);
+  $('gSum').innerHTML = sm ? '<h3 style="margin-bottom:2px">📊 Nhận xét chung cả lớp</h3><p class="mut" style="margin:0 0 8px">Đánh giá chất lượng, câu sai nhiều, câu dễ nhưng vẫn sai, hướng khắc phục — không nêu tên học sinh. Tự gửi kèm làm ảnh cuối (ảnh thứ ' + (list.length + 1) + ').' + (sumSent[sm.key] === sm.n ? ' <b style="color:#0f7a3d">✓ Đã gửi</b>' : '') + '</p><div class="row"><button class="btn gold" id="bSumView">👁 Xem ảnh nhận xét</button><button class="btn" id="bSumSend">📤 Chỉ gửi ảnh này</button></div>' : '';
+  if(sm){ $('bSumView').onclick = ()=> sumView(sm); $('bSumSend').onclick = ()=> share([], sm); } $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
   $('bMark').onclick = ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); };
   $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
   if(ex){
