@@ -98,9 +98,13 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .chip{background:rgba(20,28,58,.78);color:#fff;border:0;border-radius:20px;padding:8px 13px;font-size:.85rem;font-weight:600;min-height:38px}
 .shot{display:none;position:absolute;inset:0;background:#0d1226;flex-direction:column}
 .shot.on{display:flex}
-.shot .pic{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;text-align:center}
+.shot .pic{flex:1 1 0;min-height:45%;overflow:auto;-webkit-overflow-scrolling:touch;text-align:center}
 .shot img{max-width:100%;display:block;margin:0 auto}
-.shot .bar{background:#fff;padding:12px 14px calc(12px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:10px}
+.shot .bar{flex:none;max-height:38%;overflow:auto;background:#fff;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}
+.shot .binfo{min-width:0}
+.shot .bbtn{display:flex;gap:8px}
+.shot .bbtn .btn{flex:1;padding:10px 8px;white-space:nowrap}
+.shot .bbtn .btn.pri{flex:1.7}
 .score{font-size:1.9rem;font-weight:800;color:var(--bad);line-height:1}
 .score small{font-size:.95rem;color:var(--mut);font-weight:600}
 #shotFix{background:#fff8e6;border-top:2px solid #e0b030;padding:8px 12px;max-height:32vh;overflow:auto}
@@ -170,10 +174,12 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
         <div class="pic"><img id="shotImg" alt="Bài đã chấm"></div>
         <div id="shotFix" style="display:none"></div>
         <div class="bar">
-          <div><div class="score" id="shotScore"></div><div class="warn" id="shotWarn"></div></div>
-          <button class="btn" id="bSend" style="margin-left:auto" aria-label="Gửi ảnh bài này qua Zalo hoặc ứng dụng khác">📤 Gửi</button>
-          <button class="btn" id="bDrop">Bỏ</button>
-          <button class="btn pri" id="bNext">Bài tiếp ➜</button>
+          <div class="binfo"><div class="score" id="shotScore"></div><div class="warn" id="shotWarn"></div></div>
+          <div class="bbtn">
+            <button class="btn" id="bSend" aria-label="Gửi ảnh bài này qua Zalo hoặc ứng dụng khác">📤 Gửi</button>
+            <button class="btn" id="bDrop">Bỏ</button>
+            <button class="btn pri" id="bNext">Bài tiếp ➜</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1099,7 +1105,7 @@ function drawShot(){
   $('shotImg').src = pending.url;
   $('shotScore').innerHTML = fmtVN(pending.pts) + '<small>/' + fmtVN(pending.max) + (pending.kind==='exam' ? ' · ' + esc(pending.name || 'SBD ' + (pending.sbd || '?')) : ' · đúng ' + pending.right + '/' + pending.total) + '</small>';
   { const ex = pending.kind==='exam' ? exams.find(e=> e.id===pending.exId) : null; $('shotScore').innerHTML += '<small style="display:block;font-size:.8rem;margin-top:3px">' + esc(pending.kind==='exam' ? (ex ? ex.title : '') + ' · mã đề ' + pending.made : 'Mã bài ' + pending.id + ' · ' + (pending.name || 'Bài kiểm tra')) + '</small>'; }
-  $('shotWarn').innerHTML = (pending.cm ? cmtHtml(pending.cm) : '') + esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét hiện cả bằng chữ (ảnh chụp sát khung có thể không còn chỗ vẽ ô nhận xét)
+  $('shotWarn').innerHTML = esc(pending.warn.length ? '⚠ Xem lại: ' + pending.warn.slice(0, 4).join('; ') + (pending.warn.length > 4 ? '…' : '') : '');   // nhận xét (bong bóng chat) đã vẽ dưới ảnh bởi cmtPanel — kéo ảnh xuống để xem; không lặp lại ở thanh dưới để ảnh có chỗ hiện
   const fx = $('shotFix'), S = pendSrc;
   if(pending.kind==='exam'){ const ex = exams.find(e=> e.id===pending.exId), parts = [];
     // Phiếu không tô / tô sai số báo danh: cho chọn học sinh ngay để điểm gắn đúng tên (và gửi được về MathBankPro)
