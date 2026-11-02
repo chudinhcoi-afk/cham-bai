@@ -191,7 +191,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11c · đọc phiếu v3</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11d · đọc phiếu v3</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -1239,7 +1239,7 @@ $('fPick').onchange = async e=>{
 /* ===== Đáp án trên máy chủ (MathBank V1.67): quét MỘT LẦN mã liên kết MBPK1;<khoá> trên máy tính, sau đó đọc được mã bài trên phiếu là tự tải đáp án.
    Máy chủ chỉ giữ bản đáp án đã mã hoá (AES-GCM); khoá nằm trong điện thoại đã liên kết. ===== */
 const FB_DB = 'https://kho-de-toan-vonhai-default-rtdb.firebaseio.com', FB_KEY = 'AIzaSyATpXxpfSc03NLbzFQG6J04tFZOptfuL1s';
-const cloudWait = {};   // mã bài → {p: đang tải, at, miss, err}
+const cloudWait = {}, cloudGrp = {};   // mã bài → {p: đang tải, at, miss, err}; cloudGrp: mã bài → các mã cùng nhóm (MathBank V2.01)
 const b64u = s=> Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c=> c.charCodeAt(0));
 async function fbToken(){ const c = ls('mbpscan_fbtok', null); if(c && c.t && c.exp > Date.now() + 60000) return c.t;
   if(c && c.rt){ try{ const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB_KEY, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(c.rt)});
@@ -1253,7 +1253,7 @@ function cloudExam(ak){ const key = 'e' + ak, w = cloudWait[key]; if(w && w.p) r
   cloudWait[key] = {p, at:Date.now()}; return p; }
 async function cloudDecrypt(key){ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
   const r = await fetch(FB_DB + '/mbp/' + key + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
-  const d = await r.json(); if(!d || !d.c) return null;
+  const d = await r.json(); if(!d || !d.c) return null; if(Array.isArray(d.g)) cloudGrp[key] = d.g.map(Number).filter(x=> x >= 1024).slice(0, 80);
   for(const k of akKeys){ try{ const ck = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, ck, b64u(d.c))); }catch(e){} }
   throw new Error('Đáp án mã bài ' + key.replace(/^e/, '') + ' thuộc máy tính chưa liên kết với điện thoại này'); }
 /* thầy sửa thang điểm trên máy tính → điện thoại nhận bản mới và tính lại điểm các bài đã chấm của mã đó (dựa trên kết quả từng ô đã lưu) */
@@ -1264,14 +1264,18 @@ function rescore(t){ let n = 0; results.forEach(r=>{ if(r.kind !== 'ws' || r.id 
 function putTest(t){ const i = tests.findIndex(x=> x.id === t.id), same = i >= 0 && JSON.stringify(tests[i].rows) === JSON.stringify(t.rows); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); return {isNew:i < 0, changed:i >= 0 && !same}; }
 const cloudChk = {};
 function cloudRefresh(id){ if(!akKeys.length || cloudChk[id] && Date.now() - cloudChk[id] < 60000) return; cloudChk[id] = Date.now();
-  cloudFetch(id).then(t=>{ if(!t) return; const c = putTest(t); if(c.changed){ const n = rescore(t); drawTests(); toast('Thang điểm mã bài ' + id + ' vừa được sửa trên máy tính — đã cập nhật' + (n ? ', tính lại ' + n + ' bài đã chấm.' : '.'), 3500); } }, ()=>{}); }
+  cloudFetch(id).then(t=>{ if(!t) return; const c = putTest(t); cloudGroup(id); if(c.changed){ const n = rescore(t); drawTests(); toast('Thang điểm mã bài ' + id + ' vừa được sửa trên máy tính — đã cập nhật' + (n ? ', tính lại ' + n + ' bài đã chấm.' : '.'), 3500); } }, ()=>{}); }
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') tests.filter(t=> t.id >= 1024).slice(-10).forEach(t=> cloudRefresh(t.id)); });
 function cloudTest(id){ if(!akKeys.length || !(id >= 1024)) return Promise.resolve(null); const w = cloudWait[id];
   if(w && w.p) return w.p; if(w && Date.now() - w.at < 15000) return Promise.resolve(null);   // vừa thử không có: 15 giây sau mới hỏi lại
   const p = cloudFetch(id)
-  .then(t=>{ cloudWait[id] = {at:Date.now(), miss:!t}; if(t){ putTest(t); cloudChk[id] = Date.now(); if(pinTest != null && pinTest !== t.id){ pinTest = null; lsSet('mbpscan_pin', null); } drawTests(); toast('Đã tải đáp án mã bài ' + id + ' từ máy chủ.', 2200); } return t; },
+  .then(t=>{ cloudWait[id] = {at:Date.now(), miss:!t}; if(t){ putTest(t); cloudChk[id] = Date.now(); if(pinTest != null && pinTest !== t.id){ pinTest = null; lsSet('mbpscan_pin', null); } drawTests(); toast('Đã tải đáp án mã bài ' + id + ' từ máy chủ.', 2200); cloudGroup(id); } return t; },
         e=>{ cloudWait[id] = {at:Date.now(), err:e.message}; return null; });
   cloudWait[id] = {p, at:Date.now()}; return p; }
+/* tải sẵn đáp án các mã bài cùng nhóm (cùng lượt in) ngay khi chấm bài đầu tiên — các bài sau chấm được cả khi mất mạng */
+async function cloudGroup(id){ const ids = (cloudGrp[String(id)] || []).filter(x=> x !== id && !pickTest(x) && !(cloudWait[x] && cloudWait[x].p)); if(!ids.length) return;
+  let n = 0; for(const x of ids){ try{ const t = await cloudFetch(x); if(t){ putTest(t); cloudChk[x] = Date.now(); cloudWait[x] = {at:Date.now()}; n++; } }catch(e){} }
+  if(n){ drawTests(); setTimeout(()=> toast('Đã tải sẵn đáp án ' + n + ' mã bài cùng nhóm (' + ids.slice(0, 6).join(', ') + (ids.length > 6 ? '…' : '') + ') — chấm tiếp không cần mạng.', 3200), 2400); } }
 function cloudWhy(id){ const w = cloudWait[id] || {}; return w.err ? ['Không tải được đáp án mã bài ' + id, esc(w.err)] : w.miss ? ['Mã bài ' + id + ' chưa có đáp án trên máy chủ', 'Trên máy tính: in xong bấm “Lưu đáp án” (cần có mạng). Hoặc quét mã QR của đề.'] : ['Đang tải đáp án mã bài ' + id + '…', 'Giữ yên phiếu.']; }
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
