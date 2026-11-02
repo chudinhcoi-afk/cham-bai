@@ -58,6 +58,30 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .fab:active{transform:translateY(3px);box-shadow:0 0 0 #d6dae6,0 1px 3px rgba(20,28,58,.2)}
 .fab.go{flex:1.5;background:linear-gradient(#22306a,#141c3a);color:#fff;box-shadow:0 3px 0 #0a0f24,0 6px 12px rgba(20,28,58,.3)}
 .fab.del{flex:0 0 46px;color:var(--bad)}
+.fab.more{flex:0 0 46px;font-size:1.2rem}
+/* giao diện mới: thanh công cụ, ô tìm, mục chia theo trạng thái */
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+.toolbar .btn{min-height:52px;font-size:1rem;border-radius:14px}
+.search{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:.95rem;background:#fff;color:var(--ink);margin:2px 0 10px}
+.seg{display:flex;background:#e6e9f1;border-radius:13px;padding:3px;gap:3px;margin:0 0 4px;position:sticky;top:0;z-index:5}
+.seg button{flex:1;border:0;background:none;border-radius:10px;padding:9px 2px;font-weight:700;font-size:.86rem;color:var(--mut);white-space:nowrap}
+.seg button.on{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(20,28,58,.16)}
+.seg button b{display:inline-block;min-width:1.5em;margin-left:5px;padding:1px 6px;border-radius:10px;background:#d6dae6;color:var(--ink);font-size:.74rem}
+.seg button.on b{background:var(--gold);color:#fff}
+.pill{font-size:.72rem;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap;flex:none}
+.pill.todo{background:#eef0f7;color:var(--mut)}.pill.done{background:#fff1d6;color:#8a5a00}.pill.sent{background:#dcf7e6;color:#0f7a3d}
+.iinfo{font-size:.84rem;color:var(--mut);margin-top:6px}.iinfo b{color:var(--ink)}
+.prog{height:6px;border-radius:4px;background:#eef0f5;overflow:hidden;margin-top:6px}.prog i{display:block;height:100%;background:var(--ok)}
+.empty{text-align:center;color:var(--mut);font-size:.9rem;line-height:1.5;padding:28px 16px;background:#fff;border:1px dashed var(--line);border-radius:14px;margin-top:10px}
+.ver{text-align:center;color:#9aa0b3;font-size:.72rem;margin:16px 0 4px}
+details.help{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+details.help summary{color:var(--mut);font-size:.88rem;font-weight:600}
+.res{position:relative}.res .snt{position:absolute;top:6px;right:6px;background:#12a150;color:#fff;font-size:.7rem;font-weight:700;font-style:normal;border-radius:12px;padding:2px 8px}
+.grp .sc .snt{display:block;font-size:.72rem;color:#0f7a3d;font-weight:700}
+.mrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}.mlist .mrow:first-child{border-top:0}
+.mrow .tx{flex:1;min-width:0}.mrow .tx b{display:block}.mrow .tx small{display:block;color:var(--mut);font-size:.78rem}
+.mrow .btn{min-height:40px;padding:8px 11px;flex:none}
+nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-radius:50%;background:linear-gradient(#22306a,#141c3a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(20,28,58,.35);border:3px solid #fff}
 #sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:50}
 #sheet.on{display:flex}
 .shBox{background:#fff;width:100%;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
@@ -149,7 +173,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .grp{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
 .grp .ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:#eef0f7;flex:none}
 .grp .tx{flex:1;min-width:0}
-.grp .tx b{display:block;font-size:.98rem;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp .tx b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:.98rem;line-height:1.25;overflow:hidden}
 .grp .tx small{color:var(--mut);font-size:.82rem}
 .grp .sc{text-align:right;flex:none}
 .grp .sc b{display:block;font-size:1.15rem;color:var(--navy)}
@@ -190,21 +214,20 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
   </section>
 
   <section class="view" id="v-tests">
-    <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11g · đọc phiếu v4</span></h3>
-      <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
-      <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
-      <div id="qrBox" style="display:none;margin-top:10px">
-        <div class="cam" style="height:300px;border-radius:12px"><video id="qrVid" playsinline muted autoplay></video></div>
-        <div class="mut" id="qrStat" style="text-align:center;margin-top:6px"></div><button class="btn wide" id="bQrStop" style="margin-top:8px">Dừng quét</button>
-      </div>
-      <details style="margin-top:12px"><summary class="mut">Không quét được? Dán mã đáp án dạng chữ</summary>
-        <textarea id="tPaste" placeholder="MBP1;… hoặc MBPZ;…" style="margin-top:8px"></textarea>
-        <button class="btn wide" id="bPaste" style="margin-top:6px">Nạp mã đã dán</button>
-      </details>
+    <div class="toolbar"><button class="btn pri" id="bGoScan" style="flex:1.3">📷 Chấm bài</button><button class="btn" id="bQr" style="flex:1">⬇ Nạp đáp án</button></div>
+    <div id="qrBox" class="card" style="display:none">
+      <div class="cam" style="height:300px;border-radius:12px"><video id="qrVid" playsinline muted autoplay></video></div>
+      <div class="mut" id="qrStat" style="text-align:center;margin-top:6px"></div><button class="btn wide" id="bQrStop" style="margin-top:8px">Dừng quét</button>
     </div>
-    <div class="card"><h3>Đề thi giữa kỳ, cuối kỳ</h3><div id="examList"></div></div>
-    <div class="card"><h3>Bài kiểm tra</h3><div id="testList"></div></div>
+    <details class="help"><summary>Cách nạp đáp án · dán mã dạng chữ</summary>
+      <p class="mut" style="margin:8px 0">Đã liên kết điện thoại với MathBank thì <b>không cần nạp</b>: chĩa camera vào phiếu có mã bài là app tự tải đáp án. Chưa liên kết: trên MathBankPro, mục <b>Chấm bài</b> → 📱 Mã QR (bài kiểm tra) hoặc thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại (đề thi), rồi bấm <b>⬇ Nạp đáp án</b> ở trên để quét.</p>
+      <textarea id="tPaste" placeholder="Không quét được: dán mã MBP1;… hoặc MBPZ;…"></textarea>
+      <button class="btn wide" id="bPaste" style="margin-top:6px">Nạp mã đã dán</button>
+    </details>
+    <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
+    <div class="seg" id="tSeg"></div>
+    <div id="itemList"></div>
+    <p class="ver">MBP Chấm bài · bản 02/11h · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -227,8 +250,8 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
   </section>
 </main>
 <nav>
-  <button data-v="scan" class="on"><i>📷</i>Chấm</button>
-  <button data-v="tests"><i>🗂</i>Đề</button>
+  <button data-v="tests" class="on"><i>🗂</i>Đề</button>
+  <button data-v="scan"><i>📷</i>Chấm</button>
   <button data-v="res"><i>📑</i>Kết quả</button>
 </nav>
 <div id="sheet"></div>
@@ -1308,16 +1331,50 @@ async function takeCode(raw){   // trả về true nếu đã nạp xong một �
   let s = ''; for(let i = 1; i <= g.n; i++) s += g.got[i]; delete P[m[1]];
   try{ const ex = parseExam(await unpack(s)); if(ex){ addExam(ex); return true; } }catch(e){} toast('Mã nhận được bị lỗi, hãy quét lại.'); return false;
 }
+/* ===== THẺ ĐỀ (giao diện 02/11h): mỗi đề thi một thẻ; bài kiểm tra gộp theo lượt in (cùng tên) — chia 3 mục: chưa chấm / đã chấm (còn ảnh chưa gửi) / đã gửi ===== */
+let tTab = ls('mbpscan_ttab', 'todo'), rTab = ls('mbpscan_rtab', 'unsent'), tQ = '', tMore = 0;
+const idRange = ids=>{ const a = ids.slice().sort((x, y)=> x - y), out = []; for(let i = 0; i < a.length; i++){ let j = i; while(j + 1 < a.length && a[j + 1] === a[j] + 1) j++; out.push(j > i ? a[i] + '–' + a[j] : String(a[i])); i = j; } return out.join(', '); };
+function items(){ const out = [];
+  exams.forEach(e=> out.push({kind:'exam', key:e.id, title:e.title || 'Đề thi', sub:'Đề thi · ' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', res:xres[e.id] || [], total:e.order.length, at:e.at || 0}));
+  const G = new Map(); tests.forEach(t=>{ const k = t.name ? 'n' + t.name : 'i' + t.id; let g = G.get(k); if(!g) G.set(k, g = {kind:'ws', key:k, title:t.name || 'Bài kiểm tra', ids:[], at:0}); g.ids.push(t.id); g.at = Math.max(g.at, t.at || 0); });
+  G.forEach(g=>{ g.ids.sort((a, b)=> a - b); const S = new Set(g.ids); g.res = results.filter(r=> S.has(r.id)); g.sub = 'Bài kiểm tra · ' + (g.ids.length > 1 ? g.ids.length + ' mã bài (' + idRange(g.ids) + ')' : 'mã bài ' + g.ids[0]); out.push(g); });
+  out.forEach(it=>{ it.st = !it.res.length ? 'todo' : it.res.every(r=> r.sent) ? 'sent' : 'done'; it.last = it.res.length ? Math.max(...it.res.map(r=> r.at)) : it.at; });
+  return out; }
+function itemCard(it, i){ const n = it.res.length, sent = it.res.filter(r=> r.sent).length, cur = it.kind==='exam' ? (mode==='exam' && it.key===activeExam) : (mode==='ws' && pinTest != null && it.ids.includes(pinTest));
+  const pill = it.st==='todo' ? '<span class="pill todo">Chưa chấm</span>' : it.st==='sent' ? '<span class="pill sent">✓ Đã gửi</span>' : '<span class="pill done">' + (n - sent) + ' chưa gửi</span>';
+  const info = n ? '<div class="iinfo">Đã chấm <b>' + n + (it.total ? '/' + it.total : '') + '</b> bài · TB <b>' + fmtVN(avgOf(it.res)) + '</b> · đã gửi <b>' + sent + '/' + n + '</b>' + (it.st !== 'todo' ? ' · ' + dayVN(dayKey(it.last)) : '') + '</div><div class="prog"><i style="width:' + Math.round(100*sent/n) + '%"></i></div>' : '';
+  return '<div class="titem' + (cur ? ' cur' : '') + '" data-i="' + i + '"><div class="test"><span class="id">' + (it.kind==='exam' ? '🎓' : '📝') + '</span><div class="nm">' + esc(it.title) + '<small>' + esc(it.sub) + '</small></div>' + pill + '</div>' + info
+    + '<div class="acts"><button class="fab go" data-a="go">📷 Chấm</button>' + (n ? '<button class="fab" data-a="res">📑 Kết quả</button>' : '<button class="fab" data-a="view">👁 Đáp án</button>') + '<button class="fab more" data-a="more" aria-label="Thêm">⋯</button></div></div>'; }
+function itemGo(it){ if(it.kind==='exam') return startGrade('exam', it.key); if(it.ids.length === 1) return startGrade('ws', it.ids[0]); pinTest = null; lsSet('mbpscan_pin', null); setMode('ws'); go('scan'); }
+function itemRes(it){ if(!it.res.length) return; const r = it.res.reduce((a, b)=> b.at > a.at ? b : a); rv = it.kind==='exam' ? {kind:'x', key:it.key} : {kind:'w', key:wKey(r)}; go('res'); $('v-res').parentElement.scrollTop = 0; }
+function markSent(list, on){ const t = Date.now(); list.forEach(r=>{ if(on) r.sent = r.sent || t; else delete r.sent; }); saveResults(); saveX(); }
+function itemMore(it){ const sh = $('sheet'), n = it.res.length, uns = it.res.filter(r=> !r.sent).length;
+  const rows = it.kind==='exam' ? '<div class="mrow"><div class="tx"><b>Đáp án đề thi</b><small>' + esc(it.sub) + '</small></div><button class="btn" data-a="view" data-id="' + esc(it.key) + '">👁 Xem</button><button class="btn" data-a="edit" data-id="' + esc(it.key) + '">✏ Sửa</button></div>'
+    : it.ids.map(id=>{ const t = pickTest(id); return '<div class="mrow"><div class="tx"><b>Mã bài ' + id + '</b><small>' + (t ? t.rows.length + ' ô chấm · tối đa ' + fmtVN(testMax(t)) + ' điểm' : '') + ' · đã chấm ' + it.res.filter(r=> r.id === id).length + '</small></div><button class="btn" data-a="view" data-id="' + id + '">👁</button><button class="btn" data-a="edit" data-id="' + id + '">✏</button><button class="btn" data-a="del" data-id="' + id + '" style="color:var(--bad)">🗑</button></div>'; }).join('');
+  sh.innerHTML = '<div class="shBox"><div class="shHead"><small class="mut">' + (it.kind==='exam' ? 'ĐỀ THI' : 'BÀI KIỂM TRA') + '</small><b style="display:block">' + esc(it.title) + '</b></div><div class="shBody"><div class="mlist">' + rows + '</div>'
+    + (n ? '<div class="mrow" style="border-top:1px solid var(--line);margin-top:4px;padding-top:12px"><div class="tx"><b>Đã gửi ' + (n - uns) + '/' + n + ' ảnh</b><small>App tự đánh dấu khi gửi qua Zalo… thành công</small></div><button class="btn" id="mMark">' + (uns ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button></div>' : '') + '</div>'
+    + '<div class="shFoot"><button class="fab del" id="mDel" style="flex:0 0 auto;padding:0 14px">🗑 Xoá ' + (it.kind==='exam' ? 'đề' : it.ids.length > 1 ? 'cả nhóm' : 'đề') + '</button><button class="fab go" id="mClose">Đóng</button></div></div>';
+  sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target===sh) sheetClose(); }; $('mClose').onclick = sheetClose;
+  sh.querySelectorAll('.mlist .btn').forEach(b=> b.onclick = ()=>{ const id = it.kind==='exam' ? b.dataset.id : +b.dataset.id, k = it.kind==='exam' ? 'exam' : 'ws';
+    if(b.dataset.a === 'view') sheetKey(k, id, false); else if(b.dataset.a === 'edit') sheetKey(k, id, true); else { sheetClose(); delKey(k, id); } });
+  if($('mMark')) $('mMark').onclick = ()=>{ markSent(it.res, !!uns); sheetClose(); drawTests(); toast(uns ? 'Đã đánh dấu ' + uns + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); };
+  $('mDel').onclick = ()=>{ sheetClose(); if(it.kind==='exam') return delKey('exam', it.key);
+    if(!confirm('Xoá đáp án ' + it.ids.length + ' mã bài (' + idRange(it.ids) + ')? Bài đã chấm vẫn giữ ở mục Kết quả.')) return; const S = new Set(it.ids); tests = tests.filter(t=> !S.has(t.id)); saveTests(); drawTests(); drawHeader(); }; }
+const EMPTY = {todo:'Không có đề nào đang chờ chấm.<br>Bấm <b>📷 Chấm bài</b> rồi chĩa camera vào phiếu có mã bài — app tự tải đáp án; hoặc <b>⬇ Nạp đáp án</b> bằng mã QR.', done:'Không có đề nào còn ảnh chưa gửi.', sent:'Chưa có đề nào gửi xong.<br>Gửi ảnh qua Zalo ở mục <b>Kết quả</b>, app tự đánh dấu “đã gửi”.'};
 function drawTests(){
-  const acts = (kind, id)=> '<div class="acts"><button class="fab go" data-a="go" data-k="' + kind + '" data-id="' + id + '">📷 Chấm</button><button class="fab" data-a="view" data-k="' + kind + '" data-id="' + id + '">👁 Xem</button><button class="fab" data-a="edit" data-k="' + kind + '" data-id="' + id + '">✏ Sửa</button><button class="fab del" data-a="del" data-k="' + kind + '" data-id="' + id + '" aria-label="Xoá">🗑</button></div>';
-  const xl = $('examList');
-  xl.innerHTML = exams.length ? exams.slice().reverse().map(e=> '<div class="titem' + (mode==='exam' && e.id===activeExam ? ' cur' : '') + '"><div class="test"><span class="id">🎓</span><div class="nm">' + esc(e.title) + '<small>' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh · đã chấm ' + (xres[e.id]||[]).length + '</small></div>' + (mode==='exam' && e.id===activeExam ? '<span class="now">đang chấm</span>' : '') + '</div>' + acts('exam', e.id) + '</div>').join('') : '<p class="mut" style="margin:0">Chưa có đề thi nào.</p>';
-  const el = $('testList');
-  el.innerHTML = tests.length ? tests.slice().reverse().map(t=> '<div class="titem' + (mode==='ws' && pinTest===t.id ? ' cur' : '') + '"><div class="test"><span class="id">' + t.id + '</span><div class="nm">' + esc(t.name || 'Bài kiểm tra') + '<small>' + t.rows.length + ' ô chấm · tối đa ' + fmtVN(testMax(t)) + ' điểm</small></div>' + (mode==='ws' && pinTest===t.id ? '<span class="now">đang chấm</span>' : '') + '</div>' + acts('ws', t.id) + '</div>').join('') + (tests.length > 1 ? '<p class="mut" style="margin:10px 0 0"><a href="#" id="aAuto">Chấm lẫn nhiều đề, tự nhận theo mã bài</a></p>' : '') : '<p class="mut" style="margin:0">Chưa có bài kiểm tra nào.</p>';
-  document.querySelectorAll('#v-tests .fab').forEach(b=> b.onclick = ()=>{ const k = b.dataset.k, id = k==='ws' ? +b.dataset.id : b.dataset.id, a = b.dataset.a;
-    if(a==='go') startGrade(k, id); else if(a==='view') sheetKey(k, id, false); else if(a==='edit') sheetKey(k, id, true); else delKey(k, id); });
-  const au = $('aAuto'); if(au) au.onclick = ev=>{ ev.preventDefault(); pinTest = null; lsSet('mbpscan_pin', null); setMode('ws'); go('scan'); };
+  const all = items(), q = tQ.trim().toLowerCase(), m = it=> !q || (it.title + ' ' + it.sub).toLowerCase().includes(q), cnt = {todo:0, done:0, sent:0};
+  all.forEach(it=>{ if(m(it)) cnt[it.st]++; });
+  $('tSeg').innerHTML = [['todo', 'Chưa chấm'], ['done', 'Đã chấm'], ['sent', 'Đã gửi']].map(([k, l])=> '<button data-t="' + k + '" class="' + (tTab===k ? 'on' : '') + '">' + l + '<b>' + cnt[k] + '</b></button>').join('');
+  $('tSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ tTab = b.dataset.t; lsSet('mbpscan_ttab', tTab); tMore = 0; drawTests(); });
+  const list = all.filter(it=> it.st===tTab && m(it)).sort((a, b)=> tTab==='todo' ? b.at - a.at : b.last - a.last), lim = 25 + tMore;
+  $('itemList').innerHTML = list.length ? list.slice(0, lim).map(itemCard).join('') + (list.length > lim ? '<button class="btn wide" id="bMore" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' đề</button>' : '')
+    : '<div class="empty">' + (q ? 'Không tìm thấy đề nào khớp “' + esc(tQ) + '”.' : EMPTY[tTab]) + '</div>';
+  $('itemList').querySelectorAll('.titem .fab').forEach(b=> b.onclick = ()=>{ const it = list[+b.closest('.titem').dataset.i], a = b.dataset.a;
+    if(a==='go') itemGo(it); else if(a==='res') itemRes(it); else if(a==='view'){ if(it.kind==='exam') sheetKey('exam', it.key, false); else if(it.ids.length === 1) sheetKey('ws', it.ids[0], false); else itemMore(it); } else itemMore(it); });
+  if($('bMore')) $('bMore').onclick = ()=>{ tMore += 25; drawTests(); };
 }
+$('tSearch').oninput = e=>{ tQ = e.target.value; tMore = 0; drawTests(); };
+$('bGoScan').onclick = ()=>{ if(mode !== 'exam'){ pinTest = null; lsSet('mbpscan_pin', null); } go('scan'); };
 const testMax = t=> Math.round(100*t.rows.reduce((s,r)=> s + r.pt, 0))/100;
 function delKey(k, id){
   if(k==='ws'){ if(!confirm('Xoá đáp án mã bài ' + id + '?')) return; tests = tests.filter(t=> t.id!==id); saveTests(); }
@@ -1404,17 +1461,17 @@ const wKey = r=> (r.name ? 'n' + r.name : r.id) + '@' + dayKey(r.at),   // cùng
       wList = key=> results.filter(r=> wKey(r)===key).sort((a,b)=> a.at - b.at);
 function groups(){
   const out = [];
-  exams.forEach(e=>{ const a = xres[e.id] || []; if(a.length) out.push({kind:'x', key:e.id, title:labels['x'+e.id] || e.title, sub:Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', n:a.length, total:e.order.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+  exams.forEach(e=>{ const a = xres[e.id] || []; if(a.length) out.push({kind:'x', key:e.id, title:labels['x'+e.id] || e.title, sub:Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', n:a.length, sent:a.filter(r=> r.sent).length, total:e.order.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
   const by = {}; results.forEach(r=> (by[wKey(r)] = by[wKey(r)] || []).push(r));
   Object.keys(by).forEach(key=>{ const a = by[key], id = a[0].id, t = pickTest(id), nm = a[0].name || (t && t.name) || 'Bài kiểm tra';
-    const ids = [...new Set(a.map(r=> r.id))].sort((x, y)=> x - y); out.push({kind:'w', key, title:labels['w'+key] || nm, sub:'Mã bài ' + ids.join(', '), n:a.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+    const ids = [...new Set(a.map(r=> r.id))].sort((x, y)=> x - y); out.push({kind:'w', key, title:labels['w'+key] || nm, sub:'Mã bài ' + idRange(ids), n:a.length, sent:a.filter(r=> r.sent).length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
   return out.sort((a,b)=> b.at - a.at);
 }
 const fileName = (r, i)=>{ const d = new Date(r.at || Date.now()), p = x=> String(x).padStart(2, '0'), tm = p(d.getDate()) + '-' + p(d.getMonth()+1) + '_' + p(d.getHours()) + 'h' + p(d.getMinutes()) + 'm' + p(d.getSeconds());   // tên có ngày giờ chấm → không trùng ảnh đã gửi trước đó
   return (r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_' + tm : 'Ma' + r.id + '_' + tm + '_' + p(i+1)) + '_' + fmtVN(r.pts) + 'diem.jpg'; };
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
 function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
-async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
+async function share(list){ try{ const files = await Promise.all(list.map(([r,i])=> toFile(r, i))); if(navigator.canShare && navigator.canShare({files})){ await navigator.share({files, title:'Bài đã chấm'}); markSent(list.map(x=> x[0]), true); if(view==='res') drawResults(); if(view==='tests') drawTests(); toast('Đã gửi ' + list.length + ' ảnh — đánh dấu “đã gửi”.', 2200); return; } }catch(e){ if(e && e.name==='AbortError') return; } toast('Máy không chia sẻ trực tiếp được — đang tải ảnh về máy.'); list.forEach(([r,i], k)=> setTimeout(()=> download(r, i), k*250)); }
 /* Thống kê câu sai nhiều trong một lần chấm: tỉ lệ học sinh làm sai (kể cả bỏ trống) theo từng câu */
 function missStats(list, ex){
   const M = {}, add = (key, label, st)=>{ const o = M[key] || (M[key] = {label, n:0, wrong:0, blank:0}); o.n++; if(st==='x') o.wrong++; else if(st==='-') o.blank++; };
@@ -1443,10 +1500,11 @@ function drawResults(){
   const gs = groups(); if(rv && !gs.some(g=> g.kind===rv.kind && g.key===rv.key)) rv = null;
   $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
   if(!rv){
-    const card = g=> '<div class="grp" data-k="' + g.kind + '" data-key="' + esc(g.key) + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + dayVN(dayKey(g.at)) + ' · ' + esc(g.sub) + '</small></div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + '</b><small>bài · TB ' + fmtVN(g.avg) + '</small></div></div>';
-    const xs = gs.filter(g=> g.kind==='x'), ws = gs.filter(g=> g.kind==='w');
-    $('resList').innerHTML = gs.length ? (xs.length ? '<div class="sec">Đề thi giữa kỳ, cuối kỳ</div>' + xs.map(card).join('') : '') + (ws.length ? '<div class="sec">Bài kiểm tra</div>' + ws.map(card).join('') : '')
-      : '<div class="card"><h3>Chưa có bài nào được chấm</h3><p class="mut" style="margin:0">Mỗi lần chấm sẽ thành một mục riêng ở đây: đề thi xếp theo từng đề, bài kiểm tra xếp theo mã bài và ngày chấm.</p></div>';
+    const card = g=> '<div class="grp" data-k="' + g.kind + '" data-key="' + esc(g.key) + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + dayVN(dayKey(g.at)) + ' · ' + esc(g.sub) + '</small></div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + '</b><small>bài · TB ' + fmtVN(g.avg) + '</small><span class="snt" style="' + (g.sent < g.n ? 'color:#8a5a00' : '') + '">' + (g.sent < g.n ? (g.n - g.sent) + ' chưa gửi' : '✓ đã gửi') + '</span></div></div>';
+    const un = gs.filter(g=> g.sent < g.n), sn = gs.filter(g=> g.sent >= g.n), cur = rTab === 'sent' ? sn : un;
+    $('resList').innerHTML = '<div class="seg" id="rSeg"><button data-t="unsent" class="' + (rTab !== 'sent' ? 'on' : '') + '">Chưa gửi<b>' + un.length + '</b></button><button data-t="sent" class="' + (rTab === 'sent' ? 'on' : '') + '">Đã gửi<b>' + sn.length + '</b></button></div>'
+      + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
+    $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
     $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; drawResults(); $('v-res').parentElement.scrollTop = 0; });
     return;
   }
@@ -1454,16 +1512,21 @@ function drawResults(){
   $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
   $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('gMiss').innerHTML = missHtml(list, ex); $('gMiss').style.display = $('gMiss').innerHTML ? '' : 'none';
-  $('gActs').innerHTML = (ex ? '<button class="btn gold" id="bXSend">📤 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '') + '<button class="btn' + (ex ? '' : ' gold') + '" id="bShare">📤 Gửi ảnh (Zalo…)</button><button class="btn" id="bSave">⬇ Tải ảnh</button>';
+  const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent);
+  $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi (Zalo…)</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
+    + '<button class="btn" id="bShare">📤 ' + (uns.length === list.length ? 'Gửi tất cả' : 'Gửi lại tất cả') + '</button><button class="btn" id="bSave">⬇ Tải ảnh</button><button class="btn" id="bMark">' + (uns.length ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button>'
+    + (ex ? '<button class="btn" id="bXSend">💻 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' : '');
+  if($('bShareNew')) $('bShareNew').onclick = ()=> share(uns);
   $('bShare').onclick = ()=> share(list.map((r,i)=> [r, i])); $('bSave').onclick = ()=> list.forEach((r,i)=> setTimeout(()=> download(r, i), i*250));
+  $('bMark').onclick = ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); };
   $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
   if(ex){
     const rows = xRows(ex);
-    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(r.pts) + '</b>' + (r.warn.length ? ' ⚠' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
+    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(r.pts) + '</b>' + (r.warn.length ? ' ⚠' : '') + (r.sent ? ' <span style="color:#12a150" title="đã gửi">✓</span>' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
     $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('bXSend').onclick = ()=> sendToPc(ex);
   } else {
-    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt=""><div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(r.pts) + '/' + fmtVN(r.max) + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
   }
 }
@@ -1501,7 +1564,7 @@ $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) ret
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
 (async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; const x = await idb.get('xres'); if(x && typeof x==='object') xres = x;
-  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go(tests.length || exams.length ? 'scan' : 'tests'); })();
+  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
