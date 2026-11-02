@@ -227,7 +227,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 02/11j · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 02/11k · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -710,6 +710,7 @@ function wakLocate(gray, w, h, pickTest, cg){
         const fit = hit/Math.max(1, tot); if(fit < 0.55) continue; score += 1000*fit; }
       if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span};
     } }
+  if(best) best.cands = cands;   // các ô đen tìm được — dùng để dò mốc đầu dòng họ tên (MathBank V2.13)
   return best;
 }
 
@@ -786,7 +787,7 @@ function wakRead(img, pickTest){
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, keyIdx:O.indexOf(r.key)}; });
   const gr = wakGrade(test, picks);
-  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr, comment:wakComment(test, picks, gr)};
+  return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, cands:loc.cands, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr, comment:wakComment(test, picks, gr)};
 }
 /* điểm TO ở góc trên bên phải của ảnh kết quả (đọc được ngay khi lướt ảnh hoặc chiếu lên lớp) */
 function scoreBadge(c, pts, max, top){
@@ -1000,16 +1001,29 @@ function tick(){
   if(!f.ok){ hint(f.why[0], f.why[1]); drawQuad(f.corners || null, 1/k, '#d0302b'); lastSig = ''; sameCount = 0; setTimeout(tick, f.corners ? 250 : 100); return; }
   sameCount = f.sig===lastSig ? sameCount + 1 : 0; lastSig = f.sig;
   // phần họ tên, mã bài (trên khung ~27–36 mm) còn ngoài khung hình: nhắc lùi máy, chờ tối đa 1,5 giây rồi vẫn chấm
-  if(!hdrInView(f, work.width, work.height)){ if(!hdrWait) hdrWait = Date.now();
-    if(Date.now() - hdrWait < 1500){ drawQuad(f.corners, 1/k, '#e0b030'); hint('Lùi máy ra một chút', 'Cho thấy cả phần họ tên, mã bài phía trên khung — để ảnh gửi phụ huynh có tên.'); setTimeout(tick, 50); return; } }
+  const hn = hdrNeed(f, work.width, work.height);
+  if(hn){ if(!hdrWait) hdrWait = Date.now();
+    if(Date.now() - hdrWait < (hn === 2 ? 4000 : 1500)){ drawQuad(f.corners, 1/k, '#e0b030'); hint('Lùi máy ra một chút', 'Cho thấy cả phần họ tên, mã bài phía trên khung — để ảnh gửi phụ huynh có tên.'); setTimeout(tick, 50); return; } }
   drawQuad(f.corners, 1/k, sameCount ? '#12a150' : '#e0b030'); hint(sameCount ? 'Đang chấm…' : 'Đã thấy phiếu — giữ yên…', esc(f.label));
   // chấm nhanh mà vẫn chắc: 2 lần đọc ảnh thu nhỏ giống hệt nhau + lần đọc ảnh gốc phải ra đúng như vậy (3 lần khớp — như trước, bớt một lượt chờ)
   if(sameCount >= 1){ requestAnimationFrame(()=> setTimeout(capture, 0)); return; }
   setTimeout(tick, 50);
 }
 let hdrWait = 0;   // lúc bắt đầu chờ lùi máy (0 = chưa chờ); về 0 khi chấm xong một bài
-function hdrInView(f, W, H){ if(!f || f.kind !== 'ws' || !f.r || !f.r.mapMm) return true;   // bài kiểm tra: điểm ở mức dòng họ tên / ô mã bài phải nằm trong ảnh
-  return [[12, -34], [WAK.W - 12, -34]].every(([X, Y])=>{ const [x, y] = f.r.mapMm(X, Y); return x >= 0 && x < W && y >= 0 && y < H; }); }
+/* Mốc ■ đầu dòng họ tên (MathBank V2.13): ô đen nằm phía trên góc trái khung, to cỡ ô góc. Trả về toạ độ mốc theo mm của khung, hoặc null */
+function hdrMark(r){ if(!r || !r.cands || !r.corners || !r.G) return null; const W = WAK.W, H = r.G.H, C = r.corners;
+  const inv = omrSolveHomography(C.map(p=> [p.x, p.y]), [[2, 2], [W - 2, 2], [W - 2, H - 2], [2, H - 2]]); if(!inv) return null;
+  const side = C.reduce((t, p)=> t + p.side, 0)/4; let best = null;
+  r.cands.forEach(c=>{ if(C.includes(c)) return; const k = c.side/side; if(k < 0.75 || k > 1.8) return; const [mx, my] = inv(c.x, c.y);
+    if(mx < -15 || mx > 30 || my > -12 || my < -120) return; const d = Math.abs(mx - 0.5); if(!best || d < best.d) best = {mx, my, d}; });
+  return best; }
+const hmTests = ()=> new Set(tests.filter(t=> t.hm).map(t=> t.name || ''));
+function hdrNeed(f, W, H){   // 0 = đủ phần họ tên; 1 = (phiếu cũ) ước lượng họ tên ra ngoài ảnh; 2 = phiếu có mốc mà chưa thấy mốc
+  if(!f || f.kind !== 'ws' || !f.r || !f.r.mapMm) return 0; const r = f.r, t = r.test || {};
+  if(hdrMark(r)){ if(!t.hm){ tests.filter(x=> x.id === r.id || (t.name && x.name === t.name)).forEach(x=> x.hm = 1); saveTests(); } return 0; }   // thấy mốc một lần: nhớ cho cả lượt in
+  if(t.hm || (t.name && hmTests().has(t.name))) return 2;
+  return [[12, -34], [WAK.W - 12, -34]].every(([X, Y])=>{ const [x, y] = r.mapMm(X, Y); return x >= 0 && x < W && y >= 0 && y < H; }) ? 0 : 1; }
+const hdrInView = (f, W, H)=> hdrNeed(f, W, H) === 0;
 let capMiss = 0;   // số lần ảnh gốc đọc khác ảnh thu nhỏ liên tiếp (ô tô sát ngưỡng): lần thứ 2 thì lấy kết quả ảnh gốc (rõ hơn), ô chưa chắc vẫn báo để chấm tay
 function capture(){
   const v = $('vid'), full = document.createElement('canvas'); full.width = v.videoWidth; full.height = v.videoHeight; const cx = full.getContext('2d'); cx.drawImage(v, 0, 0);
@@ -1161,6 +1175,7 @@ function parentCard(crop, pts, max, cm){   // ảnh cắt (họ tên, mã bài/m
   return cmtPanel(c, cm, {pts, max}); }
 /* bài kiểm tra (khung trả lời ở đầu trang): lấy cả phần họ tên, lớp, ngày phía trên khung */
 function wsParentImg(canvas, r, cm){ const {c, k} = wakAnnotate(canvas, r, true), map = (X, Y)=>{ const [px, py] = r.mapMm(X, Y); return [px*k, py*k]; };
+  const mk = hdrMark(r); if(mk) return parentCard(warpCrop(c, map, -3, mk.my - 7, WAK.W + 3, r.G.H + 2, 1080), r.pts, r.max, cm);   // có mốc: cắt đúng từ ngay trên dòng họ tên
   const crop = trimTop(warpCrop(c, map, -3, -55, WAK.W + 3, r.G.H + 2, 1080), 1080/(WAK.W + 6)*7);   // phần họ tên, lớp, ngày, mã bài in cách khung ~36 mm (lấy dư tới 55 mm); xén giấy trắng thừa, chừa lề trên 7 mm
   return parentCard(crop, r.pts, r.max, cm); }
 /* đề thi (phiếu trả lời chung): cả tờ phiếu, nắn thẳng */
@@ -1279,21 +1294,21 @@ $('fPick').onchange = async e=>{
 /* ===== Đáp án trên máy chủ (MathBank V1.67): quét MỘT LẦN mã liên kết MBPK1;<khoá> trên máy tính, sau đó đọc được mã bài trên phiếu là tự tải đáp án.
    Máy chủ chỉ giữ bản đáp án đã mã hoá (AES-GCM); khoá nằm trong điện thoại đã liên kết. ===== */
 const FB_DB = 'https://kho-de-toan-vonhai-default-rtdb.firebaseio.com', FB_KEY = 'AIzaSyATpXxpfSc03NLbzFQG6J04tFZOptfuL1s';
-const cloudWait = {}, cloudGrp = {};   // mã bài → {p: đang tải, at, miss, err}; cloudGrp: mã bài → các mã cùng nhóm (MathBank V2.01)
+const cloudWait = {}, cloudGrp = {}, cloudHm = {};   // mã bài → {p: đang tải, at, miss, err}; cloudGrp: mã bài → các mã cùng nhóm (MathBank V2.01)
 const b64u = s=> Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)), c=> c.charCodeAt(0));
 async function fbToken(){ const c = ls('mbpscan_fbtok', null); if(c && c.t && c.exp > Date.now() + 60000) return c.t;
   if(c && c.rt){ try{ const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + FB_KEY, {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:'grant_type=refresh_token&refresh_token=' + encodeURIComponent(c.rt)});
     if(r.ok){ const d = await r.json(); lsSet('mbpscan_fbtok', {t:d.id_token, rt:d.refresh_token, exp:Date.now() + (+d.expires_in || 3600)*1000}); return d.id_token; } }catch(e){} }
   const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + FB_KEY, {method:'POST', headers:{'Content-Type':'application/json'}, body:'{"returnSecureToken":true}'}); const d = await r.json();
   if(!r.ok) throw new Error('Không đăng nhập được máy chủ'); lsSet('mbpscan_fbtok', {t:d.idToken, rt:d.refreshToken, exp:Date.now() + (+d.expiresIn || 3600)*1000}); return d.idToken; }
-async function cloudFetch(id){ const txt = await cloudDecrypt(String(id)); if(txt == null) return null; const t = parsePayload(txt); if(t && t.id === id){ t.cloud = 1; return t; } throw new Error('Đáp án mã bài ' + id + ' không đọc được'); }
+async function cloudFetch(id){ const txt = await cloudDecrypt(String(id)); if(txt == null) return null; const t = parsePayload(txt); if(t && t.id === id){ t.cloud = 1; if(cloudHm[String(id)]) t.hm = 1; return t; } throw new Error('Đáp án mã bài ' + id + ' không đọc được'); }
 /* đề thi giữa kỳ, cuối kỳ (MathBank V1.74): mbp/e<mã bài> chứa đáp án mọi mã đề + danh sách SBD */
 function cloudExam(ak){ const key = 'e' + ak, w = cloudWait[key]; if(w && w.p) return w.p; if(w && Date.now() - w.at < 15000) return Promise.resolve(null);
   const p = cloudDecrypt(key).then(txt=>{ const ex = txt ? parseExam(txt) : null; if(ex){ ex.ak = ak; addExam(ex); } cloudWait[key] = {at:Date.now(), miss:!ex}; return ex; }, e=>{ cloudWait[key] = {at:Date.now(), err:e.message}; return null; });
   cloudWait[key] = {p, at:Date.now()}; return p; }
 async function cloudDecrypt(key){ if(!navigator.onLine) throw new Error('Điện thoại đang mất mạng');
   const r = await fetch(FB_DB + '/mbp/' + key + '.json?auth=' + encodeURIComponent(await fbToken())); if(r.status === 401) throw new Error('Máy chủ chưa cho điện thoại đọc đáp án — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
-  const d = await r.json(); if(!d || !d.c) return null; if(Array.isArray(d.g)) cloudGrp[key] = d.g.map(Number).filter(x=> x >= 1024).slice(0, 80);
+  const d = await r.json(); if(!d || !d.c) return null; if(Array.isArray(d.g)) cloudGrp[key] = d.g.map(Number).filter(x=> x >= 1024).slice(0, 80); if(d.h) cloudHm[key] = 1;   // h: phiếu in có mốc họ tên
   for(const k of akKeys){ try{ const ck = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); return new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, ck, b64u(d.c))); }catch(e){} }
   throw new Error('Đáp án mã bài ' + key.replace(/^e/, '') + ' thuộc máy tính chưa liên kết với điện thoại này'); }
 /* thầy sửa thang điểm trên máy tính → điện thoại nhận bản mới và tính lại điểm các bài đã chấm của mã đó (dựa trên kết quả từng ô đã lưu) */
@@ -1301,7 +1316,7 @@ function rescore(t){ let n = 0; results.forEach(r=>{ if(r.kind !== 'ws' || r.id 
     const pts = Math.round(t.rows.reduce((s, x, k)=> s + (r.qa[k] === 'o' ? x.pt : 0), 0)*100)/100, max = Math.round(t.rows.reduce((s, x)=> s + x.pt, 0)*100)/100;
     if(pts !== r.pts || max !== r.max){ r.pts = pts; r.max = max; r.rescored = 1; n++; } });
   if(n){ saveResults(); try{ drawResults(); }catch(e){} } return n; }
-function putTest(t){ const i = tests.findIndex(x=> x.id === t.id), same = i >= 0 && JSON.stringify(tests[i].rows) === JSON.stringify(t.rows); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); return {isNew:i < 0, changed:i >= 0 && !same}; }
+function putTest(t){ { const o = tests.find(x=> x.id === t.id); if(o && o.hm) t.hm = 1; } const i = tests.findIndex(x=> x.id === t.id), same = i >= 0 && JSON.stringify(tests[i].rows) === JSON.stringify(t.rows); if(i >= 0) tests[i] = t; else tests.push(t); saveTests(); return {isNew:i < 0, changed:i >= 0 && !same}; }
 const cloudChk = {};
 function cloudRefresh(id){ if(!akKeys.length || cloudChk[id] && Date.now() - cloudChk[id] < 60000) return; cloudChk[id] = Date.now();
   cloudFetch(id).then(t=>{ if(!t) return; const c = putTest(t); cloudGroup(id); if(c.changed){ const n = rescore(t); drawTests(); toast('Thang điểm mã bài ' + id + ' vừa được sửa trên máy tính — đã cập nhật' + (n ? ', tính lại ' + n + ' bài đã chấm.' : '.'), 3500); } }, ()=>{}); }
