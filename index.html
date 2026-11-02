@@ -191,7 +191,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11f · đọc phiếu v4</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11g · đọc phiếu v4</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -975,18 +975,24 @@ function tick(){
   const f = readFrame(cx.getImageData(0, 0, work.width, work.height));
   if(!f.ok){ hint(f.why[0], f.why[1]); drawQuad(f.corners || null, 1/k, '#d0302b'); lastSig = ''; sameCount = 0; setTimeout(tick, f.corners ? 250 : 100); return; }
   sameCount = f.sig===lastSig ? sameCount + 1 : 0; lastSig = f.sig;
+  // phần họ tên, mã bài (trên khung ~27–36 mm) còn ngoài khung hình: nhắc lùi máy, chờ tối đa 1,5 giây rồi vẫn chấm
+  if(!hdrInView(f, work.width, work.height)){ if(!hdrWait) hdrWait = Date.now();
+    if(Date.now() - hdrWait < 1500){ drawQuad(f.corners, 1/k, '#e0b030'); hint('Lùi máy ra một chút', 'Cho thấy cả phần họ tên, mã bài phía trên khung — để ảnh gửi phụ huynh có tên.'); setTimeout(tick, 50); return; } }
   drawQuad(f.corners, 1/k, sameCount ? '#12a150' : '#e0b030'); hint(sameCount ? 'Đang chấm…' : 'Đã thấy phiếu — giữ yên…', esc(f.label));
   // chấm nhanh mà vẫn chắc: 2 lần đọc ảnh thu nhỏ giống hệt nhau + lần đọc ảnh gốc phải ra đúng như vậy (3 lần khớp — như trước, bớt một lượt chờ)
   if(sameCount >= 1){ requestAnimationFrame(()=> setTimeout(capture, 0)); return; }
   setTimeout(tick, 50);
 }
+let hdrWait = 0;   // lúc bắt đầu chờ lùi máy (0 = chưa chờ); về 0 khi chấm xong một bài
+function hdrInView(f, W, H){ if(!f || f.kind !== 'ws' || !f.r || !f.r.mapMm) return true;   // bài kiểm tra: điểm ở mức dòng họ tên / ô mã bài phải nằm trong ảnh
+  return [[12, -34], [WAK.W - 12, -34]].every(([X, Y])=>{ const [x, y] = f.r.mapMm(X, Y); return x >= 0 && x < W && y >= 0 && y < H; }); }
 let capMiss = 0;   // số lần ảnh gốc đọc khác ảnh thu nhỏ liên tiếp (ô tô sát ngưỡng): lần thứ 2 thì lấy kết quả ảnh gốc (rõ hơn), ô chưa chắc vẫn báo để chấm tay
 function capture(){
   const v = $('vid'), full = document.createElement('canvas'); full.width = v.videoWidth; full.height = v.videoHeight; const cx = full.getContext('2d'); cx.drawImage(v, 0, 0);
   const f = readFrame(cx.getImageData(0, 0, full.width, full.height));
   if(!f.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 60); return; }
   if(f.sig !== lastSig && capMiss < 1){ capMiss++; lastSig = ''; sameCount = 0; setTimeout(tick, 30); return; }
-  capMiss = 0; showShot(full, f);
+  capMiss = 0; hdrWait = 0; showShot(full, f);
 }
 /* ===== NHẬN XÉT ĐỘNG VIÊN (MathBank V1.75): khen điểm mạnh, chỉ rõ dạng cần xem lại, lời khuyên cụ thể, mục tiêu lần sau — mỗi ý một bong bóng chat có icon =====
    qs: [{n: số câu in trên đề, part:'TN'|'DS'|'TLN', ok, blank, sub, subBad, md:'NB'|'TH'|'VD'|'VDC'|'', dg: tên dạng, pt: điểm tối đa, got: điểm đạt}] */
