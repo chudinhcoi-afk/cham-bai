@@ -227,7 +227,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 02/11i · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 02/11j · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1034,8 +1034,8 @@ function cmtRich(qs, pts, max, extra){
   const OPEN = {
     great:[['🌟', 'Xuất sắc! Bài làm rất chắc chắn và cẩn thận.'], ['🏆', 'Tuyệt vời! Em đã thể hiện phong độ rất cao.'], ['🌟', 'Quá giỏi! Kết quả này xứng đáng với sự chăm chỉ của em.']],
     good:[['🎉', 'Rất tốt! Em nắm vững phần lớn kiến thức.'], ['👏', 'Bài làm tốt lắm, em đang đi đúng hướng!'], ['🎉', 'Kết quả rất đáng khen!']],
-    fair:[['👍', 'Bài làm khá! Em đã nắm được kiến thức cơ bản.'], ['😊', 'Khá lắm! Chỉ cần cẩn thận thêm một chút là em lên mức tốt.']],
-    pass:[['💪', 'Em đã đạt yêu cầu — một nền móng để bứt phá.'], ['🙂', 'Em đã qua mức trung bình, cố thêm chút nữa nhé!']],
+    fair:[['👍', 'Bài làm khá: em đã nắm được kiến thức cơ bản.'], ['👍', 'Bài làm khá, còn vài câu mất điểm đáng tiếc.']],
+    pass:[['🙂', 'Em đã đạt yêu cầu, nhưng còn hổng một số phần của bài.'], ['🙂', 'Em qua mức trung bình, các câu sai dưới đây cần xem lại ngay.']],
     grow:[['📌', 'Chưa đạt trung bình — em cần cố gắng nhiều hơn nữa.'], ['📌', 'Em làm được một phần, nhưng như vậy là chưa đủ: cần chắc hơn ở các câu cơ bản.']],
     low:[['⚠️', 'Kết quả này chưa đạt — và thầy cô biết đây chưa phải sức của em.'], ['📉', 'Điểm lần này đáng báo động, em cần nghiêm túc nhìn lại cách học bài này.'], ['⏰', 'Em đang bị bỏ lại khá xa so với yêu cầu của bài — đã đến lúc phải tăng tốc.']],
     zero:[['⚠️', 'Chưa có câu nào đúng — đây là hồi chuông cảnh báo, không thể để lặp lại.'], ['📉', 'Không câu nào đúng: em đang hổng kiến thức bài này, cần lấp ngay trước khi học tiếp.']]};
@@ -1052,7 +1052,7 @@ function cmtRich(qs, pts, max, extra){
   if(good.length < 2 && dgOk.length && bad.length) good.push(`làm tốt dạng “${dgOk[0]}”`);
   if(good.length && mood !== 'low') add('good', '✅', 'Điểm mạnh: em ' + good.slice(0, 3).join('; ') + '.');
   else if(nOk && mood === 'low') add('good', '✅', `Em mới làm đúng ${nOk} câu — chưa đủ, nhưng chứng tỏ em làm được nếu chịu học.`);
-  else if(nOk) add('good', '✅', `Em đã làm đúng ${nOk} câu — đó là những viên gạch đầu tiên, cần xây tiếp.`);
+  else if(nOk) add('good', '✅', `Em làm đúng ${nOk}/${qs.length} câu.`);
   // 3. Cần xem lại — gom theo dạng
   if(wrong.length){ const G = new Map(); wrong.forEach(q=>{ const k = q.dg || ''; if(!G.has(k)) G.set(k, []); G.get(k).push(q.n); });
     const items = [...G.entries()].sort((a, b)=> b[1].length - a[1].length).slice(0, 3).map(([d, ns])=> cq(ns) + (d ? ` (${d})` : ''));
@@ -1073,18 +1073,21 @@ function cmtRich(qs, pts, max, extra){
     const cand = bad.slice().sort((a, b)=> ((a.md === 'NB' || a.md === 'TH') ? 0 : 1) - ((b.md === 'NB' || b.md === 'TH') ? 0 : 1) || (b.pt - b.got) - (a.pt - a.got));
     let acc = 0; const take = []; for(const q of cand){ if(acc >= need - 1e-9) break; acc += q.pt - q.got; take.push(q.n); }
     const ten = Math.abs(max - 10) < 0.01, ex3 = cq(take.slice(0, 3).sort((a, b)=> a - b));   // thang 10 → nêu mốc điểm; phần chấm máy (còn tự luận) → nêu số điểm cộng thêm
-    if(acc >= need - 1e-9 && take.length) add('goal', '🎯', mood === 'low' ? (ten ? `Mục tiêu tối thiểu lần sau: ${f(tg)} điểm — tức là đúng thêm ${take.length} câu (như ${ex3}). Thầy cô sẽ chờ xem em làm được không!` : `Mục tiêu tối thiểu lần sau: đúng thêm ${take.length} câu (như ${ex3}), lên ${f(pts + acc)}/${f(max)}. Thầy cô sẽ chờ xem em làm được không!`) : ten ? `Mục tiêu lần sau: ${f(tg)} điểm — chỉ cần làm đúng thêm ${take.length} câu (như ${ex3}). Em hoàn toàn làm được!` : `Mục tiêu lần sau: làm đúng thêm ${take.length} câu (như ${ex3}) là em có thêm ${f(acc)} điểm, lên ${f(pts + acc)}/${f(max)}. Em hoàn toàn làm được!`); }
-  // 6. Lời chúc
-  const END = {great:['🚀 Giữ vững phong độ này nhé — em là tấm gương cho cả lớp!', '💎 Tiếp tục chinh phục những bài khó hơn nhé!'],
-    good:['🚀 Thêm chút cẩn thận là em chạm mốc xuất sắc!', '🔥 Cố lên, điểm 9 – 10 đang ở rất gần!'],
-    fair:['💡 Mỗi lỗi sai là một bài học — sửa xong là em giỏi hơn hôm qua.', '🔥 Cố gắng thêm một chút, em sẽ bứt phá!'],
-    pass:['💪 Kiên trì mỗi ngày một chút, kết quả sẽ đến!', '🌈 Thầy cô tin em sẽ tiến bộ rõ ở bài sau.'],
-    grow:['🔥 Mỗi ngày làm thêm vài câu — bài sau phải qua được điểm 5!', '🙋 Chưa hiểu chỗ nào thì hỏi thầy cô, bạn bè ngay, đừng để dồn lại.'],
-    low:['🔥 Bạn bè làm được thì em cũng làm được — bài sau hãy chứng minh điều đó!', '💪 Thầy cô không cần lời hứa, chỉ cần thấy bài sau của em khác hẳn.', '🏁 Em đủ khả năng làm tốt hơn nhiều — bài sau hãy cho thầy cô thấy điều đó!']};
-  const e = pick(END[mood]); add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1));
+    if(acc >= need - 1e-9 && take.length) add('goal', '🎯', mood === 'low' ? (ten ? `Mục tiêu tối thiểu lần sau: ${f(tg)} điểm — tức là đúng thêm ${take.length} câu (như ${ex3}). Thầy cô sẽ chờ xem em làm được không!` : `Mục tiêu tối thiểu lần sau: đúng thêm ${take.length} câu (như ${ex3}), lên ${f(pts + acc)}/${f(max)}. Thầy cô sẽ chờ xem em làm được không!`) : ten ? `Mục tiêu lần sau: ${f(tg)} điểm — làm đúng thêm ${take.length} câu (như ${ex3}).` : `Mục tiêu lần sau: làm đúng thêm ${take.length} câu (như ${ex3}) là có thêm ${f(acc)} điểm, lên ${f(pts + acc)}/${f(max)}.`); }
+  // 6. Gửi phụ huynh: việc cụ thể ở nhà theo đúng bài của con (câu sai, dạng sai) — không nói chung chung
+  const wn = wrong.concat(blank).map(q=> q.n).sort((a, b)=> a - b), wq = wn.length ? (wn.length > 4 ? 'câu ' + wn.slice(0, 4).join(', ') + '…' : cq(wn)) : '';
+  const dgs = [...new Set(bad.filter(q=> q.dg).map(q=> q.dg))].slice(0, 2), dgT = dgs.length ? ' (dạng ' + dgs.map(d=> '“' + d + '”').join(', ') + ')' : '';
+  let ph;
+  if(mood === 'low') ph = nOk ? `Con đang hổng kiến thức bài này. Mỗi tối dành 20 phút cùng con xem lại ${wq}${dgT}: cho con tự giải lại đến khi đúng, chỗ nào con không làm được thì ghi lại để hỏi thầy cô. Nếu bài sau vẫn dưới 5 điểm, phụ huynh nên liên hệ thầy cô để có kế hoạch kèm thêm.` : `Con chưa làm đúng câu nào. Phụ huynh nên trao đổi với con xem vướng ở đâu (chưa học bài, không hiểu hay làm không kịp) và liên hệ thầy cô sớm để có kế hoạch kèm thêm.`;
+  else if(mood === 'grow') ph = `Con chưa đạt trung bình. Phụ huynh kiểm tra con làm lại ${wq}${dgT} trong tuần này và nhắc con ôn bài trước buổi học sau.`;
+  else if(mood === 'pass' || mood === 'fair') ph = `Con nắm được phần cơ bản. Nhắc con làm lại ${wq}${dgT} và luyện thêm dạng này; khi làm bài cần kiểm tra lại trước khi nộp.`;
+  else if(bad.length) ph = `Con làm bài tốt — phụ huynh hãy ghi nhận sự cố gắng của con. Chỉ còn ${wq} chưa đúng; có thể cho con làm thêm bài vận dụng để lên điểm tối đa.`;
+  else ph = `Con làm đúng toàn bộ — phụ huynh hãy khen con. Có thể cho con thử sức thêm bài vận dụng cao, nâng cao để phát huy.`;
+  add('parent', '👪', 'Gửi phụ huynh: ' + ph);
+  if(mood === 'low'){ const e = pick(['🔥 Bạn bè làm được thì em cũng làm được — bài sau hãy chứng minh điều đó!', '💪 Thầy cô không cần lời hứa, chỉ cần thấy bài sau của em khác hẳn.', '🏁 Em đủ khả năng làm tốt hơn nhiều — bài sau hãy cho thầy cô thấy điều đó!']); add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1)); }
   return cmtPack(L, mood); }
 function cmtPack(L, mood){ return {mood, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
-const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], cheer:['#ffe3ef', '#e0457b']};
+const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b']};
 /* khung nhận xét gọn (chữ nhỏ, một thẻ, chạm để mở hết) — dùng ở màn hình sau khi chấm và mục Kết quả */
 function cmtMini(r){ const cm = r && (r.cm || (r.cmt ? {lines:[{i:'💬', t:r.cmt}]} : null)); if(!cm || !cm.lines || !cm.lines.length) return '';
   return '<div class="cmini" onclick="this.classList.toggle(\'open\')">' + cm.lines.map(l=> '<div><span>' + l.i + '</span><span>' + esc(l.t) + '</span></div>').join('') + '</div>'; }
