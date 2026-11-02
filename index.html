@@ -191,7 +191,7 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 
   <section class="view" id="v-tests">
     <div class="card">
-      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11d · đọc phiếu v3</span></h3>
+      <h3>Nạp đáp án từ máy tính <span style="float:right;font-size:.7rem;font-weight:500;color:#8a90a6">bản 02/11e · đọc phiếu v4</span></h3>
       <p class="mut" style="margin:0 0 10px">Trên MathBankPro, mục <b>Chấm bài</b>. <b>Bài kiểm tra:</b> bảng “Bài kiểm tra đã lưu đáp án” → 📱 Mã QR. <b>Đề thi giữa kỳ, cuối kỳ:</b> thẻ 📱 Điện thoại → Gửi đáp án sang điện thoại. Mỗi đề nạp một lần; chấm không cần mạng.</p>
       <button class="btn pri wide" id="bQr">📷 Quét mã QR đáp án</button>
       <div id="qrBox" style="display:none;margin-top:10px">
@@ -676,7 +676,9 @@ function wakLocate(gray, w, h, pickTest, cg){
       { const tb = topM.map(m=> m < mid ? 1 : 0); if(tb.some(x=> x)){ let hi = 0, o2 = 0; for(let i=0;i<10;i++){ hi |= tb[i+1] << i; o2 += tb[i+1]; } if(tb[11] !== (o2 % 2 ? 0 : 1)) continue; id = hi*1024 + id; } }   // mã bài ≥ 1024 (MathBank V1.66): hàng ô thứ hai ở đỉnh khung
       // Kiểm chứng bằng chính bố cục khung: tại vị trí mỗi ô phải có VÒNG TRÒN in sẵn (tối hơn giấy ở giữa các ô).
       // Bộ bốn điểm ghép nhầm từ các ô học sinh tô đậm sẽ không khớp bố cục này.
-      let score = paper - botM[0]; const test = pickTest ? pickTest(id) : null;
+      // Ưu tiên khung có 4 góc TO ĐỀU nhau (ô mã bài 3,2 × 3 mm nhỏ hơn ô góc 4 × 4 mm) và mã ≥ 1024 (mọi phiếu in từ MathBank V1.66):
+      // bộ bốn điểm lấy nhầm ô mã bài làm góc (đọc sai mã, ví dụ 1143 thành 16) luôn thua khung thật.
+      let score = paper - botM[0] + 400*Math.min(...sides)/Math.max(...sides) + (id >= 1024 ? 100 : 0); const test = pickTest ? pickTest(id) : null;
       if(test){ const G = wakGeom(test.rows, test.v), vs = G.H - 4, mp = (x, y)=> map((x-2)/span, (y-2)/vs); let hit = 0, tot = 0;
         const px = (x, y)=>{ const [qx, qy] = mp(x, y), ix = Math.round(qx), iy = Math.round(qy); return ix < 0 || iy < 0 || ix >= w || iy >= h ? 255 : gray[iy*w+ix]; };
         for(let k = 0; k < test.rows.length; k++) for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j); let ring = 0; for(let t = 0; t < 12; t++){ const an = t*Math.PI/6; ring += px(p.x + 1.65*Math.cos(an), p.y + 1.65*Math.sin(an)); } ring /= 12;
