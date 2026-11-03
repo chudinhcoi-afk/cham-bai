@@ -230,7 +230,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 03/11c · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 03/11d · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -546,11 +546,19 @@ function omrReadImageData(img, counts){
   const pxg = (X, Y)=>{ const [x, y] = map(X, Y), xi = Math.round(x), yi = Math.round(y); return (xi < 0 || yi < 0 || xi >= w || yi >= h) ? 255 : gray[yi*w + xi]; };
   const surround = b=>{ const v = SUR.map(([u,q])=> pxg(b.x+u, b.y+q)).sort((p,q)=> q-p); return (v[2] + v[3] + v[4] + v[5])/4; };   // bỏ 2 điểm sáng nhất, lấy nhóm sáng kế tiếp (tránh rơi vào vạch kẻ / chữ)
   const bScore = b=> Math.max(0, Math.min(1, (surround(b) - omrMeanGray(gray,w,h,map,b.x,b.y,0.62))/span));
-  const groupScores = g=> g.map(bScore);
+  // V4 (03/11): ô tô nhạt (bút chì, mực nhạt) mà giữa ô loang trắng / lóa sáng — đo thêm nửa số điểm TỐI NHẤT trong vùng rộng hơn (bán kính 0,9 mm).
+  // Chỉ dùng cho phần I, II (ô để trống, không in chữ số bên trong) nên không làm ô trống bị nhận là có tô.
+  const darkHalf = b=>{ const [cx, cy] = map(b.x, b.y), [ex, ey] = map(b.x + 0.9, b.y), r = Math.max(2, Math.hypot(ex - cx, ey - cy)), v = [];
+    for(let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(h - 1, Math.ceil(cy + r)); y++) for(let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(w - 1, Math.ceil(cx + r)); x++) if((x - cx)*(x - cx) + (y - cy)*(y - cy) <= r*r) v.push(gray[y*w + x]);
+    if(!v.length) return 255; v.sort((a, b)=> a - b); const k = Math.max(1, v.length >> 1); let t = 0; for(let i = 0; i < k; i++) t += v[i]; return t/k; };
+  const rawR = b=> Math.max(0, Math.min(1, (surround(b) - darkHalf(b))/span));
+  const groupScores = (g, rob)=>{ const c = g.map(bScore); if(!rob) return c;
+    const R = g.map(rawR), mn = Math.min(...R); return c.map((v, i)=> Math.max(v, 0.9*(R[i] - mn))); };   // trừ ô nhạt nhất cùng câu: nét in viền ô (như nhau ở mọi ô) triệt tiêu, chỉ còn phần học sinh tô
   const T = omrAdaptiveT([...L.sbd.flat(), ...L.made.flat(), ...L.p1.flat(), ...L.p2.flat(2), ...L.p3.flat(2)].map(bScore));
-  const pick = (g, label)=>{
-    const sc = groupScores(g);
-    const r = omrPickGroupT(g, sc, T);
+  const pick = (g, label, rob)=>{
+    const sc = groupScores(g, rob);
+    let r = omrPickGroupT(g, sc, T);
+    if(rob && r.state === 'blank'){ const o = sc.slice().sort((a, b)=> b - a); const o1 = o[1] || 0; if(o[0] >= 0.07 && o[0] - o1 >= 0.055 && o[0] >= 1.35*Math.max(o1, 0.02)) r = {v:'', state:'weak', i:sc.indexOf(o[0])}; }   // có một ô nhỉnh hẳn lên nhưng còn nhạt: báo “tô mờ” để giáo viên chấm tay, không coi là bỏ trống
     if(r.state==='ok') marks.push({b:g[r.i], c:'ok'});
     else if(r.state==='multi'){ marks.push({b:g[r.i], c:'bad'}); marks.push({b:g[r.i2], c:'bad'}); warnings.push(`${label}: tô nhiều hơn 1 ô`); }
     else if(r.state==='weak'){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: tô mờ, chưa chắc`); }
@@ -564,9 +572,9 @@ function omrReadImageData(img, counts){
   const made = digitsOf(L.made, 'Mã đề');
   const unsure = [];   // các ô máy chưa chắc (tô mờ / tô nhiều ô) — giáo viên chấm tay trên điện thoại
   let tn = '';
-  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`); tn += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'tn', q, why:r.state}); }
+  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`, true); tn += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'tn', q, why:r.state}); }
   let ds = '';
-  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`); ds += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'ds', q, j, why:r.state}); }
+  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`, true); ds += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'ds', q, j, why:r.state}); }
   const tln = [], tlnSel = [];
   for(let q=0;q<Math.min(nTLN,6);q++){
     let s = '', bad = null; const sel = [];
