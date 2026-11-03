@@ -230,7 +230,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 03/11b · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 03/11c · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -244,6 +244,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
         <div class="row" id="gActs" style="margin-top:12px"></div>
       </div>
       <div class="card" id="gTl" style="display:none"></div>
+      <div class="card" id="gCmp" style="display:none"></div>
       <div class="card" id="gSum"></div>
       <div class="card" id="gMiss"></div>
       <div class="card" id="xCard" style="display:none;padding:0;overflow:hidden">
@@ -1093,7 +1094,7 @@ function cmtRich(qs, pts, max, extra){
     const ten = Math.abs(max - 10) < 0.01, ex3 = cq(take.slice(0, 3).sort((a, b)=> a - b));   // thang 10 → nêu mốc điểm; phần chấm máy (còn tự luận) → nêu số điểm cộng thêm
     if(acc >= need - 1e-9 && take.length) add('goal', '🎯', mood === 'low' ? (ten ? `Mục tiêu tối thiểu lần sau: ${f(tg)} điểm — tức là đúng thêm ${take.length} câu (như ${ex3}). Thầy cô sẽ chờ xem em làm được không!` : `Mục tiêu tối thiểu lần sau: đúng thêm ${take.length} câu (như ${ex3}), lên ${f(pts + acc)}/${f(max)}. Thầy cô sẽ chờ xem em làm được không!`) : ten ? `Mục tiêu lần sau: ${f(tg)} điểm — làm đúng thêm ${take.length} câu (như ${ex3}).` : `Mục tiêu lần sau: làm đúng thêm ${take.length} câu (như ${ex3}) là có thêm ${f(acc)} điểm, lên ${f(pts + acc)}/${f(max)}.`); }
   // 6. Gửi phụ huynh: việc cụ thể ở nhà theo đúng bài của con (câu sai, dạng sai) — không nói chung chung
-  const wn = wrong.concat(blank).map(q=> q.n).sort((a, b)=> a - b), wq = wn.length ? (wn.length > 4 ? 'câu ' + wn.slice(0, 4).join(', ') + '…' : cq(wn)) : '';
+  const wn = wrong.concat(blank).map(q=> q.n).sort((a, b)=> a - b), wq = wn.length ? (wn.length > 4 ? 'câu ' + wn.slice(0, 4).join(', ') + '…' : cq(wn)) : 'các câu chưa làm được';
   const dgs = [...new Set(bad.filter(q=> q.dg).map(q=> q.dg))].slice(0, 2), dgT = dgs.length ? ' (dạng ' + dgs.map(d=> '“' + d + '”').join(', ') + ')' : '';
   let ph;
   if(mood === 'low') ph = nOk ? `Con đang hổng kiến thức bài này. Mỗi tối dành 20 phút cùng con xem lại ${wq}${dgT}: cho con tự giải lại đến khi đúng, chỗ nào con không làm được thì ghi lại để hỏi thầy cô. Nếu bài sau vẫn dưới 5 điểm, phụ huynh nên liên hệ thầy cô để có kế hoạch kèm thêm.` : `Con chưa làm đúng câu nào. Phụ huynh nên trao đổi với con xem vướng ở đâu (chưa học bài, không hiểu hay làm không kịp) và liên hệ thầy cô sớm để có kế hoạch kèm thêm.`;
@@ -1105,7 +1106,7 @@ function cmtRich(qs, pts, max, extra){
   if(mood === 'low'){ const e = pick(['🔥 Bạn bè làm được thì em cũng làm được — bài sau hãy chứng minh điều đó!', '💪 Thầy cô không cần lời hứa, chỉ cần thấy bài sau của em khác hẳn.', '🏁 Em đủ khả năng làm tốt hơn nhiều — bài sau hãy cho thầy cô thấy điều đó!']); add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1)); }
   return cmtPack(L, mood); }
 function cmtPack(L, mood){ return {mood, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
-const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b'], note:['#eef1f7', '#5a6378']};
+const CMT_COL = {cmp:['#eef6ff', '#4a78b8'], open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b'], note:['#eef1f7', '#5a6378']};
 /* khung nhận xét gọn (chữ nhỏ, một thẻ, chạm để mở hết) — dùng ở màn hình sau khi chấm và mục Kết quả */
 function cmtMini(r){ const cm = r && (r.cm || (r.cmt ? {lines:[{i:'💬', t:r.cmt}]} : null)); if(!cm || !cm.lines || !cm.lines.length) return '';
   return '<div class="cmini" onclick="this.classList.toggle(\'open\')">' + cm.lines.map(l=> '<div><span>' + l.i + '</span><span>' + esc(l.t) + '</span></div>').join('') + '</div>'; }
@@ -1193,7 +1194,7 @@ async function recRecomment(rec, cm){
   if(!rec.cmY) throw new Error('Bài chấm từ bản cũ (trước 03/11) — chấm lại bài này để sửa được nhận xét.');
   const im = new Image(); im.src = rec.url; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = rec.cmY; c.getContext('2d').drawImage(im, 0, 0);
   const T = recTot(rec), out = cmtPanel(c, cm, rec.cmSc ? {pts:T.pts, max:T.max} : null); rec.url = out.toDataURL('image/jpeg', 0.88); rec.cmY = out.cmY; rec.cm = cm; rec.cmt = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
-function cmtEdit(rec, onSaved){ if(!rec) return; const sh = $('sheet'); let L = ((rec.cm && rec.cm.lines) || []).map(l=> ({...l}));
+function cmtEdit(rec, onSaved){ if(!rec) return; const sh = $('sheet'); let L = ((rec.cm && rec.cm.lines) || []).map(l=> ({...l})), resetUsed = false;
   const sync = ()=> sh.querySelectorAll('.ced textarea').forEach(e=>{ L[+e.dataset.i].t = e.value; });
   const draw = (focus)=>{ sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">SỬA NHẬN XÉT TRƯỚC KHI GỬI</small><b style="display:block">' + esc(rec.kind === 'exam' ? (rec.name || 'SBD ' + (rec.sbd || '?')) : (rec.name || 'Bài kiểm tra')) + ' · ' + fmtVN(recTot(rec).pts) + '/' + fmtVN(recTot(rec).max) + ' điểm</b></div><div class="shBody">'
       + (rec.cmY ? '' : '<p class="warn" style="margin:0 0 8px">Bài này chấm từ bản cũ nên không vẽ lại được nhận xét trên ảnh — chấm lại bài để sửa.</p>')
@@ -1202,12 +1203,14 @@ function cmtEdit(rec, onSaved){ if(!rec) return; const sh = $('sheet'); let L = 
       + '<p class="mut" style="margin:10px 0 0">Sửa xong bấm <b>Lưu</b>: ảnh gửi phụ huynh được vẽ lại với nhận xét mới.</p></div><div class="shFoot"><button class="fab" id="ceCancel">Huỷ</button><button class="fab go" id="ceSave"' + (rec.cmY ? '' : ' disabled') + '>💾 Lưu nhận xét</button></div></div>';
     sh.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ sync(); L.splice(+b.dataset.del, 1); draw(); });
     $('ceAdd').onclick = ()=>{ sync(); L.push({k:'note', i:'✍️', t:''}); draw(true); };
-    if($('ceReset')) $('ceReset').onclick = ()=>{ L = rec.cmAuto.lines.map(l=> ({...l})); draw(); };
+    if($('ceReset')) $('ceReset').onclick = ()=>{ L = rec.cmAuto.lines.map(l=> ({...l})); resetUsed = true; draw(); };
     $('ceCancel').onclick = sheetClose;
     $('ceSave').onclick = async ()=>{ sync(); const lines = L.map(l=> ({...l, t:String(l.t || '').trim()})).filter(l=> l.t); if(!lines.length){ toast('Cần ít nhất một dòng nhận xét.', 2400); return; }
       const auto = rec.cmAuto || rec.cm, was = !!rec.sent;
-      try{ await recRecomment(rec, {mood:(rec.cm || {}).mood, lines, text:''}); }catch(e){ toast(e.message, 3600); return; }
-      if(!rec.cmAuto) rec.cmAuto = auto; rec.cmEdited = 1; if(was) delete rec.sent; saveResults(); saveX(); sheetClose(); if(onSaved) onSaved();
+      const hadCmp0 = ((rec.cm || {}).lines || []).some(l=> l.k === 'cmp'); try{ await recRecomment(rec, {mood:(rec.cm || {}).mood, lines, text:''}); }catch(e){ toast(e.message, 3600); return; }
+      const hadCmp = hadCmp0;
+      if(!rec.cmAuto) rec.cmAuto = auto; rec.cmEdited = 1; if(was) delete rec.sent;
+      if(resetUsed){ delete rec.cmpOff; delete rec.cmpSig; } else if(hadCmp && !lines.some(l=> l.k === 'cmp')) rec.cmpOff = 1;   /* thầy tự bỏ dòng so sánh: không thêm lại */ saveResults(); saveX(); sheetClose(); if(onSaved) onSaved();
       toast(was ? 'Đã lưu nhận xét — bài này chuyển về “chưa gửi” để thầy gửi bản mới.' : 'Đã lưu nhận xét.', 3000); };
     if(focus){ const t = sh.querySelectorAll('.ced textarea'); if(t.length) t[t.length - 1].focus(); } };
   draw(); sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; }
@@ -1523,6 +1526,25 @@ function recAutoCm(rec){ let qs = null;   // nhận xét tự động tính lạ
     cm.lines.splice(1, 0, q >= 0.8 ? {k:'good', i:'✍️', t:'Tự luận ' + sc + ': trình bày tốt, lập luận chặt chẽ.'} : q >= 0.5 ? {k:'tip', i:'✍️', t:'Tự luận ' + sc + ': cần trình bày đủ các bước, lập luận chặt hơn để không mất điểm.'} : {k:'fix', i:'✍️', t:'Tự luận ' + sc + ': còn yếu — xem lại lời giải mẫu, tập viết đủ các bước và kiểm tra lại kết quả.'});
     cm.text = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
   return cm; }
+/* ===== SO SÁNH VỚI CẢ LỚP trong nhận xét từng bài (dòng 📊, ngay trên lời nhắn phụ huynh): cao nhất (kèm tên bạn cao nhất), thấp nhất (không tên), trung bình, trung vị, vị trí của con.
+   Cập nhật khi mở lần chấm ở mục Kết quả (cần từ 5 bài) — điểm cả lớp thay đổi theo từng bài chấm thêm nên không ghi lúc vừa chấm. ===== */
+let topNames = ls('mbpscan_top', {}), cmpBusy = null;
+function cmpStats(list, key){ const T = list.map(r=> recTot(r).pts), so = T.slice().sort((a, b)=> a - b), n = so.length, max = so[n - 1], min = so[0], avg = avgOf(list), med = n % 2 ? so[(n - 1)/2] : r2((so[n/2 - 1] + so[n/2])/2);
+  const tops = list.filter((r, i)=> Math.abs(T[i] - max) < 1e-9), auto = tops.map(r=> r.kind === 'exam' ? r.name : '').filter(Boolean), manual = String(topNames[key] || '').trim();
+  return {n, max, min, avg, med, tops, names:auto.length ? auto : manual ? manual.split(/\s*[,;]\s*/).filter(Boolean) : [], sig:[n, max, min, avg, med, manual].join('|')}; }
+function cmpLine(rec, S){ const f = fmtVN, me = recTot(rec).pts, isTop = S.tops.includes(rec), nm = a=> a.length > 3 ? a.slice(0, 2).join(', ') + ' và ' + (a.length - 2) + ' bạn khác' : a.join(', ');
+  let top = 'cao nhất ' + f(S.max) + ' điểm';
+  if(isTop) top += S.tops.length > 1 ? ' — con và ' + (S.tops.length - 1) + ' bạn cùng đạt' : ' — chính là con 🎉';
+  else if(S.names.length) top += ' (bạn ' + nm(S.names) + ')';
+  const d = r2(me - S.avg), pos = Math.abs(d) < 0.05 ? 'bằng điểm trung bình lớp' : (d > 0 ? 'cao hơn' : 'thấp hơn') + ' trung bình lớp ' + f(Math.abs(d)) + ' điểm';
+  return {k:'cmp', i:'📊', t:'So với lớp (' + S.n + ' bài): ' + top + '; thấp nhất ' + f(S.min) + '; trung bình ' + f(S.avg) + '; trung vị ' + f(S.med) + '. Con được ' + f(me) + ' điểm — ' + pos + '.'}; }
+async function cmpUpdate(list, key, prog){ if(list.length < 5) return 0; const S = cmpStats(list, key), todo = list.filter(r=> r.cmY && r.cm && !r.cmpOff && r.cmpSig !== S.sig); let k = 0;
+  for(const r of todo){ const lines = r.cm.lines.filter(l=> l.k !== 'cmp'), i = lines.findIndex(l=> l.k === 'parent'); lines.splice(i >= 0 ? i : lines.length, 0, cmpLine(r, S));
+    try{ await recRecomment(r, {mood:r.cm.mood, lines, text:''}); r.cmpSig = S.sig; }catch(e){} if(prog) prog(++k, todo.length); await new Promise(z=> setTimeout(z, 0)); }
+  if(todo.length){ saveResults(); saveX(); } return todo.length; }
+function cmpKick(list, key){ if(cmpBusy || list.length < 5) return; const S = cmpStats(list, key); if(!list.some(r=> r.cmY && r.cm && !r.cmpOff && r.cmpSig !== S.sig)) return;
+  cmpBusy = key; const st = ()=> $('cmpSt');
+  cmpUpdate(list, key, (k, n)=>{ if(st()) st().textContent = 'Đang cập nhật so sánh vào nhận xét từng bài… ' + k + '/' + n; }).finally(()=>{ cmpBusy = null; if(view === 'res' && rv && rv.kind + rv.key === key) drawResults(); }); }
 function tlSheet(list, done){ const sh = $('sheet'), ex = rvExam(), rows = list.map((r, i)=> ({r, i, m:tlMaxOf(r)})).filter(x=> x.m > 0);
   const who = x=> x.r.kind === 'exam' ? '<b>' + esc(x.r.name || '(chưa rõ tên)') + '</b><small>SBD ' + esc(x.r.sbd || '?') + ' · mã đề ' + esc(x.r.made) + '</small>' : '<b>Bài #' + (x.i + 1) + '</b><small>' + hm(x.r.at) + ' · mã ' + x.r.id + '</small>';
   sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">NHẬP ĐIỂM TỰ LUẬN</small><b style="display:block">Tối đa ' + fmtVN(rows.length ? rows[0].m : 0) + ' điểm/bài · cộng vào điểm chấm máy</b></div><div class="shBody">'
@@ -1541,7 +1563,7 @@ function tlSheet(list, done){ const sh = $('sheet'), ex = rvExam(), rows = list.
     const b = $('tlSave'); b.disabled = true; let k = 0, resent = 0, err = '';
     for(const [r, v] of ch){ b.textContent = 'Đang cập nhật ảnh ' + (++k) + '/' + ch.length + '…'; await new Promise(z=> setTimeout(z, 0));
       if(v == null) delete r.tl; else r.tl = v;
-      try{ const cm = r.cmEdited ? r.cm : (recAutoCm(r) || r.cm); if(cm) await recRecomment(r, cm); if(!r.cmEdited && cm) r.cmAuto = undefined; }catch(e){ err = e.message; }
+      try{ const cm = r.cmEdited ? r.cm : (recAutoCm(r) || r.cm); if(cm) await recRecomment(r, cm); if(!r.cmEdited && cm){ r.cmAuto = undefined; delete r.cmpSig; } }catch(e){ err = e.message; }
       if(r.sent){ delete r.sent; resent++; } }
     saveResults(); saveX(); sheetClose(); if(done) done();
     toast('Đã lưu điểm tự luận ' + ch.length + ' bài' + (resent ? ' — ' + resent + ' bài đã gửi trước đó chuyển về “chưa gửi” để gửi bản mới' : '') + (err ? '. ' + err : '') + '.', 4200); };
@@ -1694,7 +1716,14 @@ function drawResults(){
   $('gTl').style.display = tlN.length ? '' : 'none';
   $('gTl').innerHTML = tlN.length ? '<h3 style="margin-bottom:2px">✍ Điểm tự luận</h3><p class="mut" style="margin:0 0 8px">Phần chấm máy tối đa ' + fmtVN(tlN[0].max) + ' điểm, tự luận ' + fmtVN(tlMaxOf(tlN[0])) + ' điểm. Đã nhập <b>' + tlDone + '/' + tlN.length + '</b> bài' + (tlLeft ? ' — nhập xong trước khi gửi để ảnh và nhận xét theo điểm tổng.' : ' ✓') + '</p><button class="btn ' + (tlLeft ? 'gold' : '') + ' wide" id="bTl">✍ ' + (tlDone ? 'Sửa' : 'Nhập') + ' điểm tự luận</button>' : '';
   if(tlN.length) $('bTl').onclick = ()=> tlSheet(list, drawResults);
-  const tlAsk = ()=> !tlLeft || confirm('Còn ' + tlLeft + ' bài chưa nhập điểm tự luận — ảnh của các bài này chỉ có điểm chấm máy. Vẫn gửi?');
+  const gk = rv.kind + rv.key, CS = list.length >= 5 ? cmpStats(list, gk) : null, needName = CS && !list.some(r=> r.kind === 'exam');
+  $('gCmp').style.display = CS ? '' : 'none';
+  $('gCmp').innerHTML = CS ? '<h3 style="margin-bottom:2px">📊 So sánh với cả lớp</h3><p class="mut" style="margin:0 0 8px">Ghi vào nhận xét từng bài (ngay trên lời nhắn phụ huynh): cao nhất <b>' + fmtVN(CS.max) + '</b>' + (CS.names.length ? ' (' + esc(CS.names.join(', ')) + ')' : '') + ', thấp nhất <b>' + fmtVN(CS.min) + '</b> (không nêu tên), trung bình <b>' + fmtVN(CS.avg) + '</b>, trung vị <b>' + fmtVN(CS.med) + '</b>.</p>'
+    + (needName ? '<label class="mut" style="display:block;margin-bottom:4px">Tên bạn điểm cao nhất (bài kiểm tra không có danh sách lớp; nhiều bạn thì cách nhau dấu phẩy; để trống = không nêu tên)</label><div class="row" style="flex-wrap:nowrap"><input id="cmpName" class="search" style="margin:0;flex:1" placeholder="vd Nguyễn Văn An" value="' + esc(topNames[gk] || '') + '"><button class="btn" id="cmpNameOk">Lưu</button></div>' : '')
+    + '<p class="mut" id="cmpSt" style="margin:8px 0 0;color:#8a5a00;font-weight:600">' + (cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét từng bài…' : '') + '</p>' : '';
+  if(needName) $('cmpNameOk').onclick = ()=>{ const v = $('cmpName').value.trim(); if(v) topNames[gk] = v; else delete topNames[gk]; lsSet('mbpscan_top', topNames); drawResults(); toast(v ? 'Đã lưu tên bạn điểm cao nhất — đang cập nhật nhận xét.' : 'Đã bỏ tên bạn điểm cao nhất.', 2600); };
+  if(CS) cmpKick(list, gk);
+  const tlAsk = ()=>{ if(cmpBusy){ toast('Đang cập nhật so sánh vào nhận xét — chờ vài giây rồi gửi.', 2600); return false; } return !tlLeft || confirm('Còn ' + tlLeft + ' bài chưa nhập điểm tự luận — ảnh của các bài này chỉ có điểm chấm máy. Vẫn gửi?'); };
   const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
   $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi' + (sumDue ? ' + nhận xét cả lớp' : '') + '</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
     + '<button class="btn" id="bShare">📤 ' + (uns.length === list.length ? 'Gửi tất cả' : 'Gửi lại tất cả') + '</button><button class="btn" id="bSave">⬇ Tải ảnh</button><button class="btn" id="bMark">' + (uns.length ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button>'
