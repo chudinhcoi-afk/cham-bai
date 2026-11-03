@@ -82,7 +82,8 @@ details.help summary{color:var(--mut);font-size:.88rem;font-weight:600}
 .mrow .tx{flex:1;min-width:0}.mrow .tx b{display:block}.mrow .tx small{display:block;color:var(--mut);font-size:.78rem}
 .mrow .btn{min-height:40px;padding:8px 11px;flex:none}
 nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-radius:50%;background:linear-gradient(#22306a,#141c3a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(20,28,58,.35);border:3px solid #fff}
-#sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:50}
+#sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:70}
+.ced{display:flex;gap:6px;align-items:flex-start;margin-bottom:8px}.ced .cic{flex:none;font-size:1.25rem;line-height:2}.ced textarea{flex:1;min-height:64px;font-size:.95rem;margin:0}.ced .btn{flex:none;min-height:40px;padding:6px 10px}
 #sheet.on{display:flex}
 .shBox{background:#fff;width:100%;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
 .shHead{padding:14px 16px 10px;border-bottom:1px solid var(--line);font-size:1.02rem}
@@ -204,6 +205,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
         <div class="bar">
           <div class="binfo"><div class="score" id="shotScore"></div><div class="warn" id="shotWarn"></div></div>
           <div class="bbtn">
+            <button class="btn" id="bCmt" aria-label="Sửa nhận xét" style="flex:0 0 auto;padding:10px 12px">✏</button>
             <button class="btn" id="bSend" aria-label="Gửi ảnh bài này qua Zalo hoặc ứng dụng khác">📤 Gửi</button>
             <button class="btn" id="bDrop">Bỏ</button>
             <button class="btn pri" id="bNext">Bài tiếp ➜</button>
@@ -227,7 +229,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 02/11k · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 03/11 · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -257,7 +259,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
 </nav>
 <div id="sheet"></div>
 <div id="toast"></div>
-<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Gửi (Zalo…)</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zSbd" style="display:none">👤 Gán HS</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
+<div id="zoom"><img id="zoomImg" alt=""><div class="zb"><button class="btn" id="zShare">📤 Gửi (Zalo…)</button><button class="btn" id="zCmt">✏ Nhận xét</button><button class="btn" id="zSave">⬇ Tải</button><button class="btn" id="zSbd" style="display:none">👤 Gán HS</button><button class="btn" id="zDel">🗑 Xoá</button><button class="btn pri" id="zClose" style="margin-left:auto">Đóng</button></div></div>
 
 <script>
 "use strict";
@@ -1101,7 +1103,7 @@ function cmtRich(qs, pts, max, extra){
   if(mood === 'low'){ const e = pick(['🔥 Bạn bè làm được thì em cũng làm được — bài sau hãy chứng minh điều đó!', '💪 Thầy cô không cần lời hứa, chỉ cần thấy bài sau của em khác hẳn.', '🏁 Em đủ khả năng làm tốt hơn nhiều — bài sau hãy cho thầy cô thấy điều đó!']); add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1)); }
   return cmtPack(L, mood); }
 function cmtPack(L, mood){ return {mood, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
-const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b']};
+const CMT_COL = {open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b'], note:['#eef1f7', '#5a6378']};
 /* khung nhận xét gọn (chữ nhỏ, một thẻ, chạm để mở hết) — dùng ở màn hình sau khi chấm và mục Kết quả */
 function cmtMini(r){ const cm = r && (r.cm || (r.cmt ? {lines:[{i:'💬', t:r.cmt}]} : null)); if(!cm || !cm.lines || !cm.lines.length) return '';
   return '<div class="cmini" onclick="this.classList.toggle(\'open\')">' + cm.lines.map(l=> '<div><span>' + l.i + '</span><span>' + esc(l.t) + '</span></div>').join('') + '</div>'; }
@@ -1111,7 +1113,7 @@ function cmtHtml(cm){ if(!cm || !cm.lines) return '';
     return '<div style="display:flex;gap:8px;align-items:flex-start">' + (i === 0 ? '<div style="flex:0 0 34px;height:34px;border-radius:50%;background:#fff;border:2px solid ' + bd + ';display:flex;align-items:center;justify-content:center;font-size:20px">🧑‍🏫</div>' : '<div style="flex:0 0 34px"></div>')
       + '<div style="background:' + bg + ';border:2px solid ' + bd + ';border-radius:16px;' + (i === 0 ? 'border-top-left-radius:4px;' : '') + 'padding:8px 12px;font-size:1.02rem;font-weight:600;line-height:1.45;color:#1d2433"><span style="font-size:1.15em;margin-right:5px">' + l.i + '</span>' + String(l.t).replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</div></div>'; }).join('') + '</div>'; }
 /* bong bóng chat vẽ thêm vào DƯỚI ảnh kết quả (ảnh gửi Zalo vẫn thấy đầy đủ, chữ to rõ) */
-function cmtPanel(canvas, cm, sc){ if(!cm || !cm.lines || !cm.lines.length) return canvas;   // sc = {pts, max}: ghi điểm to ở dòng đầu (ảnh gửi phụ huynh)
+function cmtPanel(canvas, cm, sc){ if(!cm || !cm.lines || !cm.lines.length){ canvas.cmY = canvas.height; canvas.sc = !!sc; return canvas; }   // sc = {pts, max}: ghi điểm to ở dòng đầu (ảnh gửi phụ huynh)
   const W = canvas.width, fz = Math.round(Math.max(22, W/30)), pad = Math.round(fz*0.75), av = Math.round(fz*2.1), bx = pad + av + pad*0.6, maxW = W - bx - pad - pad*1.6, lh = Math.round(fz*1.38);
   const t = document.createElement('canvas').getContext('2d'), font = `600 ${fz}px "Segoe UI", Roboto, Arial, sans-serif`; t.font = font;
   const wrap = s=>{ const out = []; let cur = ''; String(s).split(' ').forEach(w=>{ const x = cur ? cur + ' ' + w : w; if(t.measureText(x).width > maxW && cur){ out.push(cur); cur = w; } else cur = x; }); if(cur) out.push(cur); return out; };
@@ -1130,6 +1132,7 @@ function cmtPanel(canvas, cm, sc){ if(!cm || !cm.lines || !cm.lines.length) retu
     rr(bx, y, w, h, fz*0.8, i === 0); x.fillStyle = bg; x.fill(); x.lineWidth = Math.max(2, fz*0.11); x.strokeStyle = bd; x.stroke();
     x.fillStyle = '#1d2433'; b.rows.forEach((r, j)=> x.fillText(r, bx + pad*0.8, y + pad*0.65 + lh*(j + 0.5)));
     y += h + gap; });
+  c.cmY = canvas.height; c.sc = !!sc;   // cmY: phần trên là ảnh bài, phần dưới là nhận xét — sửa nhận xét thì vẽ lại phần dưới
   return c; }
 /* thông tin từng câu cho nhận xét — bài ôn luyện (khung trả lời) */
 function wsCmtInfo(test, picks){ const Q = {}, qn = lab=> parseInt(String(lab)) || 0;
@@ -1182,11 +1185,35 @@ function wsParentImg(canvas, r, cm){ const {c, k} = wakAnnotate(canvas, r, true)
 function examParentImg(canvas, f, g, st, cm){ const {c, k} = examAnnotate(canvas, f.r, f.ex, g, true), map = (X, Y)=>{ const [px, py] = f.r.map(X, Y); return [px*k, py*k]; };
   const crop = warpCrop(c, map, -1.5, -7, 145.5, 104.5, 1080);
   return parentCard(crop, g.pts, g.max, cm); }
+function recImg(make, fallback){ let cv; try{ cv = make(); }catch(e){ cv = fallback(); } return {url:cv.toDataURL('image/jpeg', 0.88), cmY:cv.cmY || 0, cmSc:cv.sc ? 1 : 0, card:true}; }
+/* ===== SỬA NHẬN XÉT THỦ CÔNG trước khi gửi: sửa / bỏ từng dòng, thêm lời nhắn riêng, khôi phục bản tự động — vẽ lại phần nhận xét dưới ảnh ===== */
+async function recRecomment(rec, cm){
+  if(!rec.cmY) throw new Error('Bài chấm từ bản cũ (trước 03/11) — chấm lại bài này để sửa được nhận xét.');
+  const im = new Image(); im.src = rec.url; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = rec.cmY; c.getContext('2d').drawImage(im, 0, 0);
+  const out = cmtPanel(c, cm, rec.cmSc ? {pts:rec.pts, max:rec.max} : null); rec.url = out.toDataURL('image/jpeg', 0.88); rec.cmY = out.cmY; rec.cm = cm; rec.cmt = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
+function cmtEdit(rec, onSaved){ if(!rec) return; const sh = $('sheet'); let L = ((rec.cm && rec.cm.lines) || []).map(l=> ({...l}));
+  const sync = ()=> sh.querySelectorAll('.ced textarea').forEach(e=>{ L[+e.dataset.i].t = e.value; });
+  const draw = (focus)=>{ sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">SỬA NHẬN XÉT TRƯỚC KHI GỬI</small><b style="display:block">' + esc(rec.kind === 'exam' ? (rec.name || 'SBD ' + (rec.sbd || '?')) : (rec.name || 'Bài kiểm tra')) + ' · ' + fmtVN(rec.pts) + '/' + fmtVN(rec.max) + ' điểm</b></div><div class="shBody">'
+      + (rec.cmY ? '' : '<p class="warn" style="margin:0 0 8px">Bài này chấm từ bản cũ nên không vẽ lại được nhận xét trên ảnh — chấm lại bài để sửa.</p>')
+      + L.map((l, i)=> '<div class="ced"><span class="cic">' + l.i + '</span><textarea data-i="' + i + '" rows="3">' + esc(l.t) + '</textarea><button class="btn" data-del="' + i + '" aria-label="Bỏ dòng này">🗑</button></div>').join('')
+      + '<button class="btn wide" id="ceAdd">＋ Thêm lời nhắn của thầy cô</button>' + (rec.cmAuto ? '<button class="btn wide" id="ceReset" style="margin-top:8px">↺ Khôi phục nhận xét tự động</button>' : '')
+      + '<p class="mut" style="margin:10px 0 0">Sửa xong bấm <b>Lưu</b>: ảnh gửi phụ huynh được vẽ lại với nhận xét mới.</p></div><div class="shFoot"><button class="fab" id="ceCancel">Huỷ</button><button class="fab go" id="ceSave"' + (rec.cmY ? '' : ' disabled') + '>💾 Lưu nhận xét</button></div></div>';
+    sh.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{ sync(); L.splice(+b.dataset.del, 1); draw(); });
+    $('ceAdd').onclick = ()=>{ sync(); L.push({k:'note', i:'✍️', t:''}); draw(true); };
+    if($('ceReset')) $('ceReset').onclick = ()=>{ L = rec.cmAuto.lines.map(l=> ({...l})); draw(); };
+    $('ceCancel').onclick = sheetClose;
+    $('ceSave').onclick = async ()=>{ sync(); const lines = L.map(l=> ({...l, t:String(l.t || '').trim()})).filter(l=> l.t); if(!lines.length){ toast('Cần ít nhất một dòng nhận xét.', 2400); return; }
+      const auto = rec.cmAuto || rec.cm, was = !!rec.sent;
+      try{ await recRecomment(rec, {mood:(rec.cm || {}).mood, lines, text:''}); }catch(e){ toast(e.message, 3600); return; }
+      if(!rec.cmAuto) rec.cmAuto = auto; rec.cmEdited = 1; if(was) delete rec.sent; saveResults(); saveX(); sheetClose(); if(onSaved) onSaved();
+      toast(was ? 'Đã lưu nhận xét — bài này chuyển về “chưa gửi” để thầy gửi bản mới.' : 'Đã lưu nhận xét.', 3000); };
+    if(focus){ const t = sh.querySelectorAll('.ced textarea'); if(t.length) t[t.length - 1].focus(); } };
+  draw(); sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; }
 function makeRecord(canvas, f){
   if(f.kind==='exam'){ const g = gradeExam(f.ex, f.r), st = f.ex.students[f.r.sbd], warn = (f.r.warnings||[]).filter(w=> !(pendSrc && pendSrc.sbdManual && /^Số báo danh/.test(w))); if(!st) warn.unshift('SBD ' + (f.r.sbd || '?') + ' không có trong danh sách');
     const cm = cmtRich(examCmtInfo(f.ex, f.r, g), g.pts, g.max, {tl:!!f.ex.tl});   // nhận xét động viên (bong bóng chat dưới ảnh)
-    return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, cmt:cm ? cm.text : '', cm, at:Date.now(), url:(()=>{ try{ return examParentImg(canvas, f, g, st, cm); }catch(e){ return cmtPanel(examAnnotate(canvas, f.r, f.ex, g), cm); } })().toDataURL('image/jpeg', 0.88), card:true}; }
-  const r = f.r, cm = cmtRich(wsCmtInfo(r.test, r.picks), r.pts, r.max, {tl:(r.test.qs||[]).some(q=> q.k === 'TL')}); return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', cmt:cm ? cm.text : '', cm, qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), url:(()=>{ try{ return wsParentImg(canvas, r, cm); }catch(e){ return cmtPanel(wakAnnotate(canvas, r), cm); } })().toDataURL('image/jpeg', 0.88), card:true};
+    return {kind:'exam', exId:f.ex.id, sbd:f.r.sbd, name:st ? st.name : '', made:f.r.made, tn:f.r.tn, ds:f.r.ds, tln:f.r.tln||[], pts:g.pts, max:g.max, c:g.c, warn, cmt:cm ? cm.text : '', cm, at:Date.now(), ...recImg(()=> examParentImg(canvas, f, g, st, cm), ()=> cmtPanel(examAnnotate(canvas, f.r, f.ex, g), cm))}; }
+  const r = f.r, cm = cmtRich(wsCmtInfo(r.test, r.picks), r.pts, r.max, {tl:(r.test.qs||[]).some(q=> q.k === 'TL')}); return {kind:'ws', ok:true, id:r.id, name:r.test.name || '', cmt:cm ? cm.text : '', cm, qa:r.picks.map(p=> p.ok ? 'o' : p.pk.state==='ok' ? 'x' : '-').join(''), pts:r.pts, max:r.max, right:r.right, total:r.total, warn:r.warn||[], at:Date.now(), ...recImg(()=> wsParentImg(canvas, r, cm), ()=> cmtPanel(wakAnnotate(canvas, r), cm))};
 }
 // bỏ một bản ghi đã lưu (đúng đối tượng đó) khỏi danh sách kết quả
 function unkeep(rec){ if(!rec) return; if(rec.kind==='exam'){ const a = xres[rec.exId] || [], i = a.indexOf(rec); if(i >= 0){ a.splice(i, 1); saveX(); } } else { const i = results.indexOf(rec); if(i >= 0){ results.splice(i, 1); saveResults(); } } }
@@ -1278,7 +1305,8 @@ function manualPick(k, i){
 function closeShot(ok){ if(!ok){ unkeep(savedRec); if(replacedRec && replacedRec.kind==='exam'){ (xres[replacedRec.exId] = xres[replacedRec.exId] || []).push(replacedRec); saveX(); } } savedRec = null; replacedRec = null; pending = null; pendSrc = null; frozen = false; $('shot').classList.remove('on'); lastSig = ''; sameCount = 0; drawHeader(); if(view==='scan'){ if(stream){ loopOn = true; tick(); } else camStart(); } }
 $('bNext').onclick = ()=> closeShot(true);
 $('bDrop').onclick = ()=> closeShot(false);
-$('bSend').onclick = ()=>{ if(pending) share([[pending, 0]]); };   // gửi ngay ảnh vừa chấm (Zalo, Messenger, Gmail… theo bảng chia sẻ của máy)
+$('bSend').onclick = ()=>{ if(pending) share([[pending, 0]]); };
+$('bCmt').onclick = ()=>{ if(pending) cmtEdit(pending, ()=>{ $('shotImg').src = pending.url; }); };   // gửi ngay ảnh vừa chấm (Zalo, Messenger, Gmail… theo bảng chia sẻ của máy)
 $('fPick').onchange = async e=>{
   const files = [...e.target.files]; e.target.value = ''; if(!files.length) return; let okN = 0, last = null;
   for(const file of files){
@@ -1667,6 +1695,7 @@ $('zSbd').onclick = ()=>{ const ex = rvExam(), r = curList()[zi]; if(!ex || !r) 
 $('zClose').onclick = ()=> $('zoom').classList.remove('on');
 $('zSave').onclick = ()=> download(curList()[zi], zi);
 $('zShare').onclick = ()=> share([[curList()[zi], zi]]);
+$('zCmt').onclick = ()=>{ const r = curList()[zi]; cmtEdit(r, ()=>{ $('zoomImg').src = r.url; drawResults(); }); };
 $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) return; const r = curList()[zi];
   if(rv.kind==='x'){ const a = xres[rv.key]; a.splice(a.indexOf(r), 1); if(!a.length) delete xres[rv.key]; saveX(); } else { results.splice(results.indexOf(r), 1); saveResults(); }
   $('zoom').classList.remove('on'); drawResults(); drawHeader(); };
