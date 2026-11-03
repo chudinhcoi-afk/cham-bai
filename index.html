@@ -83,7 +83,8 @@ details.help summary{color:var(--mut);font-size:.88rem;font-weight:600}
 .mrow .btn{min-height:40px;padding:8px 11px;flex:none}
 nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-radius:50%;background:linear-gradient(#22306a,#141c3a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(20,28,58,.35);border:3px solid #fff}
 #sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:70}
-.tlr{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.tlr:first-of-type{border-top:0}.tlr img{flex:none;width:96px;height:56px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--line)}.tlr .tx{flex:1;min-width:0}.tlr .tx b{display:block;font-size:.92rem}.tlr .tx small{display:block;color:var(--mut);font-size:.76rem}.tlr .tlIn{flex:0 0 64px;width:64px;text-align:center;font-size:1.15rem;font-weight:800;padding:8px 4px}
+.tlr{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.tlr:first-of-type{border-top:0}.tlr img{flex:none;width:96px;height:56px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--line)}.tlr .tx{flex:1;min-width:0}.tlr .tx b{display:block;font-size:.92rem}.tlr .tx small{display:block;color:var(--mut);font-size:.76rem}.tlr .tlIn{flex:0 0 64px;width:64px;text-align:center;font-size:1.15rem;font-weight:800;padding:8px 4px}.tlr.cur{background:#fff6dc;border-radius:10px;box-shadow:0 0 0 2px #f0a500}.tlr .tot{color:var(--ink,#141c3a);font-weight:700}
+.tlc{border:1px solid #e0b860;background:#fff6dc;color:#7a4a00;border-radius:10px;padding:1px 7px;font:inherit;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap}.tlc.no{background:#ffe2a8}
 .ced{display:flex;gap:6px;align-items:flex-start;margin-bottom:8px}.ced .cic{flex:none;font-size:1.25rem;line-height:2}.ced textarea{flex:1;min-height:64px;font-size:.95rem;margin:0}.ced .btn{flex:none;min-height:40px;padding:6px 10px}
 #sheet.on{display:flex}
 .shBox{background:#fff;width:100%;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
@@ -230,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 03/11c · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 03/11d · đọc phiếu v4</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1545,15 +1546,21 @@ async function cmpUpdate(list, key, prog){ if(list.length < 5) return 0; const S
 function cmpKick(list, key){ if(cmpBusy || list.length < 5) return; const S = cmpStats(list, key); if(!list.some(r=> r.cmY && r.cm && !r.cmpOff && r.cmpSig !== S.sig)) return;
   cmpBusy = key; const st = ()=> $('cmpSt');
   cmpUpdate(list, key, (k, n)=>{ if(st()) st().textContent = 'Đang cập nhật so sánh vào nhận xét từng bài… ' + k + '/' + n; }).finally(()=>{ cmpBusy = null; if(view === 'res' && rv && rv.kind + rv.key === key) drawResults(); }); }
-function tlSheet(list, done){ const sh = $('sheet'), ex = rvExam(), rows = list.map((r, i)=> ({r, i, m:tlMaxOf(r)})).filter(x=> x.m > 0);
+const sbdCmp = (a, b)=> !a.sbd - !b.sbd || String(a.sbd || '').localeCompare(String(b.sbd || ''), 'vi', {numeric:true});   // theo số báo danh tăng dần, so theo số (2 trước 10); bài chưa có SBD xuống cuối
+function tlSheet(list, done, cur){ const sh = $('sheet'), ex = rvExam(), rows = list.map((r, i)=> ({r, i, m:tlMaxOf(r)})).filter(x=> x.m > 0);   // cur: bài được bấm vào điểm → mở sẵn ô của bài đó để sửa
+  if(ex) rows.sort((a, b)=> sbdCmp(a.r, b.r) || a.i - b.i);   // đề thi: xếp theo SBD để nhập theo thứ tự phiếu; bài kiểm tra (không có SBD): theo thứ tự chấm
   const who = x=> x.r.kind === 'exam' ? '<b>' + esc(x.r.name || '(chưa rõ tên)') + '</b><small>SBD ' + esc(x.r.sbd || '?') + ' · mã đề ' + esc(x.r.made) + '</small>' : '<b>Bài #' + (x.i + 1) + '</b><small>' + hm(x.r.at) + ' · mã ' + x.r.id + '</small>';
   sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">NHẬP ĐIỂM TỰ LUẬN</small><b style="display:block">Tối đa ' + fmtVN(rows.length ? rows[0].m : 0) + ' điểm/bài · cộng vào điểm chấm máy</b></div><div class="shBody">'
-    + '<p class="mut" style="margin:0 0 8px">Gõ điểm tự luận từng bài (vd 2,5). Để trống = chưa chấm. Lưu xong, nhận xét và ảnh gửi phụ huynh được làm lại theo điểm tổng.</p>'
-    + rows.map((x, k)=> '<div class="tlr">' + (x.r.kind === 'exam' ? '' : '<img src="' + x.r.url + '" alt="" data-z="' + x.i + '">') + '<div class="tx">' + who(x) + '<small>Chấm máy ' + fmtVN(x.r.pts) + '/' + fmtVN(x.r.max) + '</small></div><input class="tlIn" data-k="' + k + '" inputmode="decimal" enterkeyhint="next" placeholder="—" value="' + (x.r.tl != null ? fmtVN(x.r.tl) : '') + '"><span class="mut">/' + fmtVN(x.m) + '</span></div>').join('')
+    + '<p class="mut" style="margin:0 0 8px">Gõ điểm tự luận từng bài (vd 2,5)' + (ex ? ', xếp theo số báo danh' : '') + '. Muốn sửa điểm đã nhập: chạm vào ô, gõ điểm mới. Để trống = chưa chấm. Lưu xong, nhận xét và ảnh gửi phụ huynh được làm lại theo điểm tổng.</p>'
+    + rows.map((x, k)=> '<div class="tlr' + (x.r === cur ? ' cur' : '') + '">' + (x.r.kind === 'exam' ? '' : '<img src="' + x.r.url + '" alt="" data-z="' + x.i + '">') + '<div class="tx">' + who(x) + '<small>Chấm máy ' + fmtVN(x.r.pts) + '/' + fmtVN(x.r.max) + ' · <span class="tot" data-k="' + k + '"></span></small></div><input class="tlIn" data-k="' + k + '" inputmode="decimal" enterkeyhint="next" placeholder="—" value="' + (x.r.tl != null ? fmtVN(x.r.tl) : '') + '"><span class="mut">/' + fmtVN(x.m) + '</span></div>').join('')
     + '</div><div class="shFoot"><button class="fab" id="tlCancel">Huỷ</button><button class="fab go" id="tlSave">💾 Lưu điểm tự luận</button></div></div>';
   sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('tlCancel').onclick = sheetClose;
   const ins = [...sh.querySelectorAll('.tlIn')];
-  ins.forEach((e, k)=> e.onkeydown = ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); (ins[k + 1] || e).focus(); } });   // Enter: sang bài sau
+  ins.forEach((e, k)=> e.onkeydown = ev=>{ if(ev.key === 'Enter'){ ev.preventDefault(); if(ins[k + 1]) ins[k + 1].focus(); else e.blur(); } });   // Enter: sang bài sau
+  const tot = e=>{ const x = rows[+e.dataset.k], v = e.value.trim().replace(',', '.'), n = +v, t = sh.querySelector('.tot[data-k="' + e.dataset.k + '"]');   // tổng tạm tính, đổi ngay khi gõ
+    t.textContent = v === '' ? 'chưa chấm tự luận' : n >= 0 && n <= x.m + 1e-9 ? 'tổng ' + fmtVN(r2(x.r.pts + n)) + '/' + fmtVN(r2(x.r.max + x.m)) : 'điểm không hợp lệ'; };
+  ins.forEach(e=>{ tot(e); e.oninput = ()=> tot(e); e.onfocus = ()=>{ e.select(); e.fs = 1; }; e.onclick = ()=>{ if(e.fs) e.select(); e.fs = 0; }; });   // chạm vào điểm đã có → chọn hết, gõ đè luôn (chọn lại sau lần chạm vì điện thoại đặt con trỏ khi nhả tay)
+  { const k = rows.findIndex(x=> x.r === cur); if(k >= 0){ ins[k].scrollIntoView({block:'center'}); ins[k].focus(); } }
   $('tlSave').onclick = async ()=>{ const ch = []; let bad = null;
     ins.forEach(e=>{ const x = rows[+e.dataset.k], v = e.value.trim().replace(',', '.'); e.style.borderColor = '';
       if(v === ''){ if(x.r.tl != null) ch.push([x.r, null]); return; } const n = +v; if(!(n >= 0 && n <= x.m + 1e-9)){ bad = bad || e; e.style.borderColor = 'var(--bad)'; return; }
@@ -1735,13 +1742,15 @@ function drawResults(){
   $('bMark').onclick = ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); };
   $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
   if(ex){
-    const rows = xRows(ex);
-    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(recTot(r).pts) + '</b>' + (tlMaxOf(r) ? (r.tl != null ? '<small style="display:block;color:var(--mut)">TL ' + fmtVN(r.tl) + '</small>' : '<small style="display:block;color:#8a5a00">chưa TL</small>') : '') + (r.warn.length ? ' ⚠' : '') + (r.sent ? ' <span style="color:#12a150" title="đã gửi">✓</span>' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
+    const rows = xRows(ex).sort((a, b)=> sbdCmp({sbd:a.sbd !== '?' && a.sbd}, {sbd:b.sbd !== '?' && b.sbd}));   // bảng điểm theo SBD tăng dần (tệp CSV vẫn theo danh sách lớp)
+    $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(recTot(r).pts) + '</b>' + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + esc(x.sbd) + '" style="display:block;margin-top:2px">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + (r.warn.length ? ' ⚠' : '') + (r.sent ? ' <span style="color:#12a150" title="đã gửi">✓</span>' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
+    $('xTable').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list.find(r=> (r.sbd || '?')===b.dataset.tl)); });
     $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('bXSend').onclick = ()=> sendToPc(ex);
   } else {
-    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) && r.tl == null ? '<small style="color:#8a5a00;font-weight:700"> +TL?</small>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
+    $('resGrid').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list[+b.dataset.tl]); });
   }
 }
 $('bBack').onclick = ()=>{ rv = null; drawResults(); };
