@@ -231,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 03/11f · đọc phiếu v4</p>
+    <p class="ver">MBP Chấm bài · bản 04/11 · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -287,6 +287,14 @@ function omrGrayFromImageData(img){
   for(let i=0, j=0; i<g.length; i++, j+=4) g[i] = (data[j]*77 + data[j+1]*150 + data[j+2]*29) >> 8;
   return g;
 }
+/* V6 (03/11): ảnh có nét bút ĐỎ (giáo viên gạch, khoanh trên phiếu) → đọc bằng kênh đỏ: mực đỏ gần như trắng như giấy, còn mực đen, xanh, bút chì vẫn tối.
+   Chỉ dùng khi đếm được đủ nhiều điểm đỏ đậm — phiếu bình thường đọc như cũ. */
+function omrRedInk(img){ const d = img.data, n = d.length >> 2, step = Math.max(1, Math.floor(n/60000)); let red = 0, tot = 0;
+  for(let i = 0; i < n; i += step){ const j = i << 2, r = d[j], g = d[j+1], b = d[j+2]; tot++; if(r > 120 && r - Math.max(g, b) > 85) red++; }
+  return red/tot > 0.002; }
+function omrGrayAuto(img){ if(!omrRedInk(img)) return omrGrayFromImageData(img); const {width:w, height:h, data} = img, g = new Uint8Array(w*h);
+  for(let i = 0, j = 0; i < g.length; i++, j += 4){ const r = data[j], gr = data[j+1], b = data[j+2]; g[i] = r - Math.max(gr, b) > 60 ? Math.max(r, (data[j]*77 + gr*150 + b*29) >> 8) : (r*77 + gr*150 + b*29) >> 8; }   // chỉ điểm đỏ đậm mới đổi sang kênh đỏ (sáng), điểm khác giữ độ xám thường
+  return g; }
 function omrOtsu(hist, total){
   let sum = 0; for(let i=0;i<256;i++) sum += i*hist[i];
   let sumB = 0, wB = 0, best = 0, thr = 128;
@@ -547,11 +555,19 @@ function omrReadImageData(img, counts){
   const pxg = (X, Y)=>{ const [x, y] = map(X, Y), xi = Math.round(x), yi = Math.round(y); return (xi < 0 || yi < 0 || xi >= w || yi >= h) ? 255 : gray[yi*w + xi]; };
   const surround = b=>{ const v = SUR.map(([u,q])=> pxg(b.x+u, b.y+q)).sort((p,q)=> q-p); return (v[2] + v[3] + v[4] + v[5])/4; };   // bỏ 2 điểm sáng nhất, lấy nhóm sáng kế tiếp (tránh rơi vào vạch kẻ / chữ)
   const bScore = b=> Math.max(0, Math.min(1, (surround(b) - omrMeanGray(gray,w,h,map,b.x,b.y,0.62))/span));
-  const groupScores = g=> g.map(bScore);
+  // V4 (03/11): ô tô nhạt (bút chì, mực nhạt) mà giữa ô loang trắng / lóa sáng — đo thêm nửa số điểm TỐI NHẤT trong vùng rộng hơn (bán kính 0,9 mm).
+  // Chỉ dùng cho phần I, II (ô để trống, không in chữ số bên trong) nên không làm ô trống bị nhận là có tô.
+  const darkHalf = b=>{ const [cx, cy] = map(b.x, b.y), [ex, ey] = map(b.x + 0.9, b.y), r = Math.max(2, Math.hypot(ex - cx, ey - cy)), v = [];
+    for(let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(h - 1, Math.ceil(cy + r)); y++) for(let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(w - 1, Math.ceil(cx + r)); x++) if((x - cx)*(x - cx) + (y - cy)*(y - cy) <= r*r) v.push(gray[y*w + x]);
+    if(!v.length) return 255; v.sort((a, b)=> a - b); const k = Math.max(1, v.length >> 1); let t = 0; for(let i = 0; i < k; i++) t += v[i]; return t/k; };
+  const rawR = b=> Math.max(0, Math.min(1, (surround(b) - darkHalf(b))/span));
+  const groupScores = (g, rob)=>{ const c = g.map(bScore); if(!rob) return c;
+    const R = g.map(rawR), mn = Math.min(...R); return c.map((v, i)=> Math.max(v, 0.9*(R[i] - mn))); };   // trừ ô nhạt nhất cùng câu: nét in viền ô (như nhau ở mọi ô) triệt tiêu, chỉ còn phần học sinh tô
   const T = omrAdaptiveT([...L.sbd.flat(), ...L.made.flat(), ...L.p1.flat(), ...L.p2.flat(2), ...L.p3.flat(2)].map(bScore));
-  const pick = (g, label)=>{
-    const sc = groupScores(g);
-    const r = omrPickGroupT(g, sc, T);
+  const pick = (g, label, rob)=>{
+    const sc = groupScores(g, rob);
+    let r = omrPickGroupT(g, sc, T);
+    if(rob && r.state === 'blank'){ const o = sc.slice().sort((a, b)=> b - a); const o1 = o[1] || 0; if(o[0] >= 0.07 && o[0] - o1 >= 0.055 && o[0] >= 1.35*Math.max(o1, 0.02)) r = {v:'', state:'weak', i:sc.indexOf(o[0])}; }   // có một ô nhỉnh hẳn lên nhưng còn nhạt: báo “tô mờ” để giáo viên chấm tay, không coi là bỏ trống
     if(r.state==='ok') marks.push({b:g[r.i], c:'ok'});
     else if(r.state==='multi'){ marks.push({b:g[r.i], c:'bad'}); marks.push({b:g[r.i2], c:'bad'}); warnings.push(`${label}: tô nhiều hơn 1 ô`); }
     else if(r.state==='weak'){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: tô mờ, chưa chắc`); }
@@ -565,9 +581,9 @@ function omrReadImageData(img, counts){
   const made = digitsOf(L.made, 'Mã đề');
   const unsure = [];   // các ô máy chưa chắc (tô mờ / tô nhiều ô) — giáo viên chấm tay trên điện thoại
   let tn = '';
-  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`); tn += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'tn', q, why:r.state}); }
+  for(let q=0;q<Math.min(nTN,18);q++){ const r = pick(L.p1[q], `Phần I câu ${q+1}`, true); tn += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'tn', q, why:r.state}); }
   let ds = '';
-  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`); ds += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'ds', q, j, why:r.state}); }
+  for(let q=0;q<Math.min(nDS,4);q++) for(let j=0;j<4;j++){ const r = pick(L.p2[q][j], `Phần II câu ${q+1}${'abcd'[j]}`, true); ds += r.v || '?'; if(r.state==='weak' || r.state==='multi') unsure.push({k:'ds', q, j, why:r.state}); }
   const tln = [], tlnSel = [];
   for(let q=0;q<Math.min(nTLN,6);q++){
     let s = '', bad = null; const sel = [];
@@ -684,10 +700,10 @@ function wakGeom(rs, v){
 function wakLocate(gray, w, h, pickTest, cg){
   const {cands} = omrFindMarkerCandidates(cg || gray, w, h, !!cg); if(cands.length < 4) return null;
   const span = WAK.W - 4, us = []; for(let i=0;i<WAK.idN;i++) us.push((WAK.idX + i*WAK.idP + WAK.idW/2 - 2)/span);
-  const ru = 0.9/span; let best = null; const n = cands.length;
-  for(let a=0;a<n;a++) for(let b=a+1;b<n;b++) for(let c=b+1;c<n;c++) for(let e=c+1;e<n;e++){
-    const pts = [cands[a],cands[b],cands[c],cands[e]], sides = pts.map(p=> p.side);
-    if(Math.min(...sides)/Math.max(...sides) < 0.6) continue;
+  const ru = 0.9/span; let best = null; const n = cands.length, seen = {};   // seen: mã đọc được từ các khung chưa có đáp án → hỏi máy chủ cả các mã này
+  // V6 (03/11): thử từng bộ 4 ô đen; không có khung đủ 4 góc khớp bố cục thì SUY RA góc thứ tư từ 3 góc còn lại (ô góc bị nét bút / vết bẩn che)
+  const tryQuad = (pts, virt)=>{ const sides = pts.map(p=> p.side);
+    if(Math.min(...sides)/Math.max(...sides) < 0.6) return;
     const cx = pts.reduce((t,p)=> t+p.x, 0)/4, cy = pts.reduce((t,p)=> t+p.y, 0)/4;
     const ord = pts.slice().sort((p,q)=> Math.atan2(p.y-cy,p.x-cx) - Math.atan2(q.y-cy,q.x-cx));
     for(let k=0;k<4;k++){
@@ -714,8 +730,16 @@ function wakLocate(gray, w, h, pickTest, cg){
         for(let k = 0; k < test.rows.length; k++) for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j); let ring = 0; for(let t = 0; t < 12; t++){ const an = t*Math.PI/6; ring += px(p.x + 1.65*Math.cos(an), p.y + 1.65*Math.sin(an)); } ring /= 12;
           const bo = G.bg || 2.6, bg = [[bo,bo],[-bo,bo],[bo,-bo],[-bo,-bo]].map(([dx,dy])=> px(p.x+dx, p.y+dy)).sort((x,y)=> y-x)[1]; tot++; if(bg - ring > 0.12*(paper - ink)) hit++; }
         const fit = hit/Math.max(1, tot); if(fit < 0.55) continue; score += 1000*fit; }
-      if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span};
-    } }
+      if(virt) score -= 80; if(!test && id >= 1024) seen[id] = Math.max(seen[id] || 0, score);   // khung suy ra từ 3 góc: chỉ thắng khi không có khung đủ 4 góc
+      if(!best || score > best.score) best = {score, map, id, ink, paper, corners:[TL,TR,BR,BL], pxPerMm:((top+bot)/2)/span, fit:!!test, virt:!!virt};
+    } };
+  for(let a=0;a<n;a++) for(let b=a+1;b<n;b++) for(let c=b+1;c<n;c++) for(let e=c+1;e<n;e++) tryQuad([cands[a],cands[b],cands[c],cands[e]]);
+  if(!best || !best.fit){ const m = Math.min(n, 12);
+    for(let a=0;a<m;a++) for(let b=a+1;b<m;b++) for(let c=b+1;c<m;c++){ const T = [cands[a],cands[b],cands[c]], sd = T.map(p=> p.side); if(Math.min(...sd)/Math.max(...sd) < 0.7) continue;
+      const side = (sd[0] + sd[1] + sd[2])/3;
+      for(let o=0;o<3;o++){ const P = T[(o + 1) % 3], Q = T[(o + 2) % 3], x = P.x + Q.x - T[o].x, y = P.y + Q.y - T[o].y; if(x < 0 || y < 0 || x >= w || y >= h) continue;
+        tryQuad([T[0], T[1], T[2], {x, y, side, area:side*side, virt:true}], true); } } }
+  if(best){ best.alts = Object.keys(seen).map(Number).filter(x=> x !== best.id).sort((x, y)=> seen[y] - seen[x]).slice(0, 4); }
   if(best) best.cands = cands;   // các ô đen tìm được — dùng để dò mốc đầu dòng họ tên (MathBank V2.13)
   return best;
 }
@@ -779,18 +803,23 @@ function wakPick2(opts, s, T){
   return {v:opts[idx[0]].v, state:'ok', i:idx[0], faint:s1 < 1.3*thr};
 }
 function wakRead(img, pickTest){
-  const {width:w, height:h} = img, gray = omrGrayFromImageData(img), loc = wakLocate(gray, w, h, pickTest) || wakLocate(gray, w, h, pickTest, omrInkGray(img));
+  const {width:w, height:h} = img, gray = omrGrayAuto(img), loc = wakLocate(gray, w, h, pickTest) || wakLocate(gray, w, h, pickTest, omrInkGray(img));
   if(!loc) return {ok:false, error:'Không tìm thấy khung trả lời (cần thấy rõ cả 4 ô vuông đen ở góc khung; ảnh không quá mờ, không bị che).'};
   const test = pickTest(loc.id);
-  if(!test) return {ok:false, id:loc.id, error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
+  if(!test) return {ok:false, id:loc.id, alts:loc.alts || [], error:`Đọc được mã bài ${loc.id} nhưng trong phần mềm không có bài kiểm tra nào mang mã này (đề phải được in từ máy này, bằng nút In / Lưu PDF).`};
   const G0 = wakGeom(test.rows, test.v), span = WAK.W - 4, vs = G0.H - 4;
   const mapMm = (x, y)=> loc.map((x-2)/span, (y-2)/vs);
   const off = wakRefine(gray, w, h, mapMm, test, G0), G = {...G0, off, pos:(k, j)=>{ const p = G0.pos(k, j); return {x:p.x + off[k][0], y:p.y + off[k][1]}; }};
   const sc = wakScores(gray, w, h, loc, test, G), T = wakThreshold(sc), thr = T.thr;
-  const warn = [];
+  const warn = [], hasRed = omrRedInk(img), D = img.data;
+  // nét bút đỏ phủ lên ô (giáo viên gạch qua phiếu): chỗ bị phủ không nhìn thấy vết tô bên dưới → hàng đọc ra trống mà có ô bị phủ nhiều thì báo để chấm tay
+  const redCover = (x, y)=>{ const [cx, cy] = mapMm(x, y), [ex] = mapMm(x + 1.4, y), r = Math.max(2, Math.abs(ex - cx)); let n = 0, red = 0;
+    for(let yy = Math.max(0, Math.floor(cy - r)); yy <= Math.min(h - 1, Math.ceil(cy + r)); yy += 1) for(let xx = Math.max(0, Math.floor(cx - r)); xx <= Math.min(w - 1, Math.ceil(cx + r)); xx += 1){ if((xx - cx)*(xx - cx) + (yy - cy)*(yy - cy) > r*r) continue; const j = (yy*w + xx) << 2; n++; if(D[j] > 120 && D[j] - Math.max(D[j+1], D[j+2]) > 85) red++; }
+    return n ? red/n : 0; };
   const picks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
     if(r.t && pk.state==='weak' && Math.max(...sc[k]) < 0.6*T.thr) pk = {v:'', state:'blank', i:pk.i};   // trả lời ngắn: hàng chỉ có vết nhạt (chữ in, bụi) coi là để trống
-    if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak') warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
+    if(hasRed && !r.t && pk.state === 'blank'){ const cov = O.map((_, j)=>{ const q = G.pos(k, j); return redCover(q.x, q.y); }), mx = Math.max(...cov); if(mx > 0.2){ pk = {v:'', state:'weak', i:cov.indexOf(mx), red:true}; warn.push(`câu ${r.lab}: bị nét đỏ che, xem lại`); } }
+    if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak' && !pk.red) warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, keyIdx:O.indexOf(r.key)}; });
   const gr = wakGrade(test, picks);
   return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, cands:loc.cands, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr, comment:wakComment(test, picks, gr)};
@@ -981,18 +1010,21 @@ function drawQuad(corners, s, col){ const c = $('ov'), v = $('vid'); c.width = v
 function readFrame(img){
   if(mode==='exam'){ let ex = curExam(); if(!ex && !akKeys.length) return {ok:false, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính.']};
     let r; try{ r = omrReadImageData(img, ex ? ex.n : {nTN:12, nDS:4, nTLN:6}); }catch(e){ r = {ok:false}; }
-    if(!r.ok) return {ok:false, why:['Đưa cả phiếu trả lời vào màn hình', 'Thấy đủ 4 ô vuông đen ở góc phiếu; giữ máy yên một chút.']};
+    // đang ở chế độ Đề thi mà chĩa vào phiếu BÀI KIỂM TRA (khung trả lời đầu trang): tự chuyển sang chế độ Kiểm tra (cứ 2 khung hình thử 1 lần cho nhẹ máy)
+    const toWs = ()=>{ if(!tests.length && !akKeys.length) return null; if((readFrame.kx = (readFrame.kx || 0) + 1) % 2) return null; let w = null; try{ w = wakRead(img, pickTest); }catch(e){}
+      if(w && (w.ok || w.id >= 1024)){ setMode('ws'); toast('Phiếu này là bài kiểm tra (mã bài ' + w.id + ') — đã tự chuyển sang chế độ 📝 Kiểm tra.', 3200); return readFrame(img); } return null; };
+    if(!r.ok){ const w = toWs(); if(w) return w; return {ok:false, why:['Đưa cả phiếu trả lời vào màn hình', 'Thấy đủ 4 ô vuông đen ở góc phiếu; giữ máy yên một chút.']}; }
     if(r.ak > 0){ const e2 = exams.find(e=> e.ak === r.ak);   // phiếu có mã bài: tự chọn đúng đề thi, chưa có thì tải từ máy chủ
       if(e2 && e2 !== ex){ activeExam = e2.id; saveExams(); drawTests(); ex = e2; try{ r = omrReadImageData(img, ex.n); }catch(e){ r = {ok:false}; } if(!r.ok) return {ok:false, why:['Giữ yên phiếu', '']}; }
       else if(!e2 && akKeys.length && r.ak >= 1024){ cloudExam(r.ak); return {ok:false, load:r.ak, exam:1, corners:r.corners, why:cloudWhy('e' + r.ak).map(x=> x.replace(/([mM])ã bài e(\d+)/, '$1ã bài $2 (đề thi)'))}; } }
     if(!ex) return {ok:false, corners:r.corners, why:['Chưa có đáp án đề thi', 'Vào thẻ “Đề” để quét mã QR từ máy tính (phiếu in từ MathBank V1.74 trở lên có mã bài thì tự tải).']};
-    if(!ex.variants[r.made]) return {ok:false, corners:r.corners, why:['Mã đề “' + (r.made || '?') + '” không có trong đề đang chấm', 'Kiểm tra ô mã đề học sinh tô, hoặc chọn đúng đề ở thẻ “Đề”.']};
+    if(!ex.variants[r.made]){ const w = r.ak > 0 ? null : toWs(); if(w) return w; return {ok:false, corners:r.corners, why:['Mã đề “' + (r.made || '?') + '” không có trong đề đang chấm', 'Kiểm tra ô mã đề học sinh tô, hoặc chọn đúng đề ở thẻ “Đề”.']}; }
     return {ok:true, kind:'exam', r, ex, corners:r.corners, sig:[r.sbd, r.made, r.tn, r.ds, (r.tln||[]).join('|')].join('/'), label:'SBD ' + (r.sbd || '?') + ' · mã đề ' + r.made}; }
   if(!tests.length && !akKeys.length) return {ok:false, why:['Chưa có đáp án nào', 'Vào thẻ “Đề” để quét mã QR đáp án (hoặc mã liên kết) từ máy tính.']};
   let r; try{ r = wakRead(img, pickTest); }catch(e){ r = {ok:false}; }
   // không thấy khung ôn luyện (hoặc nhận nhầm mã cũ trên phiếu đề thi): thử đọc phiếu đề thi có mã bài
   if(!r.ok && !(r.id >= 1024) && akKeys.length && (readFrame.k = (readFrame.k || 0) + 1) % 2 === 0){ let o = null; try{ o = omrReadImageData(img, {nTN:12, nDS:4, nTLN:6}); }catch(e){} if(o && o.ok && o.ak > 0){ setMode('exam'); return readFrame(img); } }
-  if(!r.ok && r.id >= 1024 && akKeys.length){ cloudTest(r.id); return {ok:false, load:r.id, why:cloudWhy(r.id)}; }   // tự tải đáp án theo mã bài
+  if(!r.ok && r.id >= 1024 && akKeys.length){ cloudTest(r.id); (r.alts || []).forEach(id=> cloudTest(id)); return {ok:false, load:r.id, why:cloudWhy(r.id)}; }   // kèm các mã khả nghi khác (khung bị che góc, ghép nhầm): mã nào có đáp án thì tải về, lần đọc sau vòng tròn in sẵn xác nhận đúng khung   // tự tải đáp án theo mã bài
   if(!r.ok) return {ok:false, why: r.id != null ? ['Mã bài ' + r.id + ' chưa có đáp án', 'Vào thẻ “Đề” để quét mã QR của đề này.'] : ['Đưa khung trả lời vào giữa màn hình', 'Thấy đủ 4 ô vuông đen ở góc khung; giữ máy yên một chút.']};
   if(r.id >= 1024) cloudRefresh(r.id);
   if(pinTest != null && r.id !== pinTest) return {ok:false, corners:r.corners, why:['Bài này thuộc đề khác: mã bài ' + r.id + ' · ' + esc(r.test.name || ''), 'Đang chấm mã bài ' + pinTest + '. Chạm tên đề ở trên để đổi.']};
