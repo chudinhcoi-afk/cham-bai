@@ -242,7 +242,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11k · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11l · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -983,25 +983,56 @@ const idb = { db:null,
   put(k, v){ return new Promise((ok, no)=>{ const t = idb.db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = t.onabort = ()=> no(t.error || new Error('ghi lỗi')); }); },
   del(k){ return new Promise((ok, no)=>{ const t = idb.db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = ok; t.onerror = t.onabort = ()=> no(t.error || new Error('xoá lỗi')); }); },
   keys(){ return new Promise((ok, no)=>{ const q = idb.db.transaction('kv').objectStore('kv').getAllKeys(); q.onsuccess = ()=> ok(q.result); q.onerror = ()=> no(q.error); }); } };
-/* KHO BÀI: mỗi bài một ô “rec:<khoá>” (trước đây gộp cả vào “results”, “xres”: quá khoảng 127 MB thì Chrome từ chối ghi mà app không báo). Chỉ ghi bài có thay đổi; ghi lỗi phải báo. */
-let storeReady = false; const recFp = new Map();
+/* KHO BÀI: điểm và ảnh tách riêng, mỗi bài một ô: “rec:<khoá>” (chữ, rất nhẹ) và “img:<khoá>” (ảnh). Chỉ ghi phần thay đổi; ảnh đọc lỗi không kéo theo điểm; ghi lỗi phải báo. */
+let storeReady = false; const recFp = new Map(), imgFp = new Map();
 const recKey = r=> r._k || (r._k = (r.exId || r.id || 'x') + '_' + (r.at || 0) + '_' + (r.sbd || ''));
-const recPrint = r=>{ const {url, ...m} = r; return JSON.stringify(m) + '|' + (url ? url.length + ':' + url.slice(-24) : ''); };
+const recMeta = r=>{ const {url, ...m} = r; return m; }, imgPrint = u=> u.length + ':' + u.slice(-24);
+const IMG_NONE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="400"><rect width="300" height="400" fill="#eef0f7"/><text x="150" y="195" text-anchor="middle" font-family="Arial" font-size="20" fill="#5a6378">Chưa có ảnh</text><text x="150" y="222" text-anchor="middle" font-family="Arial" font-size="14" fill="#5a6378">quét lại phiếu nếu cần ảnh</text></svg>');
 function storeWarn(){ if($('storeWarn')) return; document.body.insertAdjacentHTML('afterbegin', '<div id="storeWarn" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không lưu được bài vừa chấm: bộ nhớ máy có thể đã đầy. Đừng tắt app. Giải phóng dung lượng máy rồi bấm thử lại. <button class="btn" onclick="$(\'storeWarn\').remove();storeAll()" style="display:block;margin-top:8px">↻ Lưu lại</button></div>'); }
-function storeAll(){ if(!storeReady || !idb.db || idb.fail) return Promise.resolve(false); const live = new Set(), jobs = [];
-  results.concat(...Object.values(xres)).forEach(r=>{ const k = recKey(r), fp = recPrint(r); live.add(k); if(recFp.get(k) === fp) return; recFp.set(k, fp); jobs.push(idb.put('rec:' + k, r).then(()=> true, ()=>{ recFp.delete(k); return false; })); });
-  [...recFp.keys()].forEach(k=>{ if(live.has(k)) return; recFp.delete(k); jobs.push(idb.del('rec:' + k).then(()=> true, ()=> false)); });
+const recsAll = ()=> results.concat(...Object.values(xres));
+function storeAll(){ if(!storeReady || !idb.db || idb.fail) return Promise.resolve(false); const live = new Set(), jobs = [], job = (p, undo)=> jobs.push(p.then(()=> true, ()=>{ if(undo) undo(); return false; }));
+  recsAll().forEach(r=>{ const k = recKey(r), m = recMeta(r), fp = JSON.stringify(m); live.add(k);
+    if(r.url){ const ip = imgPrint(r.url); if(imgFp.get(k) !== ip){ imgFp.set(k, ip); job(idb.put('img:' + k, r.url), ()=> imgFp.delete(k)); } }
+    if(recFp.get(k) !== fp){ recFp.set(k, fp); job(idb.put('rec:' + k, m), ()=> recFp.delete(k)); } });
+  [...recFp.keys()].forEach(k=>{ if(live.has(k)) return; recFp.delete(k); imgFp.delete(k); job(idb.del('rec:' + k)); job(idb.del('img:' + k)); if(bakDone[k] && !bakDel.includes(k)){ bakDel.push(k); lsSet('mbpscan_bdel', bakDel); } });   // chỉ xoá bản sao lưu khi thầy xoá bài này
+  bakKick();
   return Promise.all(jobs).then(a=>{ const ok = a.every(Boolean); if(!ok) storeWarn(); return ok; }); }
 const saveResults = ()=>{ storeAll(); }, saveX = ()=>{ storeAll(); };
 async function storeLoad(){ if(!idb.db) return; let keys; try{ keys = await idb.keys(); }catch(e){ idb.fail = true; return; }
-  const seen = new Map(); for(const key of keys.filter(k=> String(k).startsWith('rec:'))){ const r = await idb.load(key); if(idb.fail) return; if(r){ r._k = key.slice(4); seen.set(r._k, r); } }
+  const seen = new Map(); let imgErr = 0;
+  for(const key of keys.filter(k=> String(k).startsWith('rec:'))){ const r = await idb.load(key); if(idb.fail) return; if(!r) continue; const k = r._k = key.slice(4);
+    if(r.url) seen.set(k, r);   // bản trước để ảnh chung ô: lần lưu tới sẽ tách
+    else { recFp.set(k, JSON.stringify(r)); if(keys.includes('img:' + k)){ try{ const u = await idb.get('img:' + k); if(u){ r.url = u; imgFp.set(k, imgPrint(u)); } }catch(e){ imgErr++; } } seen.set(k, r); } }
   const add = r=>{ const k = recKey(r); if(!seen.has(k)) seen.set(k, r); };   // ô riêng được ưu tiên: chuyển dở lần trước thì không nhân đôi
   const hasOld = keys.includes('results') || keys.includes('xres'); let oldR = null, oldX = null;
   if(hasOld){ oldR = await idb.load('results'); oldX = await idb.load('xres'); if(idb.fail) return; if(Array.isArray(oldR)) oldR.forEach(add); if(oldX && typeof oldX === 'object') Object.keys(oldX).forEach(id=> (oldX[id] || []).forEach(r=>{ r.exId = r.exId || id; add(r); })); }
   results = []; xres = {}; [...seen.values()].sort((a, b)=> (a.at || 0) - (b.at || 0)).forEach(r=>{ if(r.kind === 'exam') (xres[r.exId] = xres[r.exId] || []).push(r); else results.push(r); });
-  keys.forEach(key=>{ if(String(key).startsWith('rec:')){ const r = seen.get(key.slice(4)); if(r) recFp.set(r._k, recPrint(r)); } });
-  storeReady = true;
-  if(hasOld && await storeAll()) { await idb.del('results').catch(()=>{}); await idb.del('xres').catch(()=>{}); } }   // chỉ xoá ô cũ khi mọi bài đã ghi xong
+  storeReady = true; if(imgErr) toast('Có ' + imgErr + ' ảnh chưa đọc được, điểm vẫn đủ. Tắt hẳn app rồi mở lại để thử lại.', 5000);
+  const ok = await storeAll(); if(hasOld && ok){ await idb.del('results').catch(()=>{}); await idb.del('xres').catch(()=>{}); } }   // chỉ xoá ô cũ khi mọi bài đã ghi xong
+/* TỰ SAO LƯU ĐIỂM (không ảnh) lên mbb/<băm khoá>/<khoá bài>, mã hoá AES-GCM bằng khoá liên kết MathBank. Mất dữ liệu trên máy: mở app (đã liên kết) là tự kéo về, chỉ thiếu ảnh.
+   Dữ liệu trên máy trống KHÔNG bao giờ làm xoá bản sao lưu: chỉ xoá khi thầy xoá đúng bài đó. */
+let bakDone = ls('mbpscan_bdone', {}), bakDel = ls('mbpscan_bdel', []), bakBusy = false, bakAgain = false, bakErr = '', bakT = null; const bakRefs = {};
+const b64e = u8=> btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const bakSafe = k=> String(k).replace(/[.$#\[\]\/\s]/g, '_');
+const bakHash = t=>{ let h = 0; for(let i = 0; i < t.length; i++) h = (h*31 + t.charCodeAt(i)) >>> 0; return h.toString(36); };
+async function bakRef(k){ if(!bakRefs[k]) bakRefs[k] = b64e(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mbb:' + k))).slice(0, 16)); return bakRefs[k]; }
+function bakKick(){ clearTimeout(bakT); bakT = setTimeout(bakSync, 1500); }
+function bakText(){ if(!akKeys.length) return 'Sao lưu: chưa liên kết MathBank'; if(bakErr === 'rule') return '⚠ Sao lưu chưa chạy: dán quy tắc mới trên MathBank (Game toán → Cài đặt máy chủ)'; const all = recsAll(), d = all.filter(r=> bakDone[r._k]).length; return 'Sao lưu điểm: ' + d + '/' + all.length + ' bài' + (bakErr === 'net' ? ' (chờ mạng)' : ''); }
+async function bakSync(){ if(!storeReady || idb.fail || !akKeys.length || !navigator.onLine) return; if(bakBusy){ bakAgain = true; return; } bakBusy = true; bakErr = '';
+  try{ const tok = await fbToken(), kS = akKeys[0], h = await bakRef(kS), key = await crypto.subtle.importKey('raw', b64u(kS), 'AES-GCM', false, ['encrypt']), live = new Set(), url = k=> FB_DB + '/mbb/' + h + '/' + encodeURIComponent(bakSafe(k)) + '.json?auth=' + encodeURIComponent(tok);
+    const send = async (k, body)=>{ const r = await fetch(url(k), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); if(r.status === 401 || r.status === 403){ bakErr = 'rule'; throw 0; } if(!r.ok){ bakErr = 'net'; throw 0; } };
+    for(const r of recsAll()){ const k = recKey(r), j = JSON.stringify(recMeta(r)), fp = bakHash(j); live.add(k); if(bakDone[k] === fp) continue; const iv = crypto.getRandomValues(new Uint8Array(12)), c = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(j)));
+      await send(k, {at:Date.now(), iv:b64e(iv), c:b64e(c)}); bakDone[k] = fp; lsSet('mbpscan_bdone', bakDone); }
+    for(const k of bakDel.slice()){ if(!live.has(k)){ await send(k, null); delete bakDone[k]; } bakDel = bakDel.filter(x=> x !== k); lsSet('mbpscan_bdel', bakDel); lsSet('mbpscan_bdone', bakDone); }
+  }catch(e){ if(!bakErr) bakErr = 'net'; }
+  bakBusy = false; if(view === 'res' && !rv && $('dataInfo')) drawResults(); if(bakAgain){ bakAgain = false; bakKick(); } }
+async function bakRestore(){ if(!storeReady || idb.fail || !akKeys.length || !navigator.onLine) return 0; let n = 0;
+  try{ const tok = await fbToken(), local = new Set(recsAll().map(recKey));
+    for(const kS of akKeys){ const r = await fetch(FB_DB + '/mbb/' + await bakRef(kS) + '.json?auth=' + encodeURIComponent(tok)); if(r.status === 401 || r.status === 403){ bakErr = 'rule'; return 0; } if(!r.ok) continue; const d = await r.json(); if(!d) continue; const key = await crypto.subtle.importKey('raw', b64u(kS), 'AES-GCM', false, ['decrypt']);
+      for(const e of Object.values(d)){ if(!e || !e.c) continue; let j; try{ j = new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(e.iv)}, key, b64u(e.c))); }catch(x){ continue; } const m = JSON.parse(j), k = m._k; if(!k || local.has(k) || bakDel.includes(k)) continue;
+        local.add(k); bakDone[k] = bakHash(j); if(m.kind === 'exam') (xres[m.exId] = xres[m.exId] || []).push(m); else results.push(m); n++; } }
+    if(n){ lsSet('mbpscan_bdone', bakDone); await storeAll(); xRelink(); drawHeader(); if(view === 'res') drawResults(); if(view === 'tests') drawTests(); toast('Đã khôi phục ' + n + ' bài từ sao lưu. Bài chưa có ảnh: quét lại phiếu nếu cần ảnh.', 5000); }
+  }catch(e){} return n; }
 const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ===== Điều hướng ===== */
@@ -1278,6 +1309,7 @@ function examParentImg(canvas, f, g, st, cm){ const {c, k} = examAnnotate(canvas
 function recImg(make, fallback){ let cv; try{ cv = make(); }catch(e){ cv = fallback(); } return {url:cv.toDataURL('image/jpeg', 0.88), cmY:cv.cmY || 0, cmSc:cv.sc ? 1 : 0, card:true}; }
 /* ===== SỬA NHẬN XÉT THỦ CÔNG trước khi gửi: sửa / bỏ từng dòng, thêm lời nhắn riêng, khôi phục bản tự động — vẽ lại phần nhận xét dưới ảnh ===== */
 async function recRecomment(rec, cm){
+  if(!rec.url){ rec.cm = cm; rec.cmt = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); return; }   // bài khôi phục từ sao lưu: chỉ có chữ
   if(!rec.cmY) throw new Error('Bài chấm từ bản cũ (trước 03/11) — chấm lại bài này để sửa được nhận xét.');
   const im = new Image(); im.src = rec.url; await im.decode(); const c = document.createElement('canvas'); c.width = im.width; c.height = rec.cmY; c.getContext('2d').drawImage(im, 0, 0);
   const T = recTot(rec), out = cmtPanel(c, cm, rec.cmSc ? {pts:T.pts, max:T.max} : null); rec.url = out.toDataURL('image/jpeg', 0.88); rec.cmY = out.cmY; rec.cm = cm; rec.cmt = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
@@ -1311,8 +1343,9 @@ function makeRecord(canvas, f){
 function unkeep(rec){ if(!rec) return; if(rec.kind==='exam'){ const a = xres[rec.exId] || [], i = a.indexOf(rec); if(i >= 0){ a.splice(i, 1); saveX(); } } else { const i = results.indexOf(rec); if(i >= 0){ results.splice(i, 1); saveResults(); } } }
 // bài vừa chấm được LƯU NGAY (không đợi bấm “Bài tiếp”) — tắt app, chuyển thẻ hay khoá máy cũng không mất bài cuối; sửa tay thì cập nhật bản đã lưu, bấm “Bỏ” thì xoá
 let savedRec = null, replacedRec = null;   // replacedRec: bài cũ cùng SBD bị thay — bấm “Bỏ” thì trả lại
-function syncPending(){ if(!pending || pending===savedRec) return; unkeep(savedRec); const old = keep(pending); if(old && !replacedRec) replacedRec = old; savedRec = pending; drawHeader(); }
-function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ const old = a[i]; a[i] = rec; saveX(); toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); return old; } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
+function syncPending(){ if(!pending || pending===savedRec) return; recTlKeep(pending, savedRec); unkeep(savedRec); const old = keep(pending); if(old && !replacedRec) replacedRec = old; savedRec = pending; drawHeader(); }
+function recTlKeep(rec, old){ if(!old || old.tl == null || rec.tl != null) return; rec.tl = old.tl; try{ const cm = recAutoCm(rec) || rec.cm; if(cm) recRecomment(rec, cm).then(saveX, ()=>{}); }catch(e){} }   // chấm lại phiếu: giữ điểm tự luận đã nhập
+function keep(rec){ if(rec.kind==='exam'){ const a = xres[rec.exId] || (xres[rec.exId] = []), i = rec.sbd ? a.findIndex(x=> x.sbd===rec.sbd) : -1; if(i >= 0){ const old = a[i]; a[i] = rec; recTlKeep(rec, old); saveX(); toast('SBD ' + rec.sbd + ' đã có bài — thay bằng lần chấm mới.', 2600); return old; } else a.push(rec); saveX(); } else { results.push(rec); saveResults(); } }
 let pendSrc = null;   // ảnh gốc + kết quả đọc của bài đang xem, để chấm tay lại các câu máy chưa chắc
 function showShot(canvas, f){
   pendSrc = {canvas, f, fix: f.kind==='ws' ? f.r.picks.filter(p=> f.r.test.rows[p.k].t ? (p.pk.state==='weak' || p.pk.state==='multi' || p.pk.faint) : (p.pk.state!=='ok' || p.pk.faint)).map(p=> p.k) : [], xfix: f.kind==='exam' ? (f.r.unsure||[]).map(u=> ({...u})) : []};
@@ -1627,13 +1660,6 @@ function cmpLine(rec, S){ const f = fmtVN, me = recTot(rec).pts, isTop = S.tops.
   else if(S.names.length) top += ' (bạn ' + nm(S.names) + ')';
   const d = r2(me - S.avg), pos = Math.abs(d) < 0.05 ? 'bằng điểm trung bình lớp' : (d > 0 ? 'cao hơn' : 'thấp hơn') + ' trung bình lớp ' + f(Math.abs(d)) + ' điểm';
   return {k:'cmp', i:'📊', t:'Lớp (' + S.n + ' bài): ' + top + '; thấp nhất ' + f(S.min) + '; trung bình ' + f(S.avg) + '; trung vị ' + f(S.med) + '. Con ' + pos + '.'}; }
-/* Rút gọn nhận xét các bài đã chấm (chạy một lần sau khi cập nhật): làm lại nhận xét và ảnh theo mẫu mới. Nhận xét thầy đã sửa tay giữ nguyên; bài đã gửi vẫn giữ dấu “đã gửi”. */
-async function cmtMigrate(){ if(ls('mbpscan_cmtv', 0) >= 2 || idb.fail) return; const all = results.concat(...Object.values(xres)), todo = all.filter(r=> r.cmY && !r.cmEdited); let k = 0; if(!all.length) return;   // không có bài nào: không ghi gì, không đánh dấu đã chạy
-  cmpBusy = 'cmtv';
-  for(const r of all){ if(r.cmEdited){ try{ const a = recAutoCm(r); if(a) r.cmAuto = a; }catch(e){} } }   // bản khôi phục tự động của bài đã sửa tay cũng theo mẫu mới
-  for(const r of todo){ try{ const cm = recAutoCm(r); if(cm){ await recRecomment(r, cm); r.cmAuto = undefined; delete r.cmpSig; } }catch(e){}
-    if(++k % 10 === 0 || k === todo.length){ saveResults(); saveX(); if(todo.length > 10) toast('Đang rút gọn nhận xét các bài đã chấm… ' + k + '/' + todo.length, 1500); } await new Promise(z=> setTimeout(z, 0)); }
-  saveResults(); saveX(); lsSet('mbpscan_cmtv', 2); cmpBusy = null; if(view === 'res') drawResults(); if(todo.length) toast('Đã rút gọn nhận xét ' + todo.length + ' bài.', 2600); }
 async function cmpUpdate(list, key, prog){ if(list.length < 5) return 0; const S = cmpStats(list, key), todo = list.filter(r=> r.cmY && r.cm && !r.cmpOff && r.cmpSig !== S.sig); let k = 0;
   for(const r of todo){ const lines = r.cm.lines.filter(l=> l.k !== 'cmp'), i = lines.findIndex(l=> l.k === 'parent'); lines.splice(i >= 0 ? i : lines.length, 0, cmpLine(r, S));
     try{ await recRecomment(r, {mood:r.cm.mood, tone:r.cm.tone, toneWhy:r.cm.toneWhy, lines, text:''}); r.cmpSig = S.sig; }catch(e){} if(prog) prog(++k, todo.length); await new Promise(z=> setTimeout(z, 0)); }
@@ -1647,7 +1673,7 @@ function tlSheet(list, done, cur){ const sh = $('sheet'), ex = rvExam(), rows = 
   const who = x=> x.r.kind === 'exam' ? '<b>' + esc(x.r.name || '(chưa rõ tên)') + '</b><small>SBD ' + esc(x.r.sbd || '?') + ' · mã đề ' + esc(x.r.made) + '</small>' : '<b>Bài #' + (x.i + 1) + '</b><small>' + hm(x.r.at) + ' · mã ' + x.r.id + '</small>';
   sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">NHẬP ĐIỂM TỰ LUẬN</small><b style="display:block">Tối đa ' + fmtVN(rows.length ? rows[0].m : 0) + ' điểm/bài · cộng vào điểm chấm máy</b></div><div class="shBody">'
     + '<p class="mut" style="margin:0 0 8px">Gõ điểm tự luận từng bài (vd 2,5)' + (ex ? ', xếp theo số báo danh' : '') + '. Muốn sửa điểm đã nhập: chạm vào ô, gõ điểm mới. Để trống = chưa chấm. Lưu xong, nhận xét và ảnh gửi phụ huynh được làm lại theo điểm tổng.</p>'
-    + rows.map((x, k)=> '<div class="tlr' + (x.r === cur ? ' cur' : '') + '">' + (x.r.kind === 'exam' ? '' : '<img src="' + x.r.url + '" alt="" data-z="' + x.i + '">') + '<div class="tx">' + who(x) + '<small>Chấm máy ' + fmtVN(x.r.pts) + '/' + fmtVN(x.r.max) + ' · <span class="tot" data-k="' + k + '"></span></small></div><input class="tlIn" data-k="' + k + '" inputmode="decimal" enterkeyhint="next" placeholder="—" value="' + (x.r.tl != null ? fmtVN(x.r.tl) : '') + '"><span class="mut">/' + fmtVN(x.m) + '</span></div>').join('')
+    + rows.map((x, k)=> '<div class="tlr' + (x.r === cur ? ' cur' : '') + '">' + (x.r.kind === 'exam' ? '' : '<img src="' + (x.r.url || IMG_NONE) + '" alt="" data-z="' + x.i + '">') + '<div class="tx">' + who(x) + '<small>Chấm máy ' + fmtVN(x.r.pts) + '/' + fmtVN(x.r.max) + ' · <span class="tot" data-k="' + k + '"></span></small></div><input class="tlIn" data-k="' + k + '" inputmode="decimal" enterkeyhint="next" placeholder="—" value="' + (x.r.tl != null ? fmtVN(x.r.tl) : '') + '"><span class="mut">/' + fmtVN(x.m) + '</span></div>').join('')
     + '</div><div class="shFoot"><button class="fab" id="tlCancel">Huỷ</button><button class="fab go" id="tlSave">💾 Lưu điểm tự luận</button></div></div>';
   sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('tlCancel').onclick = sheetClose;
   const ins = [...sh.querySelectorAll('.tlIn')];
@@ -1683,14 +1709,15 @@ function groups(){
 const fileName = (r, i)=>{ const d = new Date(r.at || Date.now()), p = x=> String(x).padStart(2, '0'), tm = p(d.getDate()) + '-' + p(d.getMonth()+1) + '_' + p(d.getHours()) + 'h' + p(d.getMinutes()) + 'm' + p(d.getSeconds());   // tên có ngày giờ chấm → không trùng ảnh đã gửi trước đó
   return (r.kind==='exam' ? 'SBD_' + (r.sbd || 'khong_ro') + '_' + tm : 'Ma' + r.id + '_' + tm + '_' + p(i+1)) + '_' + fmtVN(recTot(r).pts) + 'diem.jpg'; };
 const toFile = async (r, i)=> new File([await (await fetch(r.url)).blob()], fileName(r, i), {type:'image/jpeg'});
-function download(r, i){ const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
+function download(r, i){ if(!r.url) return; const a = document.createElement('a'); a.href = r.url; a.download = fileName(r, i); document.body.appendChild(a); a.click(); a.remove(); }
 /* GỬI ẢNH (Zalo…): Chrome chỉ cho chia sẻ tối đa 10 tệp mỗi lần và phải gọi ngay sau khi bấm → chia đợt 10 ảnh, chuẩn bị tệp sẵn; gửi xong đợt nào đánh dấu đợt đó.
    Máy không chia sẻ được (trình duyệt trong Zalo, trình duyệt cũ…) → tải ảnh về máy và hiện nút “Tôi đã gửi thủ công”. */
 const SHARE_MAX = 10;
 const canShareFiles = files=>{ try{ return !!(navigator.canShare && navigator.share && navigator.canShare({files})); }catch(e){ return false; } };
 function dlFile(f){ const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=> URL.revokeObjectURL(a.href), 30000); }
 async function share(list, sum){   // list: [[bài, chỉ số]]; sum: {key, n, file:()=>Promise<File>} — ảnh nhận xét cả lớp, gửi riêng một đợt sau cùng
-  const items = list.map(([r, i])=> ({r, i})).sort((a, b)=> sbdCmp(a.r, b.r)); if(!items.length && !sum) return;   // ảnh bài làm theo SBD tăng dần (bài kiểm tra không có SBD: giữ thứ tự chấm)
+  const noImg = list.filter(([r])=> !r.url).length; if(noImg) toast(noImg + ' bài chưa có ảnh nên không gửi được; quét lại phiếu nếu cần ảnh.', 3600);
+  const items = list.filter(([r])=> r.url).map(([r, i])=> ({r, i})).sort((a, b)=> sbdCmp(a.r, b.r)); if(!items.length && !sum) return;   // ảnh bài làm theo SBD tăng dần (bài kiểm tra không có SBD: giữ thứ tự chấm)
   const chunks = []; for(let k = 0; k < items.length; k += SHARE_MAX) chunks.push(items.slice(k, k + SHARE_MAX)); if(sum) chunks.push([{sum}]);
   chunks.forEach(c=>{ c.p = Promise.all(c.map(x=> x.sum ? x.sum.file() : toFile(x.r, x.i))); c.p.catch(()=>{}); });
   if(chunks.length === 1){ const c = chunks[0]; let files = null; try{ files = await c.p; }catch(e){}
@@ -1824,7 +1851,7 @@ function xRelink(){ let moved = 0;
   if(moved){ saveX(); toast('Đã tìm lại ' + moved + ' bài đã chấm.', 3200); } return moved; }
 function xRescue(k){ const a = xres[k] || [], sh = $('sheet'), ma = [...new Set(a.map(r=> r.made).filter(Boolean))].slice(0, 6).join(', ');
   sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">BÀI CHƯA GẮN ĐƯỢC ĐỀ</small><b style="display:block">' + a.length + ' bài · mã đề ' + esc(ma) + '</b></div><div class="shBody"><p class="mut" style="margin:0 0 8px">Bài vẫn còn trên máy. Chĩa camera vào một phiếu của đề này để tải lại đề, các bài sẽ tự gắn vào.</p>'
-    + a.slice().sort(sbdCmp).map(r=> '<div class="tlr"><img src="' + r.url + '" alt=""><div class="tx"><b>' + esc(r.name || 'SBD ' + (r.sbd || '?')) + '</b><small>SBD ' + esc(r.sbd || '?') + ' · mã đề ' + esc(r.made || '?') + ' · chấm máy ' + fmtVN(r.pts) + '/' + fmtVN(r.max) + (r.tl != null ? ' · tự luận ' + fmtVN(r.tl) : '') + '</small></div></div>').join('')
+    + a.slice().sort(sbdCmp).map(r=> '<div class="tlr"><img src="' + (r.url || IMG_NONE) + '" alt=""><div class="tx"><b>' + esc(r.name || 'SBD ' + (r.sbd || '?')) + '</b><small>SBD ' + esc(r.sbd || '?') + ' · mã đề ' + esc(r.made || '?') + ' · chấm máy ' + fmtVN(r.pts) + '/' + fmtVN(r.max) + (r.tl != null ? ' · tự luận ' + fmtVN(r.tl) : '') + '</small></div></div>').join('')
     + '</div><div class="shFoot"><button class="fab" id="xrClose">Đóng</button><button class="fab go" id="xrSave">⬇ Tải ' + a.length + ' ảnh</button></div></div>';
   sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('xrClose').onclick = sheetClose; $('xrSave').onclick = ()=> a.slice().sort(sbdCmp).forEach((r, i)=> setTimeout(()=> download(r, i), i*250)); }
 function drawResults(){
@@ -1838,8 +1865,8 @@ function drawResults(){
       + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length && !shown.length ? 'Chưa có ' + kindN[rKind] + ' nào được chấm.' : gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
     const orph = xOrphans(), nX = Object.values(xres).reduce((t, a)=> t + (Array.isArray(a) ? a.length : 0), 0);
     if(orph.length) $('resList').insertAdjacentHTML('afterbegin', orph.map(k=> '<div class="grp" data-orph="' + esc(k) + '" style="border-color:#f0a500;background:#fff8e6"><div class="ic">🛟</div><div class="tx"><b>' + xres[k].length + ' bài chưa gắn được đề</b><small>Bài vẫn còn trên máy · mã đề ' + esc([...new Set(xres[k].map(r=> r.made).filter(Boolean))].slice(0, 3).join(', ')) + ' · chạm để xem</small></div></div>').join(''));
-    $('resList').insertAdjacentHTML('beforeend', '<p class="mut" id="dataInfo" style="margin:12px 2px 0;font-size:.76rem">Trên máy: ' + exams.length + ' đề thi · ' + nX + ' bài đề thi · ' + results.length + ' bài kiểm tra</p>');
-    if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const d = $('dataInfo'); if(d && e.usage != null) d.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
+    $('resList').insertAdjacentHTML('beforeend', '<p class="mut" id="dataInfo" style="margin:12px 2px 0;font-size:.76rem">Trên máy: ' + exams.length + ' đề thi · ' + nX + ' bài đề thi · ' + results.length + ' bài kiểm tra<br><span id="bakInfo">' + esc(bakText()) + '</span></p>');
+    if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const d = $('dataInfo'); if(d && e.usage != null) d.insertAdjacentText('beforeend', ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'); }).catch(()=>{});
     $('resList').querySelectorAll('[data-orph]').forEach(el=> el.onclick = ev=>{ ev.stopPropagation(); xRescue(el.dataset.orph); });
     $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
     $('rKind').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rKind = b.dataset.k; lsSet('mbpscan_rkind', rKind); drawResults(); });
@@ -1859,12 +1886,12 @@ function drawResults(){
   if(needName && !topNames[gk]) $('fSum').open = true;   // cần thầy nhập tên bạn điểm cao nhất
   if(CS) cmpKick(list, gk);
   const tlAsk = ()=>{ if(cmpBusy){ toast('Đang cập nhật so sánh vào nhận xét — chờ vài giây rồi gửi.', 2600); return false; } return !tlLeft || confirm('Còn ' + tlLeft + ' bài chưa nhập điểm tự luận — ảnh của các bài này chỉ có điểm chấm máy. Vẫn gửi?'); };
-  const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
+  const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent && r.url), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
   const upM = ex && upMarks[ex.id], upState = !upM ? 'none' : upM.sig === upSig(upRows(ex)) ? 'ok' : 'changed';   // điểm đã xác nhận còn khớp không
   // Việc cần làm theo trình tự: nhập tự luận → gửi phụ huynh → xác nhận điểm cho vnEdu; bước chưa xong đầu tiên có nút nổi bật
   const steps = []; if(tlN.length) steps.push({id:'bTl', t:'Điểm tự luận', ok:!tlLeft, s:'Đã nhập ' + tlDone + '/' + tlN.length + ' bài · chấm máy ' + fmtVN(tlN[0].max) + ' + tự luận ' + fmtVN(tlMaxOf(tlN[0])) + ' điểm', b:tlLeft ? 'Nhập' : 'Sửa'});
-  const sendDue = uns.length > 0 || !!sumDue;
-  steps.push({id:sendDue ? 'bShareNew' : 'bShare', t:'Gửi ảnh cho phụ huynh', ok:!sendDue, s:cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét…' : sendDue ? (uns.length ? uns.length + ' ảnh chưa gửi' : 'Đã gửi hết ảnh bài làm') + (sumDue ? (uns.length ? ' + ' : ', còn ') + 'nhận xét cả lớp' : '') : 'Đã gửi hết ' + list.length + ' ảnh', b:sendDue ? '📤 Gửi' : 'Gửi lại'});
+  const sendDue = uns.length > 0 || !!sumDue, noImg = list.filter(r=> !r.url).length;
+  steps.push({id:sendDue ? 'bShareNew' : 'bShare', t:'Gửi ảnh cho phụ huynh', ok:!sendDue, s:cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét…' : (sendDue ? (uns.length ? uns.length + ' ảnh chưa gửi' : noImg ? 'Không còn ảnh chờ gửi' : 'Đã gửi hết ảnh bài làm') + (sumDue ? (uns.length ? ' + ' : ', còn ') + 'nhận xét cả lớp' : '') : noImg ? 'Không còn ảnh chờ gửi' : 'Đã gửi hết ' + list.length + ' ảnh') + (noImg ? ' · ' + noImg + ' bài chưa có ảnh' : ''), b:sendDue ? '📤 Gửi' : 'Gửi lại'});
   if(ex && ex.ak >= 1024) steps.push({id:'bUp', t:'Xác nhận điểm cho vnEdu', ok:upState === 'ok', s:upState === 'ok' ? 'Đã xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) + ' · MathBank tải về được' : upState === 'changed' ? 'Điểm đã đổi sau lần xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) : 'Đẩy điểm lên máy chủ để MathBank dựng file', b:upState === 'ok' ? 'Gửi lại' : upState === 'changed' ? '☁ Xác nhận lại' : '☁ Xác nhận'});
   const stepCur = steps.findIndex(x=> !x.ok);
   $('gSteps').innerHTML = '<h3>Việc cần làm</h3>' + steps.map((x, k)=> '<div class="stp' + (x.ok ? ' ok' : k === stepCur ? ' cur' : '') + '"><i>' + (x.ok ? '✓' : k + 1) + '</i><div class="tx"><b>' + x.t + '</b><small>' + esc(x.s) + '</small></div><button class="btn' + (k === stepCur ? ' gold' : '') + '" id="' + x.id + '">' + x.b + '</button></div>').join('');
@@ -1884,7 +1911,7 @@ function drawResults(){
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
     $('xTable').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list.find(r=> (r.sbd || '?')===b.dataset.tl)); });
   } else {
-    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + (r.url || IMG_NONE) + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
     $('resGrid').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list[+b.dataset.tl]); });
   }
@@ -1974,7 +2001,7 @@ async function sendToPc(ex){ const list = xres[ex.id] || [];
   try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
   try{ await navigator.clipboard.writeText(text); toast('Đã chép kết quả — dán vào tin nhắn gửi sang máy tính.', 3200); }catch(e){ toast('Không chép được; hãy thử lại.'); } }
 let zi = -1;
-function zoom(i){ zi = i; const r = curList()[i]; $('zoomImg').src = r.url; { const zb = $('zoom').querySelector('.zb'), old = zb.querySelector('.cmini'); if(old) old.remove(); if(!r.card) zb.insertAdjacentHTML('afterbegin', cmtMini(r)); /* ảnh mới (gửi phụ huynh) đã có nhận xét trong ảnh */ } $('zSbd').style.display = rv && rv.kind==='x' ? '' : 'none'; $('zoom').classList.add('on'); }
+function zoom(i){ zi = i; const r = curList()[i]; $('zoomImg').src = r.url || IMG_NONE; { const zb = $('zoom').querySelector('.zb'), old = zb.querySelector('.cmini'); if(old) old.remove(); if(!r.card) zb.insertAdjacentHTML('afterbegin', cmtMini(r)); /* ảnh mới (gửi phụ huynh) đã có nhận xét trong ảnh */ } $('zSbd').style.display = rv && rv.kind==='x' ? '' : 'none'; $('zoom').classList.add('on'); }
 $('zSbd').onclick = ()=>{ const ex = rvExam(), r = curList()[zi]; if(!ex || !r) return;
   const v = prompt('Nhập số báo danh của bài này' + (r.sbd ? ' (máy đọc: ' + r.sbd + ')' : ' (phiếu không tô SBD)') + ':', r.sbd || ''); if(v === null) return;
   const sb = v.trim(); if(!sb) return; if(!ex.students[sb] && !confirm('SBD ' + sb + ' không có trong danh sách. Vẫn gán?')) return;
@@ -1985,7 +2012,7 @@ $('zSbd').onclick = ()=>{ const ex = rvExam(), r = curList()[zi]; if(!ex || !r) 
 $('zClose').onclick = ()=> $('zoom').classList.remove('on');
 $('zSave').onclick = ()=> download(curList()[zi], zi);
 $('zShare').onclick = ()=> share([[curList()[zi], zi]]);
-$('zCmt').onclick = ()=>{ const r = curList()[zi]; cmtEdit(r, ()=>{ $('zoomImg').src = r.url; drawResults(); }); };
+$('zCmt').onclick = ()=>{ const r = curList()[zi]; cmtEdit(r, ()=>{ $('zoomImg').src = r.url || IMG_NONE; drawResults(); }); };
 $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) return; const r = curList()[zi];
   if(rv.kind==='x'){ const a = xres[rv.key]; a.splice(a.indexOf(r), 1); if(!a.length) delete xres[rv.key]; saveX(); } else { results.splice(results.indexOf(r), 1); saveResults(); }
   $('zoom').classList.remove('on'); drawResults(); drawHeader(); };
@@ -1997,7 +2024,8 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop
   if(idb.fail) document.body.insertAdjacentHTML('afterbegin', '<div id="idbFail" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không đọc được các bài đã chấm trên máy. Dữ liệu cũ được giữ nguyên, nhưng bài chấm lúc này sẽ không được lưu. Tắt hẳn app rồi mở lại. <button class="btn" onclick="location.reload()" style="display:block;margin-top:8px">↻ Thử lại</button></div>');
   if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const v = document.querySelector('.ver'); if(v && e.usage != null) v.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
   if(!idb.fail) xRelink();
-  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); cmtMigrate(); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
+  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); bakRestore().then(bakSync); })();
+window.addEventListener('online', bakKick); document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'visible') bakKick(); });   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
