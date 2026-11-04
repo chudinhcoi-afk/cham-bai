@@ -85,6 +85,17 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
 #sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:70}
 .tlr{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.tlr:first-of-type{border-top:0}.tlr img{flex:none;width:96px;height:56px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--line)}.tlr .tx{flex:1;min-width:0}.tlr .tx b{display:block;font-size:.92rem}.tlr .tx small{display:block;color:var(--mut);font-size:.76rem}.tlr .tlIn{flex:0 0 64px;width:64px;text-align:center;font-size:1.15rem;font-weight:800;padding:8px 4px}.tlr.cur{background:#fff6dc;border-radius:10px;box-shadow:0 0 0 2px #f0a500}.tlr .tot{color:var(--ink,#141c3a);font-weight:700}
 .tlc{border:1px solid #e0b860;background:#fff6dc;color:#7a4a00;border-radius:10px;padding:1px 7px;font:inherit;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap}.tlc.no{background:#ffe2a8}
+.rtop{display:flex;justify-content:space-between;gap:8px;margin-bottom:10px}
+.stp{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.stp:first-of-type{border-top:0;padding-top:2px}.stp:last-of-type{padding-bottom:2px}
+.stp i{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:.86rem;background:#e6e9f1;color:var(--mut)}
+.stp.cur i{background:var(--gold);color:#fff}.stp.ok i{background:#12a150;color:#fff}
+.stp .tx{flex:1;min-width:0}.stp .tx b{display:block;font-size:.95rem}.stp .tx small{display:block;color:var(--mut);font-size:.78rem;line-height:1.35;margin-top:1px}.stp.ok .tx small{color:#0f7a3d}
+.stp .btn{flex:none;min-height:40px;padding:8px 12px;font-size:.9rem;white-space:nowrap}
+.lhd{padding:12px 14px 8px}.lhd b{display:block;font-size:1rem}.lhd small{color:var(--mut);font-size:.78rem}#wHd{padding:2px 2px 8px}
+details.fold{background:#fff;border:1px solid var(--line);border-radius:14px;margin:12px 0}details.fold summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px;font-weight:700;font-size:.95rem;list-style:none;cursor:pointer}details.fold summary::-webkit-details-marker{display:none}
+details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;font-size:.78rem;white-space:nowrap}details.fold summary::after{content:'▾';color:var(--mut);transition:transform .15s}details.fold[open] summary::after{transform:rotate(180deg)}details.fold>div{padding:0 14px}details.fold>div:empty{display:none}details.fold>div:last-child{padding-bottom:14px}
+.mgh{font-size:.74rem;font-weight:700;color:var(--mut);letter-spacing:.03em;margin:12px 0 4px}.mgh:first-child{margin-top:0}
+.mact{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:9px 10px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);text-align:left;font:inherit;font-weight:650;font-size:.95rem;cursor:pointer}.mact small{display:block;color:var(--mut);font-weight:500;font-size:.76rem}.mact.bad{color:var(--bad)}.mact>span:first-child{flex:none;width:24px;text-align:center}
 .ced{display:flex;gap:6px;align-items:flex-start;margin-bottom:8px}.ced .cic{flex:none;font-size:1.25rem;line-height:2}.ced textarea{flex:1;min-height:64px;font-size:.95rem;margin:0}.ced .btn{flex:none;min-height:40px;padding:6px 10px}
 #sheet.on{display:flex}
 .shBox{background:#fff;width:100%;max-height:86vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
@@ -231,28 +242,27 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11g · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11h · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
     <div id="resList"></div>
     <div id="resDetail" style="display:none">
-      <div class="row" style="margin-bottom:10px"><button class="btn" id="bBack">‹ Các lần chấm</button><button class="btn" id="bRename" style="margin-left:auto">✏ Đổi tên</button><button class="btn" id="bGDel">🗑</button></div>
+      <div class="rtop"><button class="btn" id="bBack">‹ Các lần chấm</button><button class="btn" id="bMore">⋯ Thêm</button></div>
       <div class="card">
         <h3 id="gTitle" style="margin-bottom:2px"></h3>
         <div class="mut" id="gSub"></div>
         <div class="stats" id="gStats"></div>
-        <div class="row" id="gActs" style="margin-top:12px"></div>
       </div>
-      <div class="card" id="gTl" style="display:none"></div>
-      <div class="card" id="gCmp" style="display:none"></div>
-      <div class="card" id="gSum"></div>
-      <div class="card" id="gMiss"></div>
+      <div class="card" id="gSteps"></div>
       <div class="card" id="xCard" style="display:none;padding:0;overflow:hidden">
+        <div class="lhd"><b>Danh sách bài</b><small id="xHint"></small></div>
         <div style="overflow:auto;max-height:58vh"><table class="tb" id="xTable"></table></div>
-        <p class="mut" style="margin:8px 12px 10px">Chạm vào một dòng đã chấm để xem ảnh. Dòng “—” là học sinh chưa có bài.</p>
       </div>
+      <div class="lhd" id="wHd" style="display:none"><b>Danh sách bài</b><small id="wHint"></small></div>
       <div class="grid" id="resGrid"></div>
+      <details class="fold" id="fSum"><summary><span>📊 Nhận xét chung cả lớp</span><small id="fSumS"></small></summary><div id="gSum"></div><div id="gCmp"></div></details>
+      <details class="fold" id="fMiss"><summary><span>🔍 Câu sai nhiều</span><small id="fMissS"></small></summary><div id="gMiss"></div></details>
     </div>
   </section>
 </main>
@@ -1698,9 +1708,9 @@ function missStats(list, ex){
 }
 function missHtml(list, ex){
   const a = missStats(list, ex); if(!list.length) return '';
-  if(!a.length) return '<h3 style="margin-bottom:4px">Câu sai nhiều</h3><p class="mut" style="margin:0">' + (ex || list.some(r=> r.qa) ? 'Không có câu nào sai.' : 'Các bài chấm trước bản này chưa lưu chi tiết từng câu — bài chấm từ nay sẽ được thống kê.') + '</p>';
+  if(!a.length) return '<p class="mut" style="margin:0">' + (ex || list.some(r=> r.qa) ? 'Không có câu nào sai.' : 'Các bài chấm trước bản này chưa lưu chi tiết từng câu — bài chấm từ nay sẽ được thống kê.') + '</p>';
   const mapped = !ex || Object.values(ex.variants).every(v=> v.map);
-  return '<h3 style="margin-bottom:2px">Câu sai nhiều</h3><p class="mut" style="margin:0 0 8px">' + (ex ? (mapped ? 'Đánh số theo đề gốc (đã quy đổi từ các mã đề trộn).' : 'Đề nạp từ bản cũ chưa có thông tin đề gốc nên thống kê theo từng mã đề.') : 'Tính trên các bài có lưu chi tiết.') + ' Tỉ lệ = sai + bỏ trống.</p>'
+  return '<p class="mut" style="margin:0 0 8px">' + (ex ? (mapped ? 'Đánh số theo đề gốc (đã quy đổi từ các mã đề trộn).' : 'Đề nạp từ bản cũ chưa có thông tin đề gốc nên thống kê theo từng mã đề.') : 'Tính trên các bài có lưu chi tiết.') + ' Tỉ lệ = sai + bỏ trống.</p>'
     + a.slice(0, 12).map(o=>{ const pc = Math.round(100*(o.wrong + o.blank)/o.n); return '<div class="miss"><div class="ml"><b>' + esc(o.label) + '</b><small>sai ' + o.wrong + (o.blank ? ' · trống ' + o.blank : '') + ' / ' + o.n + ' bài</small></div><div class="mb"><i style="width:' + pc + '%;background:' + (pc >= 50 ? '#d0302b' : pc >= 30 ? '#e08a00' : '#b8892b') + '"></i></div><div class="mp">' + pc + '%</div></div>'; }).join('')
     + (a.length > 12 ? '<p class="mut" style="margin:6px 0 0">… và ' + (a.length - 12) + ' câu khác có học sinh sai.</p>' : '');
 }
@@ -1767,6 +1777,18 @@ function sumView(sm){ const sh = $('sheet'); sh.innerHTML = '<div class="shBox f
   sh.classList.add('on'); $('svClose').onclick = sheetClose; $('svSave').onclick = async ()=> dlFile(await sm.file()); $('svShare').onclick = ()=>{ sheetClose(); share([], sm); }; }
 function xRows(ex){ const list = xres[ex.id] || [], by = {}; list.forEach(r=>{ if(r.sbd) by[r.sbd] = r; }); const rows = ex.order.map(sbd=> ({sbd, st:ex.students[sbd], r:by[sbd]||null})); list.forEach(r=>{ if(!r.sbd || !ex.students[r.sbd]) rows.push({sbd:r.sbd || '?', st:null, r}); }); return rows; }
 const curList = ()=> !rv ? [] : rv.kind==='x' ? (xres[rv.key] || []) : wList(rv.key), rvExam = ()=> rv && rv.kind==='x' ? exams.find(e=> e.id===rv.key) : null;
+function resMore(list, ex, g, uns, shareAll){ const sh = $('sheet'), mact = (id, ic, t, d, cls)=> '<button class="mact' + (cls ? ' ' + cls : '') + '" id="' + id + '"><span>' + ic + '</span><span>' + t + (d ? '<small>' + d + '</small>' : '') + '</span></button>';
+  sh.innerHTML = '<div class="shBox"><div class="shHead"><small class="mut">THÊM</small><b style="display:block">' + esc(g.title) + '</b></div><div class="shBody">'
+    + '<div class="mgh">ẢNH BÀI LÀM</div>' + (uns.length && uns.length < list.length ? mact('mShare', '📤', 'Gửi lại tất cả', 'Cả những ảnh đã gửi') : '') + mact('mSave', '⬇', 'Tải ảnh về máy', list.length + ' ảnh, theo số báo danh') + mact('mMark', uns.length ? '✓' : '↺', uns.length ? 'Đánh dấu đã gửi' : 'Bỏ đánh dấu đã gửi', uns.length ? 'Khi đã gửi bằng cách khác' : '')
+    + (ex ? '<div class="mgh">BẢNG ĐIỂM</div>' + mact('mCsv', '📄', 'Tải bảng điểm (.csv)', '') + '<label class="mact" id="mVne"><span>📗</span><span>Điền điểm vào file vnEdu<small>Chọn file xuất từ vnEdu ngay trên điện thoại</small></span><input type="file" id="fVne" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>' + mact('mPc', '💻', 'Chép kết quả cho máy tính', 'Dán vào MathBank khi không dùng máy chủ') : '')
+    + '<div class="mgh">LẦN CHẤM NÀY</div>' + mact('mRen', '✏', 'Đổi tên', '') + mact('mDel', '🗑', 'Xoá lần chấm', 'Xoá ' + list.length + ' bài trên điện thoại', 'bad')
+    + '</div><div class="shFoot"><button class="fab" id="mClose">Đóng</button></div></div>';
+  sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('mClose').onclick = sheetClose;
+  const on = (id, f)=>{ const e = $(id); if(e) e.onclick = ()=>{ sheetClose(); f(); }; };
+  on('mShare', shareAll); on('mSave', ()=> list.map((r, i)=> [r, i]).sort((a, b)=> sbdCmp(a[0], b[0])).forEach(([r, i], k)=> setTimeout(()=> download(r, i), k*250)));
+  on('mMark', ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); });
+  on('mRen', resRename); on('mDel', resDelete);
+  if(ex){ on('mCsv', ()=> exportCsv(ex, g.title)); on('mPc', ()=> sendToPc(ex)); $('fVne').onchange = e=>{ const f = e.target.files[0]; e.target.value = ''; if(f){ sheetClose(); vneOpen(ex, f); } }; } }
 function drawResults(){
   const gs = groups(); if(rv && !gs.some(g=> g.kind===rv.kind && g.key===rv.key)) rv = null;
   $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
@@ -1778,42 +1800,46 @@ function drawResults(){
       + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length && !shown.length ? 'Chưa có ' + kindN[rKind] + ' nào được chấm.' : gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
     $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
     $('rKind').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rKind = b.dataset.k; lsSet('mbpscan_rkind', rKind); drawResults(); });
-    $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; drawResults(); $('v-res').parentElement.scrollTop = 0; });
+    $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; $('fSum').open = $('fMiss').open = false; drawResults(); $('v-res').parentElement.scrollTop = 0; });
     return;
   }
   const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> recTot(r).pts), mx = list.length ? list[0].max : 0, ex = rvExam();
   $('gTitle').textContent = g.title; $('gSub').textContent = dayVN(dayKey(g.at)) + ' · ' + g.sub;
   $('gStats').innerHTML = [[ex ? g.n + '/' + g.total : g.n, 'đã chấm'], [fmtVN(g.avg), 'trung bình'], [fmtVN(Math.max(...pts)), 'cao nhất'], [fmtVN(Math.min(...pts)), 'thấp nhất']].map(x=> '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
-  $('gMiss').innerHTML = missHtml(list, ex); $('gMiss').style.display = $('gMiss').innerHTML ? '' : 'none';
+  $('gMiss').innerHTML = missHtml(list, ex); $('fMiss').style.display = $('gMiss').innerHTML ? '' : 'none'; { const m = missStats(list, ex).length; $('fMissS').textContent = m ? m + ' câu' : ''; }
   const tlN = list.filter(r=> tlMaxOf(r) > 0), tlDone = tlN.filter(r=> r.tl != null).length, tlLeft = tlN.length - tlDone;
-  $('gTl').style.display = tlN.length ? '' : 'none';
-  $('gTl').innerHTML = tlN.length ? '<h3 style="margin-bottom:2px">✍ Điểm tự luận</h3><p class="mut" style="margin:0 0 8px">Phần chấm máy tối đa ' + fmtVN(tlN[0].max) + ' điểm, tự luận ' + fmtVN(tlMaxOf(tlN[0])) + ' điểm. Đã nhập <b>' + tlDone + '/' + tlN.length + '</b> bài' + (tlLeft ? ' — nhập xong trước khi gửi để ảnh và nhận xét theo điểm tổng.' : ' ✓') + '</p><button class="btn ' + (tlLeft ? 'gold' : '') + ' wide" id="bTl">✍ ' + (tlDone ? 'Sửa' : 'Nhập') + ' điểm tự luận</button>' : '';
-  if(tlN.length) $('bTl').onclick = ()=> tlSheet(list, drawResults);
   const gk = rv.kind + rv.key, CS = list.length >= 5 ? cmpStats(list, gk) : null, needName = CS && !list.some(r=> r.kind === 'exam');
-  $('gCmp').style.display = CS ? '' : 'none';
-  $('gCmp').innerHTML = CS ? '<h3 style="margin-bottom:2px">📊 So sánh với cả lớp</h3><p class="mut" style="margin:0 0 8px">Ghi vào nhận xét từng bài (ngay trên lời nhắn phụ huynh): cao nhất <b>' + fmtVN(CS.max) + '</b>' + (CS.names.length ? ' (' + esc(CS.names.join(', ')) + ')' : '') + ', thấp nhất <b>' + fmtVN(CS.min) + '</b> (không nêu tên), trung bình <b>' + fmtVN(CS.avg) + '</b>, trung vị <b>' + fmtVN(CS.med) + '</b>.</p>'
+    $('gCmp').innerHTML = CS ? '<h3 style="margin:12px 0 2px">So sánh với cả lớp</h3><p class="mut" style="margin:0 0 8px">Ghi vào nhận xét từng bài (ngay trên lời nhắn phụ huynh): cao nhất <b>' + fmtVN(CS.max) + '</b>' + (CS.names.length ? ' (' + esc(CS.names.join(', ')) + ')' : '') + ', thấp nhất <b>' + fmtVN(CS.min) + '</b> (không nêu tên), trung bình <b>' + fmtVN(CS.avg) + '</b>, trung vị <b>' + fmtVN(CS.med) + '</b>.</p>'
     + (needName ? '<label class="mut" style="display:block;margin-bottom:4px">Tên bạn điểm cao nhất (bài kiểm tra không có danh sách lớp; nhiều bạn thì cách nhau dấu phẩy; để trống = không nêu tên)</label><div class="row" style="flex-wrap:nowrap"><input id="cmpName" class="search" style="margin:0;flex:1" placeholder="vd Nguyễn Văn An" value="' + esc(topNames[gk] || '') + '"><button class="btn" id="cmpNameOk">Lưu</button></div>' : '')
     + '<p class="mut" id="cmpSt" style="margin:8px 0 0;color:#8a5a00;font-weight:600">' + (cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét từng bài…' : '') + '</p>' : '';
   if(needName) $('cmpNameOk').onclick = ()=>{ const v = $('cmpName').value.trim(); if(v) topNames[gk] = v; else delete topNames[gk]; lsSet('mbpscan_top', topNames); drawResults(); toast(v ? 'Đã lưu tên bạn điểm cao nhất — đang cập nhật nhận xét.' : 'Đã bỏ tên bạn điểm cao nhất.', 2600); };
+  if(needName && !topNames[gk]) $('fSum').open = true;   // cần thầy nhập tên bạn điểm cao nhất
   if(CS) cmpKick(list, gk);
   const tlAsk = ()=>{ if(cmpBusy){ toast('Đang cập nhật so sánh vào nhận xét — chờ vài giây rồi gửi.', 2600); return false; } return !tlLeft || confirm('Còn ' + tlLeft + ' bài chưa nhập điểm tự luận — ảnh của các bài này chỉ có điểm chấm máy. Vẫn gửi?'); };
   const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
   const upM = ex && upMarks[ex.id], upState = !upM ? 'none' : upM.sig === upSig(upRows(ex)) ? 'ok' : 'changed';   // điểm đã xác nhận còn khớp không
-  $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi' + (sumDue ? ' + nhận xét cả lớp' : '') + '</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
-    + '<button class="btn" id="bShare">📤 ' + (uns.length === list.length ? 'Gửi tất cả' : 'Gửi lại tất cả') + '</button><button class="btn" id="bSave">⬇ Tải ảnh</button><button class="btn" id="bMark">' + (uns.length ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button>'
-    + (ex ? '<button class="btn" id="bXSend">💻 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' + (ex.ak >= 1024 ? '<button class="btn ' + (upState !== 'ok' ? 'gold' : '') + '" id="bUp" style="flex:1 0 100%">' + (upState === 'ok' ? '✓ Đã xác nhận ' + hm(upMarks[ex.id].at) + ' ' + dayVN(dayKey(upMarks[ex.id].at)) + ' · gửi lại' : upState === 'changed' ? '☁ Điểm đã đổi — xác nhận lại' : '☁ Xác nhận điểm lên máy chủ (cho vnEdu)') + '</button>' : '') + '<label class="btn" style="flex:1 0 100%;justify-content:center">📗 Điền điểm vào file vnEdu<input type="file" id="fVne" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>' : '');
+  // Việc cần làm theo trình tự: nhập tự luận → gửi phụ huynh → xác nhận điểm cho vnEdu; bước chưa xong đầu tiên có nút nổi bật
+  const steps = []; if(tlN.length) steps.push({id:'bTl', t:'Điểm tự luận', ok:!tlLeft, s:'Đã nhập ' + tlDone + '/' + tlN.length + ' bài · chấm máy ' + fmtVN(tlN[0].max) + ' + tự luận ' + fmtVN(tlMaxOf(tlN[0])) + ' điểm', b:tlLeft ? 'Nhập' : 'Sửa'});
+  const sendDue = uns.length > 0 || !!sumDue;
+  steps.push({id:sendDue ? 'bShareNew' : 'bShare', t:'Gửi ảnh cho phụ huynh', ok:!sendDue, s:cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét…' : sendDue ? (uns.length ? uns.length + ' ảnh chưa gửi' : 'Đã gửi hết ảnh bài làm') + (sumDue ? (uns.length ? ' + ' : ', còn ') + 'nhận xét cả lớp' : '') : 'Đã gửi hết ' + list.length + ' ảnh', b:sendDue ? '📤 Gửi' : 'Gửi lại'});
+  if(ex && ex.ak >= 1024) steps.push({id:'bUp', t:'Xác nhận điểm cho vnEdu', ok:upState === 'ok', s:upState === 'ok' ? 'Đã xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) + ' · MathBank tải về được' : upState === 'changed' ? 'Điểm đã đổi sau lần xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) : 'Đẩy điểm lên máy chủ để MathBank dựng file', b:upState === 'ok' ? 'Gửi lại' : upState === 'changed' ? '☁ Xác nhận lại' : '☁ Xác nhận'});
+  const stepCur = steps.findIndex(x=> !x.ok);
+  $('gSteps').innerHTML = '<h3>Việc cần làm</h3>' + steps.map((x, k)=> '<div class="stp' + (x.ok ? ' ok' : k === stepCur ? ' cur' : '') + '"><i>' + (x.ok ? '✓' : k + 1) + '</i><div class="tx"><b>' + x.t + '</b><small>' + esc(x.s) + '</small></div><button class="btn' + (k === stepCur ? ' gold' : '') + '" id="' + x.id + '">' + x.b + '</button></div>').join('');
+  if(tlN.length) $('bTl').onclick = ()=> tlSheet(list, drawResults);
   if($('bShareNew')) $('bShareNew').onclick = ()=>{ if(tlAsk()) share(uns, sumDue ? sm : null); };
-  $('bShare').onclick = ()=>{ if(tlAsk()) share(list.map((r,i)=> [r, i]), sm); };
-  $('gSum').innerHTML = sm ? '<h3 style="margin-bottom:2px">📊 Nhận xét chung cả lớp</h3><p class="mut" style="margin:0 0 8px">Đánh giá chất lượng, câu sai nhiều, câu dễ nhưng vẫn sai, hướng khắc phục — không nêu tên học sinh. Khi gửi, ảnh này đi riêng một đợt sau cùng, sau ảnh bài làm của học sinh.' + (sumSent[sm.key] === sm.n ? ' <b style="color:#0f7a3d">✓ Đã gửi</b>' : '') + '</p><div class="row"><button class="btn gold" id="bSumView">👁 Xem ảnh nhận xét</button><button class="btn" id="bSumSend">📤 Chỉ gửi ảnh này</button></div>' : '';
-  if(sm){ $('bSumView').onclick = ()=> sumView(sm); $('bSumSend').onclick = ()=> share([], sm); } $('bSave').onclick = ()=> list.map((r, i)=> [r, i]).sort((a, b)=> sbdCmp(a[0], b[0])).forEach(([r, i], k)=> setTimeout(()=> download(r, i), k*250));
-  $('bMark').onclick = ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); };
-  $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : '';
+  const shareAll = ()=>{ if(tlAsk()) share(list.map((r,i)=> [r, i]), sm); };
+  if($('bShare')) $('bShare').onclick = shareAll;
+  if($('bUp')) $('bUp').onclick = ()=> upPush(ex);
+  $('bMore').onclick = ()=> resMore(list, ex, g, uns, shareAll);
+  $('fSum').style.display = sm ? '' : 'none'; $('fSumS').textContent = sm && sumSent[sm.key] === sm.n ? '✓ đã gửi' : '';
+  $('gSum').innerHTML = sm ? '<p class="mut" style="margin:0 0 8px">Đánh giá chất lượng, câu sai nhiều, câu dễ nhưng vẫn sai, hướng khắc phục — không nêu tên học sinh. Khi gửi, ảnh này đi riêng một đợt sau cùng.</p><div class="row"><button class="btn gold" id="bSumView">👁 Xem ảnh</button><button class="btn" id="bSumSend">📤 Chỉ gửi ảnh này</button></div>' : '';
+  if(sm){ $('bSumView').onclick = ()=> sumView(sm); $('bSumSend').onclick = ()=> share([], sm); }
+  $('xCard').style.display = ex ? '' : 'none'; $('resGrid').style.display = ex ? 'none' : ''; $('wHd').style.display = ex ? 'none' : ''; $(ex ? 'xHint' : 'wHint').textContent = 'Chạm ' + (ex ? 'một dòng' : 'một bài') + ' để xem ảnh' + (tlN.length ? ' · chạm “TL” để nhập điểm tự luận' : '');
   if(ex){
     const rows = xRows(ex).sort((a, b)=> sbdCmp({sbd:a.sbd !== '?' && a.sbd}, {sbd:b.sbd !== '?' && b.sbd}));   // bảng điểm theo SBD tăng dần (tệp CSV vẫn theo danh sách lớp)
     $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(recTot(r).pts) + '</b>' + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + esc(x.sbd) + '" style="display:block;margin-top:2px">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + (r.warn.length ? ' ⚠' : '') + (r.sent ? ' <span style="color:#12a150" title="đã gửi">✓</span>' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
     $('xTable').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list.find(r=> (r.sbd || '?')===b.dataset.tl)); });
-    $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('fVne').onchange = e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) vneOpen(ex, f); }; $('bXSend').onclick = ()=> sendToPc(ex); if($('bUp')) $('bUp').onclick = ()=> upPush(ex);
   } else {
     $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
@@ -1821,8 +1847,8 @@ function drawResults(){
   }
 }
 $('bBack').onclick = ()=>{ rv = null; drawResults(); };
-$('bRename').onclick = ()=>{ if(!rv) return; const k = rv.kind + rv.key, g = groups().find(x=> x.kind===rv.kind && x.key===rv.key), v = prompt('Tên của lần chấm này (ví dụ: 11A3 – kiểm tra 15 phút):', g ? g.title : ''); if(v === null) return; if(v.trim()) labels[k] = v.trim(); else delete labels[k]; lsSet('mbpscan_labels', labels); drawResults(); };
-$('bGDel').onclick = ()=>{ if(!rv) return; const n = curList().length; if(!confirm('Xoá toàn bộ ' + n + ' bài của lần chấm này trên điện thoại?')) return;
+const resRename = ()=>{ if(!rv) return; const k = rv.kind + rv.key, g = groups().find(x=> x.kind===rv.kind && x.key===rv.key), v = prompt('Tên của lần chấm này (ví dụ: 11A3 – kiểm tra 15 phút):', g ? g.title : ''); if(v === null) return; if(v.trim()) labels[k] = v.trim(); else delete labels[k]; lsSet('mbpscan_labels', labels); drawResults(); };
+const resDelete = ()=>{ if(!rv) return; const n = curList().length; if(!confirm('Xoá toàn bộ ' + n + ' bài của lần chấm này trên điện thoại?')) return;
   if(rv.kind==='x'){ delete xres[rv.key]; saveX(); } else { const key = rv.key; results = results.filter(r=> wKey(r)!==key); saveResults(); } delete labels[rv.kind + rv.key]; lsSet('mbpscan_labels', labels); rv = null; drawResults(); drawHeader(); };
 const csvCell = t=> '"' + String(t == null ? '' : t).replace(/"/g, '""') + '"';
 async function exportCsv(ex, title){
