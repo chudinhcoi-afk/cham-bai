@@ -242,7 +242,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11j · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11k · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -980,8 +980,28 @@ const idb = { db:null,
   get(k){ return new Promise((res, no)=>{ if(!idb.db) return res(null); const q = idb.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=> res(q.result); q.onerror = ()=> no(q.error); }); },
   async load(k){ for(let i = 0; i < 3; i++){ try{ return await idb.get(k); }catch(e){ await new Promise(z=> setTimeout(z, 400)); } } idb.fail = true; return null; },   // đọc lỗi khác với chưa có dữ liệu: idb.fail → không ghi gì lên dữ liệu cũ
   fail:false,
-  set(k, v){ if(!idb.db || idb.fail) return; try{ idb.db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); }catch(e){} } };
-const saveResults = ()=> idb.set('results', results), saveX = ()=> idb.set('xres', xres);
+  put(k, v){ return new Promise((ok, no)=>{ const t = idb.db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = ok; t.onerror = t.onabort = ()=> no(t.error || new Error('ghi lỗi')); }); },
+  del(k){ return new Promise((ok, no)=>{ const t = idb.db.transaction('kv', 'readwrite'); t.objectStore('kv').delete(k); t.oncomplete = ok; t.onerror = t.onabort = ()=> no(t.error || new Error('xoá lỗi')); }); },
+  keys(){ return new Promise((ok, no)=>{ const q = idb.db.transaction('kv').objectStore('kv').getAllKeys(); q.onsuccess = ()=> ok(q.result); q.onerror = ()=> no(q.error); }); } };
+/* KHO BÀI: mỗi bài một ô “rec:<khoá>” (trước đây gộp cả vào “results”, “xres”: quá khoảng 127 MB thì Chrome từ chối ghi mà app không báo). Chỉ ghi bài có thay đổi; ghi lỗi phải báo. */
+let storeReady = false; const recFp = new Map();
+const recKey = r=> r._k || (r._k = (r.exId || r.id || 'x') + '_' + (r.at || 0) + '_' + (r.sbd || ''));
+const recPrint = r=>{ const {url, ...m} = r; return JSON.stringify(m) + '|' + (url ? url.length + ':' + url.slice(-24) : ''); };
+function storeWarn(){ if($('storeWarn')) return; document.body.insertAdjacentHTML('afterbegin', '<div id="storeWarn" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không lưu được bài vừa chấm: bộ nhớ máy có thể đã đầy. Đừng tắt app. Giải phóng dung lượng máy rồi bấm thử lại. <button class="btn" onclick="$(\'storeWarn\').remove();storeAll()" style="display:block;margin-top:8px">↻ Lưu lại</button></div>'); }
+function storeAll(){ if(!storeReady || !idb.db || idb.fail) return Promise.resolve(false); const live = new Set(), jobs = [];
+  results.concat(...Object.values(xres)).forEach(r=>{ const k = recKey(r), fp = recPrint(r); live.add(k); if(recFp.get(k) === fp) return; recFp.set(k, fp); jobs.push(idb.put('rec:' + k, r).then(()=> true, ()=>{ recFp.delete(k); return false; })); });
+  [...recFp.keys()].forEach(k=>{ if(live.has(k)) return; recFp.delete(k); jobs.push(idb.del('rec:' + k).then(()=> true, ()=> false)); });
+  return Promise.all(jobs).then(a=>{ const ok = a.every(Boolean); if(!ok) storeWarn(); return ok; }); }
+const saveResults = ()=>{ storeAll(); }, saveX = ()=>{ storeAll(); };
+async function storeLoad(){ if(!idb.db) return; let keys; try{ keys = await idb.keys(); }catch(e){ idb.fail = true; return; }
+  const seen = new Map(); for(const key of keys.filter(k=> String(k).startsWith('rec:'))){ const r = await idb.load(key); if(idb.fail) return; if(r){ r._k = key.slice(4); seen.set(r._k, r); } }
+  const add = r=>{ const k = recKey(r); if(!seen.has(k)) seen.set(k, r); };   // ô riêng được ưu tiên: chuyển dở lần trước thì không nhân đôi
+  const hasOld = keys.includes('results') || keys.includes('xres'); let oldR = null, oldX = null;
+  if(hasOld){ oldR = await idb.load('results'); oldX = await idb.load('xres'); if(idb.fail) return; if(Array.isArray(oldR)) oldR.forEach(add); if(oldX && typeof oldX === 'object') Object.keys(oldX).forEach(id=> (oldX[id] || []).forEach(r=>{ r.exId = r.exId || id; add(r); })); }
+  results = []; xres = {}; [...seen.values()].sort((a, b)=> (a.at || 0) - (b.at || 0)).forEach(r=>{ if(r.kind === 'exam') (xres[r.exId] = xres[r.exId] || []).push(r); else results.push(r); });
+  keys.forEach(key=>{ if(String(key).startsWith('rec:')){ const r = seen.get(key.slice(4)); if(r) recFp.set(r._k, recPrint(r)); } });
+  storeReady = true;
+  if(hasOld && await storeAll()) { await idb.del('results').catch(()=>{}); await idb.del('xres').catch(()=>{}); } }   // chỉ xoá ô cũ khi mọi bài đã ghi xong
 const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 /* ===== Điều hướng ===== */
@@ -1487,11 +1507,11 @@ function drawTests(){
   $('tSeg').innerHTML = [['todo', 'Chưa chấm'], ['done', 'Đã chấm'], ['sent', 'Đã gửi']].map(([k, l])=> '<button data-t="' + k + '" class="' + (tTab===k ? 'on' : '') + '">' + l + '<b>' + cnt[k] + '</b></button>').join('');
   $('tSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ tTab = b.dataset.t; lsSet('mbpscan_ttab', tTab); tMore = 0; drawTests(); });
   const list = all.filter(it=> it.st===tTab && m(it)).sort((a, b)=> tTab==='todo' ? b.at - a.at : b.last - a.last), lim = 25 + tMore;
-  $('itemList').innerHTML = list.length ? list.slice(0, lim).map(itemCard).join('') + (list.length > lim ? '<button class="btn wide" id="bMore" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' đề</button>' : '')
+  $('itemList').innerHTML = list.length ? list.slice(0, lim).map(itemCard).join('') + (list.length > lim ? '<button class="btn wide" id="bMoreT" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' đề</button>' : '')
     : '<div class="empty">' + (q ? 'Không tìm thấy đề nào khớp “' + esc(tQ) + '”.' : EMPTY[tTab]) + '</div>';
   $('itemList').querySelectorAll('.titem .fab').forEach(b=> b.onclick = ()=>{ const it = list[+b.closest('.titem').dataset.i], a = b.dataset.a;
     if(a==='go') itemGo(it); else if(a==='res') itemRes(it); else if(a==='view'){ if(it.kind==='exam') sheetKey('exam', it.key, false); else if(it.ids.length === 1) sheetKey('ws', it.ids[0], false); else itemMore(it); } else itemMore(it); });
-  if($('bMore')) $('bMore').onclick = ()=>{ tMore += 25; drawTests(); };
+  if($('bMoreT')) $('bMoreT').onclick = ()=>{ tMore += 25; drawTests(); };
 }
 $('tSearch').oninput = e=>{ tQ = e.target.value; tMore = 0; drawTests(); };
 $('bGoScan').onclick = ()=>{ if(mode !== 'exam'){ pinTest = null; lsSet('mbpscan_pin', null); } go('scan'); };
@@ -1972,7 +1992,7 @@ $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) ret
 
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
-(async ()=>{ await idb.open(); const r = await idb.load('results'); if(Array.isArray(r)) results = r; const x = await idb.load('xres'); if(x && typeof x==='object') xres = x;
+(async ()=>{ await idb.open(); await storeLoad();
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}   // xin trình duyệt không tự xoá dữ liệu khi máy thiếu dung lượng
   if(idb.fail) document.body.insertAdjacentHTML('afterbegin', '<div id="idbFail" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không đọc được các bài đã chấm trên máy. Dữ liệu cũ được giữ nguyên, nhưng bài chấm lúc này sẽ không được lưu. Tắt hẳn app rồi mở lại. <button class="btn" onclick="location.reload()" style="display:block;margin-top:8px">↻ Thử lại</button></div>');
   if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const v = document.querySelector('.ver'); if(v && e.usage != null) v.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
