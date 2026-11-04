@@ -231,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11c · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11d · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1583,6 +1583,7 @@ function recAutoCm(rec){ let qs = null;   // nhận xét tự động tính lạ
   const cm = cmtRich(qs, T.pts, T.max, {tl:tm > 0 && !has}); if(!cm) return null;
   if(has){ const q = rec.tl/tm, sc = fmtVN(rec.tl) + '/' + fmtVN(tm) + ' điểm';
     cm.lines.splice(1, 0, q >= 0.8 ? {k:'good', i:'✍️', t:'Tự luận ' + sc + ': trình bày tốt, lập luận chặt chẽ.'} : q >= 0.5 ? {k:'tip', i:'✍️', t:'Tự luận ' + sc + ': cần trình bày đủ các bước, lập luận chặt hơn để không mất điểm.'} : {k:'fix', i:'✍️', t:'Tự luận ' + sc + ': còn yếu — xem lại lời giải mẫu, tập viết đủ các bước và kiểm tra lại kết quả.'});
+    if(rec.tl === 0 && rec.pts > 0){ const ph = cm.lines.find(l=> l.k === 'parent'); if(ph) ph.t += ' Tự luận 0 điểm: điểm số của con là nhờ may mắn, hay do thời gian không đủ? Phụ huynh nên trao đổi với con về điều này.'; }   // có điểm chấm máy mà tự luận 0
     cm.text = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
   return cm; }
 /* ===== SO SÁNH VỚI CẢ LỚP trong nhận xét từng bài (dòng 📊, ngay trên lời nhắn phụ huynh): cao nhất (kèm tên bạn cao nhất), thấp nhất (không tên), trung bình, trung vị, vị trí của con.
