@@ -231,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11f · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11g · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1798,9 +1798,10 @@ function drawResults(){
   if(CS) cmpKick(list, gk);
   const tlAsk = ()=>{ if(cmpBusy){ toast('Đang cập nhật so sánh vào nhận xét — chờ vài giây rồi gửi.', 2600); return false; } return !tlLeft || confirm('Còn ' + tlLeft + ' bài chưa nhập điểm tự luận — ảnh của các bài này chỉ có điểm chấm máy. Vẫn gửi?'); };
   const uns = list.map((r, i)=> [r, i]).filter(([r])=> !r.sent), sm = groupSum(g, list, ex), sumDue = sm && sumSent[sm.key] !== sm.n;   // ảnh nhận xét cả lớp: gửi kèm khi lớp có bài mới
+  const upM = ex && upMarks[ex.id], upState = !upM ? 'none' : upM.sig === upSig(upRows(ex)) ? 'ok' : 'changed';   // điểm đã xác nhận còn khớp không
   $('gActs').innerHTML = (uns.length ? '<button class="btn gold" id="bShareNew" style="flex:1 0 100%">📤 Gửi ' + uns.length + ' ảnh chưa gửi' + (sumDue ? ' + nhận xét cả lớp' : '') + '</button>' : '<div class="mut" style="flex:1 0 100%;color:#0f7a3d;font-weight:700">✓ Đã gửi hết ' + list.length + ' ảnh</div>')
     + '<button class="btn" id="bShare">📤 ' + (uns.length === list.length ? 'Gửi tất cả' : 'Gửi lại tất cả') + '</button><button class="btn" id="bSave">⬇ Tải ảnh</button><button class="btn" id="bMark">' + (uns.length ? '✓ Đánh dấu đã gửi' : '↺ Bỏ đánh dấu') + '</button>'
-    + (ex ? '<button class="btn" id="bXSend">💻 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button><label class="btn" style="flex:1 0 100%;justify-content:center">📗 Điền điểm vào file vnEdu<input type="file" id="fVne" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>' : '');
+    + (ex ? '<button class="btn" id="bXSend">💻 Gửi kết quả cho máy tính</button><button class="btn" id="bXCsv">⬇ Bảng điểm (.csv)</button>' + (ex.ak >= 1024 ? '<button class="btn ' + (upState !== 'ok' ? 'gold' : '') + '" id="bUp" style="flex:1 0 100%">' + (upState === 'ok' ? '✓ Đã xác nhận ' + hm(upMarks[ex.id].at) + ' ' + dayVN(dayKey(upMarks[ex.id].at)) + ' · gửi lại' : upState === 'changed' ? '☁ Điểm đã đổi — xác nhận lại' : '☁ Xác nhận điểm lên máy chủ (cho vnEdu)') + '</button>' : '') + '<label class="btn" style="flex:1 0 100%;justify-content:center">📗 Điền điểm vào file vnEdu<input type="file" id="fVne" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></label>' : '');
   if($('bShareNew')) $('bShareNew').onclick = ()=>{ if(tlAsk()) share(uns, sumDue ? sm : null); };
   $('bShare').onclick = ()=>{ if(tlAsk()) share(list.map((r,i)=> [r, i]), sm); };
   $('gSum').innerHTML = sm ? '<h3 style="margin-bottom:2px">📊 Nhận xét chung cả lớp</h3><p class="mut" style="margin:0 0 8px">Đánh giá chất lượng, câu sai nhiều, câu dễ nhưng vẫn sai, hướng khắc phục — không nêu tên học sinh. Khi gửi, ảnh này đi riêng một đợt sau cùng, sau ảnh bài làm của học sinh.' + (sumSent[sm.key] === sm.n ? ' <b style="color:#0f7a3d">✓ Đã gửi</b>' : '') + '</p><div class="row"><button class="btn gold" id="bSumView">👁 Xem ảnh nhận xét</button><button class="btn" id="bSumSend">📤 Chỉ gửi ảnh này</button></div>' : '';
@@ -1812,7 +1813,7 @@ function drawResults(){
     $('xTable').innerHTML = '<tr><th>#</th><th>SBD</th><th>Họ và tên</th><th>Điểm</th><th>Mã đề</th><th>I</th><th>II</th><th>III</th></tr>' + rows.map((x,i)=>{ const r = x.r; return '<tr class="' + (r ? (x.st ? 'done' : 'bad') : '') + '" data-s="' + esc(x.sbd) + '"><td>' + (i+1) + '</td><td>' + esc(x.sbd) + '</td><td class="n">' + esc(x.st ? x.st.name : '(không có trong danh sách)') + '</td>' + (r ? '<td><b>' + fmtVN(recTot(r).pts) + '</b>' + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + esc(x.sbd) + '" style="display:block;margin-top:2px">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + (r.warn.length ? ' ⚠' : '') + (r.sent ? ' <span style="color:#12a150" title="đã gửi">✓</span>' : '') + '</td><td>' + esc(r.made) + '</td><td>' + r.c[0] + '/' + r.c[1] + '</td><td>' + r.c[2] + '/' + r.c[3] + '</td><td>' + r.c[4] + '/' + r.c[5] + '</td>' : '<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>') + '</tr>'; }).join('');
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
     $('xTable').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list.find(r=> (r.sbd || '?')===b.dataset.tl)); });
-    $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('fVne').onchange = e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) vneOpen(ex, f); }; $('bXSend').onclick = ()=> sendToPc(ex);
+    $('bXCsv').onclick = ()=> exportCsv(ex, g.title); $('fVne').onchange = e=>{ const f = e.target.files[0]; e.target.value = ''; if(f) vneOpen(ex, f); }; $('bXSend').onclick = ()=> sendToPc(ex); if($('bUp')) $('bUp').onclick = ()=> upPush(ex);
   } else {
     $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + r.url + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + ' ✎' : '+ TL') + '</button>' : '') + '<span>#' + (i+1) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
@@ -1878,6 +1879,27 @@ async function vneOpen(ex, file){ let X, wb; try{ X = await xlsxLib(); wb = X.re
       const out = new File([X.write(wb, {bookType:'biff8', type:'array'})], file.name.replace(/\.xlsx?$/i, '') + '_' + col.lab + '.xls', {type:'application/vnd.ms-excel'});
       sheetClose(); dlFile(out); toast('Đã tạo ' + out.name + ' — ' + pair.size + ' học sinh, cột ' + col.lab + '. Lên vnEdu: Nhập xuất → Nhập điểm từ Excel.', 5000); }; };
   draw(); sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; }
+/* ===== XÁC NHẬN ĐIỂM LÊN MÁY CHỦ: thầy chấm xong bấm xác nhận → điểm tổng từng SBD mã hoá bằng khoá liên kết, ghi vào mbr/e<mã bài>; MathBank (nút 📥 vnEdu) tải về dựng file Excel. Máy chủ không đọc được điểm. ===== */
+let upMarks = ls('mbpscan_up', {});
+const upRows = ex=> (xres[ex.id] || []).filter(r=> r.sbd).slice().sort(sbdCmp).map(r=>{ const T = recTot(r), tm = tlMaxOf(r); return {s:r.sbd, n:r.name || (ex.students[r.sbd] || {}).name || '', m:r.made, d:T.pts, x:T.max, tl:tm ? (r.tl == null ? null : r.tl) : undefined}; });
+const upSig = rows=>{ let h = 0; const t = JSON.stringify(rows); for(let i = 0; i < t.length; i++) h = (h*31 + t.charCodeAt(i)) >>> 0; return h.toString(36); };
+async function upKey(ak, tok){   // khoá của đúng máy MathBank đã tạo đề này
+  const r = await fetch(FB_DB + '/mbp/e' + ak + '.json?auth=' + encodeURIComponent(tok)); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status); const d = await r.json();
+  if(!d || !d.c) throw new Error('Máy chủ không còn đáp án đề này — trên MathBank mở đề rồi gửi lại đáp án.');
+  for(const k of akKeys){ try{ const ck = await crypto.subtle.importKey('raw', b64u(k), 'AES-GCM', false, ['decrypt']); await crypto.subtle.decrypt({name:'AES-GCM', iv:b64u(d.iv)}, ck, b64u(d.c)); return b64u(k); }catch(e){} }
+  throw new Error('Điện thoại chưa liên kết với máy MathBank đã tạo đề này — trên MathBank bấm 🔗 Liên kết điện thoại rồi quét mã.'); }
+async function upPush(ex){ const rows = upRows(ex), all = xres[ex.id] || [], noSbd = all.length - rows.length, noTl = rows.filter(x=> x.tl === null).length, miss = ex.order.filter(s=> !all.some(r=> r.sbd === s)).length;
+  if(!rows.length){ toast('Chưa có bài nào có số báo danh để xác nhận.', 2800); return; }
+  if(!confirm('Xác nhận điểm ' + rows.length + ' bài lên máy chủ để MathBank dựng file vnEdu?' + (noTl ? '\n• ' + noTl + ' bài chưa nhập điểm tự luận: chỉ có điểm chấm máy.' : '') + (noSbd ? '\n• ' + noSbd + ' bài không có SBD: không gửi.' : '') + (miss ? '\n• ' + miss + ' học sinh chưa có bài.' : ''))) return;
+  if(!navigator.onLine){ toast('Điện thoại đang mất mạng.', 2600); return; }
+  const b = $('bUp'); if(b){ b.disabled = true; b.textContent = 'Đang gửi…'; }
+  try{ const tok = await fbToken(), raw = await upKey(ex.ak, tok), key = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']), iv = crypto.getRandomValues(new Uint8Array(12)), at = Date.now(), enc = u8=> btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const c = new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, new TextEncoder().encode(JSON.stringify({ak:ex.ak, title:ex.title, at, rows}))));
+    const r = await fetch(FB_DB + '/mbr/e' + ex.ak + '.json?auth=' + encodeURIComponent(tok), {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({v:1, at, iv:enc(iv), c:enc(c)})});
+    if(r.status === 401 || r.status === 403) throw new Error('Máy chủ chưa cho điện thoại gửi điểm — trên MathBank: Game toán → Cài đặt máy chủ → dán quy tắc mới rồi Publish.'); if(!r.ok) throw new Error('Lỗi máy chủ ' + r.status);
+    upMarks[ex.id] = {at, n:rows.length, sig:upSig(rows)}; lsSet('mbpscan_up', upMarks); toast('Đã xác nhận ' + rows.length + ' bài. Trên MathBank bấm 📥 vnEdu ở đề này để tải về.', 4000); }
+  catch(e){ toast(e.message || 'Không gửi được, thử lại.', 5000); }
+  if(view === 'res') drawResults(); }
 async function sendToPc(ex){ const list = xres[ex.id] || [];
   const text = 'MBPR;' + ex.id + '\n' + list.filter(r=> r.sbd).map(r=> [r.sbd, r.made, r.tn, r.ds.replace(/Đ/g,'T').replace(/S/g,'F'), (r.tln||[]).join('|')].join(';')).join('\n');
   try{ if(navigator.share){ await navigator.share({text, title:'Kết quả chấm đề thi'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
