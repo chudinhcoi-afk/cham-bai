@@ -231,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11d · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11e · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1070,7 +1070,7 @@ function capture(){
   if(f.sig !== lastSig && capMiss < 1){ capMiss++; lastSig = ''; sameCount = 0; setTimeout(tick, 30); return; }
   capMiss = 0; hdrWait = 0; showShot(full, f);
 }
-/* ===== NHẬN XÉT THEO 3 GIỌNG (bản 04/11c): Nghiêm khắc · Ôn hoà · Tích cực — phần mềm tự chọn theo bài làm, mỗi ý một bong bóng chat có icon =====
+/* ===== NHẬN XÉT THEO 3 GIỌNG: Nghiêm khắc · Ôn hoà · Tích cực — phần mềm tự chọn theo bài làm; ngắn gọn, tối đa 4 bong bóng (5 nếu có so sánh lớp) =====
    qs: [{n: số câu in trên đề, part:'TN'|'DS'|'TLN', ok, blank, sub, subBad, md:'NB'|'TH'|'VD'|'VDC'|'', dg: tên dạng, pt: điểm tối đa, got: điểm đạt}] */
 const TONE_NAME = {strict:'Nghiêm khắc', calm:'Ôn hoà', warm:'Tích cực'};
 function cmtTone(qs, s10){ const n = qs.length, bad = qs.filter(q=> !q.ok), blank = qs.filter(q=> q.blank).length, easy = qs.filter(q=> q.md === 'NB' || q.md === 'TH'), easyLost = easy.filter(q=> !q.ok && (!q.pt || q.got/q.pt < 0.5)).length;
@@ -1088,8 +1088,7 @@ function cmtRich(qs, pts, max, extra){
   const cq = a=> a.length === 1 ? 'câu ' + a[0] : 'câu ' + a.slice(0, -1).join(', ') + ' và ' + a[a.length - 1];
   const TN = cmtTone(qs, s10), tone = TN.tone, why = TN.why, isS = tone === 'strict', T = (s, c, w)=> isS ? s : tone === 'warm' ? w : c;   // T(nghiêm khắc, ôn hoà, tích cực)
   if(blank.length === qs.length){
-    add('open', '⚠️', 'Em để trống toàn bộ phần chấm máy — như vậy là bỏ phí cả bài kiểm tra.'); add('tip', '✏️', 'Không làm thì chắc chắn 0 điểm, làm thì còn cơ hội. Lần sau phải làm hết: đọc kĩ đề, loại trừ phương án sai, đoán có căn cứ vẫn hơn bỏ trống.');
-    add('cheer', '💪', 'Thầy cô muốn thấy em dám làm ở bài sau — em làm được nhiều hơn thế!'); return cmtPack(L, 'low', TN); }
+    add('open', '⚠️', 'Em để trống toàn bộ phần chấm máy — như vậy là bỏ phí cả bài kiểm tra.'); add('goal', '✏️', 'Lần sau phải làm hết: đọc kĩ đề, loại trừ phương án sai; đoán có căn cứ vẫn hơn bỏ trống.'); return cmtPack(L, 'low', TN); }
   // 1. Mở đầu theo giọng và mức điểm
   const nOk = qs.filter(q=> q.ok).length, n = qs.length, mood = s10 >= 9 ? 'great' : s10 >= 8 ? 'good' : s10 >= 6.5 ? 'fair' : s10 >= 5 ? 'pass' : s10 >= 3 ? 'grow' : 'low';
   const easy = qs.filter(q=> q.md === 'NB' || q.md === 'TH'), easyLost = easy.filter(q=> !q.ok && (!q.pt || q.got/q.pt < 0.5)).length;
@@ -1107,62 +1106,51 @@ function cmtRich(qs, pts, max, extra){
       great:[['🌟', 'Xuất sắc! Bài làm rất chắc chắn và cẩn thận.'], ['🏆', 'Tuyệt vời! Em đã thể hiện phong độ rất cao.'], ['🌟', 'Quá giỏi! Kết quả này xứng đáng với sự chăm chỉ của em.']],
       good:[['🎉', 'Rất tốt! Em nắm vững phần lớn kiến thức.'], ['👏', 'Bài làm tốt lắm, em đang đi đúng hướng!'], ['🎉', 'Kết quả rất đáng khen!']],
       fair:[['👏', 'Rất đáng khen: em làm chắc phần cơ bản, các câu vận dụng là thử thách tiếp theo của em.'], ['🎉', 'Nền tảng của em đã vững! Chỉ còn các câu vận dụng là cần chinh phục thêm.']]}};
-  const opK = isS ? (why === 'low' ? (pts > 0 ? 'low' : 'zero') : why) : mood, o = pick(OPEN[tone][opK]); add('open', o[0], o[1] + ` Em được ${f(pts)}/${f(max)} điểm${extra.tl ? ' phần chấm máy' : ''}.`);
-  // 2. Điểm mạnh
+  // Tối đa 3 bong bóng ở đây + lời gửi phụ huynh (và dòng so sánh lớp nếu có) để ảnh gọn: 1. Điểm + điểm mạnh · 2. Câu cần xem lại · 3. Việc cần làm + mục tiêu
   const parts = ['TN', 'DS', 'TLN'].map(p=>{ const a = qs.filter(q=> q.part === p); return {p, n:a.length, ok:a.filter(q=> q.ok).length}; }).filter(x=> x.n);
   const good = [];
   parts.forEach(x=>{ if(x.n >= 2 && x.ok/x.n >= 0.8) good.push(`làm rất chắc phần ${PN[x.p]} (${x.ok}/${x.n} câu)`); });
   const byMd = {}; qs.forEach(q=>{ if(!q.md) return; const m = byMd[q.md] || (byMd[q.md] = {n:0, ok:0}); m.n++; if(q.ok) m.ok++; });
   const mdGood = Object.keys(MDN).filter(m=> byMd[m] && byMd[m].n >= 2 && byMd[m].ok === byMd[m].n);
   if(mdGood.length && bad.length) good.push(`đúng hết các câu ${mdGood.map(m=> MDN[m]).join(', ')}`);
-  if(byMd.VD && byMd.VD.ok && (byMd.VD.ok/byMd.VD.n) >= 0.5) good.push(`đã chinh phục được ${byMd.VD.ok} câu vận dụng${isS ? '' : ' — rất đáng khen'}`);
+  if(byMd.VD && byMd.VD.ok && (byMd.VD.ok/byMd.VD.n) >= 0.5) good.push(`đã chinh phục được ${byMd.VD.ok} câu vận dụng`);
   const dgOk = [...new Set(qs.filter(q=> q.ok && q.dg).map(q=> q.dg))].filter(d=> !bad.some(q=> q.dg === d));
-  if(good.length < 2 && dgOk.length && bad.length) good.push(`làm tốt dạng “${dgOk[0]}”`);
-  if(isS && why === 'low'){ if(nOk) add('good', '✅', `Em mới làm đúng ${nOk} câu — chưa đủ, nhưng chứng tỏ em làm được nếu chịu học.`); }
-  else if(isS && good.length) add('good', '✅', 'Ghi nhận: em ' + good[0] + ', nhưng như vậy là chưa đủ.');
-  else if(good.length) add('good', '✅', T('', 'Điểm mạnh: em ', 'Điểm mạnh nổi bật: em ') + good.slice(0, 3).join('; ') + '.');
-  else if(nOk) add('good', '✅', `Em làm đúng ${nOk}/${n} câu.`);
-  // 3. Cần xem lại — gom theo dạng
+  if(!good.length && dgOk.length && bad.length) good.push(`làm tốt dạng “${dgOk[0]}”`);
+  const opK = isS ? (why === 'low' ? (pts > 0 ? 'low' : 'zero') : why) : mood, o = pick(OPEN[tone][opK]); add('open', o[0], o[1] + ` Em được ${f(pts)}/${f(max)} điểm${extra.tl ? ' phần chấm máy' : ''}.` + (!isS && good.length ? ` Điểm mạnh: em ${good[0]}.` : ''));
+  // Cần xem lại — gom theo dạng, tối đa 2 dạng, mỗi dạng 5 câu
   if(wrong.length){ const G = new Map(); wrong.forEach(q=>{ const k = q.dg || ''; if(!G.has(k)) G.set(k, []); G.get(k).push(q.n); });
-    const items = [...G.entries()].sort((a, b)=> b[1].length - a[1].length).slice(0, 3).map(([d, ns])=> cq(ns) + (d ? ` (${d})` : ''));
-    const more = [...G.values()].slice(3).reduce((t, a)=> t + a.length, 0);
+    let shown = 0; const items = [...G.entries()].sort((a, b)=> b[1].length - a[1].length).slice(0, 2).map(([d, ns])=>{ const a = ns.slice(0, 5); shown += a.length; return cq(a) + (d ? ` (${d})` : ''); });
+    const more = wrong.length - shown;
     add('fix', '🔍', T('Phải xem lại ngay: ', 'Cần xem lại: ', 'Còn lại để hoàn thiện: ') + items.join('; ') + (more ? ` và ${more} câu khác` : '') + '.'); }
-  // 4. Lời khuyên cụ thể (tối đa 2)
-  const tips = [], ds1 = wrong.filter(q=> q.part === 'DS' && q.subBad === 1), tln = wrong.filter(q=> q.part === 'TLN');
+  // Việc cần làm: một lời khuyên quan trọng nhất + mục tiêu lần sau (mốc kế tiếp, cần đúng thêm bao nhiêu câu; ưu tiên câu dễ, câu bỏ trống)
+  const ds1 = wrong.filter(q=> q.part === 'DS' && q.subBad === 1), tln = wrong.filter(q=> q.part === 'TLN');
   const nbBad = wrong.filter(q=> q.md === 'NB' || q.md === 'TH').length, vdBad = wrong.filter(q=> /^VD/.test(q.md || '')).length;
-  if(ds1.length) tips.push(['📝', T(`Đúng – sai: em sai 1 ý ở ${cq(ds1.map(q=> q.n))} — đừng để mất điểm vì thiếu cẩn thận. Đọc kĩ từng mệnh đề, tính lại trước khi tô.`, `Đúng – sai: em chỉ hụt đúng 1 ý ở ${cq(ds1.map(q=> q.n))} — tiếc lắm! Đọc kĩ từng mệnh đề, thử lại bằng tính toán trước khi tô.`, `Đúng – sai: chỉ còn 1 ý ở ${cq(ds1.map(q=> q.n))} nữa là trọn điểm. Đọc kĩ từng mệnh đề, thử lại bằng tính toán là em lấy đủ.`)]);
-  if(nbBad >= 2) tips.push(['📚', T('Phải ôn lại ngay định nghĩa, công thức của bài: các câu nhận biết – thông hiểu không nên để mất điểm.', 'Ôn lại định nghĩa, công thức của bài: các câu nhận biết – thông hiểu là điểm “dễ ăn” nhất, đừng để mất.', 'Xem lại định nghĩa, công thức một chút là em lấy trọn các câu nhận biết – thông hiểu.')]);
-  else if(vdBad && !nbBad && s10 >= 6.5 && wrong.length < nOk) tips.push(['🧠', 'Kiến thức nền của em đã vững — luyện thêm vài bài vận dụng mỗi ngày để lên điểm cao.']);
-  if(isS && why === 'low') tips.unshift(['📚', 'Việc cần làm ngay: xem lại lời giải từng câu sai, tự làm lại đến khi giải được, chỗ nào chưa hiểu phải hỏi thầy cô ngay.']);
-  if(tln.length) tips.push(['🧮', T(`Trả lời ngắn: phải kiểm tra lại phép tính, cách làm tròn và cách tô dấu “−”, dấu phẩy (${cq(tln.map(q=> q.n))}).`, `Trả lời ngắn: kiểm tra lại phép tính, cách làm tròn và cách tô dấu “−”, dấu phẩy (${cq(tln.map(q=> q.n))}).`, `Trả lời ngắn: rà lại phép tính, cách làm tròn và cách tô dấu “−”, dấu phẩy (${cq(tln.map(q=> q.n))}) là em lấy thêm được điểm.`)]);
-  if(blank.length){ const bq = cq(blank.map(q=> q.n).slice(0, 4)) + (blank.length > 4 ? '…' : ''); tips.push(['✏️', T(`Không được bỏ trống: còn ${blank.length} câu chưa làm (${bq}). Bài sau phải làm hết, câu khó để sau nhưng bắt buộc quay lại.`, `Đừng bỏ trống: còn ${blank.length} câu chưa làm (${bq}). Phân bổ thời gian, câu khó để sau nhưng nhớ quay lại.`, `Còn ${blank.length} câu chưa làm (${bq}): làm nốt là điểm của em còn cao hơn nữa.`)]); }
-  if(why === 'blank') tips.unshift(tips.pop());   // bị nhắc vì bỏ trống → lời khuyên này lên đầu
-  tips.slice(0, 2).forEach(t=> add('tip', t[0], t[1]));
-  // 5. Mục tiêu lần sau: mốc kế tiếp, cần đúng thêm bao nhiêu câu (ưu tiên câu dễ, câu bỏ trống)
+  const blankTip = ()=> T(`Không được bỏ trống: còn ${blank.length} câu chưa làm; câu khó để sau nhưng phải quay lại.`, `Đừng bỏ trống: còn ${blank.length} câu chưa làm; câu khó để sau nhưng nhớ quay lại.`, `Còn ${blank.length} câu chưa làm: làm nốt là điểm còn cao hơn.`);
+  const tip = why === 'blank' ? blankTip() : why === 'low' ? 'Việc cần làm ngay: tự làm lại từng câu sai đến khi giải được, chưa hiểu phải hỏi thầy cô.'
+    : ds1.length ? T(`Đúng – sai sai 1 ý ở ${cq(ds1.map(q=> q.n))}: phải đọc kĩ từng mệnh đề, tính lại trước khi tô.`, `Đúng – sai chỉ hụt 1 ý ở ${cq(ds1.map(q=> q.n))}: đọc kĩ từng mệnh đề, tính lại trước khi tô.`, `Đúng – sai chỉ còn 1 ý ở ${cq(ds1.map(q=> q.n))} nữa là trọn điểm: đọc kĩ từng mệnh đề.`)
+    : nbBad >= 2 ? T('Phải ôn lại ngay định nghĩa, công thức: câu nhận biết – thông hiểu không nên để mất.', 'Ôn lại định nghĩa, công thức: câu nhận biết – thông hiểu là điểm dễ lấy nhất.', 'Xem lại định nghĩa, công thức là em lấy trọn câu nhận biết – thông hiểu.')
+    : vdBad && !nbBad && s10 >= 6.5 && wrong.length < nOk ? 'Luyện thêm vài bài vận dụng mỗi ngày để lên điểm cao.'
+    : tln.length ? T(`Trả lời ngắn (${cq(tln.map(q=> q.n))}): phải kiểm tra lại phép tính, làm tròn, cách tô dấu.`, `Trả lời ngắn (${cq(tln.map(q=> q.n))}): kiểm tra lại phép tính, làm tròn, cách tô dấu.`, `Trả lời ngắn (${cq(tln.map(q=> q.n))}): rà lại phép tính, làm tròn, cách tô dấu.`)
+    : blank.length ? blankTip() : '';
+  let goal = '';
   if(bad.length){ const marks = [5, 6.5, 8, 9, 10], tg = marks.find(m=> m > s10 + 0.001) || 10, need = tg*max/10 - pts;
     const cand = bad.slice().sort((a, b)=> ((a.md === 'NB' || a.md === 'TH') ? 0 : 1) - ((b.md === 'NB' || b.md === 'TH') ? 0 : 1) || (b.pt - b.got) - (a.pt - a.got));
     let acc = 0; const take = []; for(const q of cand){ if(acc >= need - 1e-9) break; acc += q.pt - q.got; take.push(q.n); }
-    const ten = Math.abs(max - 10) < 0.01, ex3 = cq(take.slice(0, 3).sort((a, b)=> a - b));   // thang 10 → nêu mốc điểm; phần chấm máy (còn tự luận) → nêu số điểm cộng thêm
-    const head = T('Yêu cầu tối thiểu lần sau', 'Mục tiêu lần sau', 'Thử thách tiếp theo'), tail = T(' Thầy cô sẽ chờ xem em làm được không!', '', ' Em hoàn toàn làm được!');
-    if(acc >= need - 1e-9 && take.length) add('goal', '🎯', ten ? `${head}: ${f(tg)} điểm — đúng thêm ${take.length} câu (như ${ex3}).${tail}` : `${head}: đúng thêm ${take.length} câu (như ${ex3}) là có thêm ${f(acc)} điểm, lên ${f(pts + acc)}/${f(max)}.${tail}`); }
-  // 6. Gửi phụ huynh: việc cụ thể ở nhà theo đúng bài của con (câu sai, dạng sai) — không nói chung chung
+    const ten = Math.abs(max - 10) < 0.01, ex3 = cq(take.slice(0, 3).sort((a, b)=> a - b)), head = T('Yêu cầu tối thiểu lần sau', 'Mục tiêu lần sau', 'Thử thách tiếp theo');   // thang 10 → nêu mốc điểm; phần chấm máy (còn tự luận) → nêu số điểm cộng thêm
+    if(acc >= need - 1e-9 && take.length) goal = ten ? `${head}: ${f(tg)} điểm — đúng thêm ${take.length} câu (như ${ex3}).` : `${head}: đúng thêm ${take.length} câu (như ${ex3}), lên ${f(pts + acc)}/${f(max)}.`; }
+  if(tip || goal) add('goal', '🎯', [tip, goal].filter(Boolean).join(' '));
+  // Gửi phụ huynh: việc cụ thể ở nhà theo đúng bài của con — một câu ngắn
   const wn = wrong.concat(blank).map(q=> q.n).sort((a, b)=> a - b), wq = wn.length ? (wn.length > 4 ? 'câu ' + wn.slice(0, 4).join(', ') + '…' : cq(wn)) : 'các câu chưa làm được';
-  const dgs = [...new Set(bad.filter(q=> q.dg).map(q=> q.dg))].slice(0, 2), dgT = dgs.length ? ' (dạng ' + dgs.map(d=> '“' + d + '”').join(', ') + ')' : '';
   let ph;
-  if(why === 'low') ph = nOk ? `Con đang hổng kiến thức bài này. Mỗi tối dành 20 phút cùng con xem lại ${wq}${dgT}: cho con tự giải lại đến khi đúng, chỗ nào con không làm được thì ghi lại để hỏi thầy cô. Nếu bài sau vẫn dưới 5 điểm, phụ huynh nên liên hệ thầy cô để có kế hoạch kèm thêm.` : `Con chưa làm đúng câu nào. Phụ huynh nên trao đổi với con xem vướng ở đâu (chưa học bài, không hiểu hay làm không kịp) và liên hệ thầy cô sớm để có kế hoạch kèm thêm.`;
-  else if(why === 'blank') ph = `Con bỏ trống ${blank.length}/${n} câu. Phụ huynh nên hỏi rõ lí do (chưa học bài, không hiểu hay làm không kịp), nhắc con làm lại ${wq}${dgT} trong tuần này và không để trống ở bài sau.`;
-  else if(why === 'easy') ph = `Con còn mất điểm nhiều ở các câu cơ bản. Phụ huynh nhắc con ôn lại định nghĩa, công thức, làm lại ${wq}${dgT} trong tuần này và kiểm tra lại bài trước khi nộp.`;
-  else if(why === 'hard') ph = `Con đã nắm chắc phần cơ bản — phụ huynh hãy ghi nhận sự cố gắng của con. Chỉ còn ${wq}${dgT} chưa đúng; có thể cho con luyện thêm bài vận dụng để lên điểm cao hơn.`;
-  else if(mood === 'grow') ph = `Con chưa đạt trung bình. Phụ huynh kiểm tra con làm lại ${wq}${dgT} trong tuần này và nhắc con ôn bài trước buổi học sau.`;
-  else if(mood === 'pass' || mood === 'fair') ph = `Con nắm được phần cơ bản. Nhắc con làm lại ${wq}${dgT} và luyện thêm dạng này; khi làm bài cần kiểm tra lại trước khi nộp.`;
-  else if(bad.length) ph = `Con làm bài tốt — phụ huynh hãy ghi nhận sự cố gắng của con. Chỉ còn ${wq} chưa đúng; có thể cho con làm thêm bài vận dụng để lên điểm tối đa.`;
-  else ph = `Con làm đúng toàn bộ — phụ huynh hãy khen con. Có thể cho con thử sức thêm bài vận dụng cao, nâng cao để phát huy.`;
-  add('parent', '👪', 'Gửi phụ huynh: ' + ph);
-  // 7. Lời kết theo giọng
-  const e = pick(T(['🔥 Bạn bè làm được thì em cũng làm được — bài sau hãy chứng minh điều đó!', '💪 Thầy cô không cần lời hứa, chỉ cần thấy bài sau của em khác hẳn.', '🏁 Em đủ khả năng làm tốt hơn nhiều — bài sau hãy cho thầy cô thấy điều đó!'],
-    ['🌱 Từng bước một, em sẽ tiến bộ — thầy cô tin em làm được.', '🌱 Xem lại kĩ các câu trên, bài sau em sẽ làm tốt hơn.'],
-    bad.length ? ['🚀 Cứ giữ phong độ này, em sẽ còn tiến xa hơn nữa!', '🌟 Thầy cô rất vui với kết quả của em — cố thêm chút nữa nhé!'] : ['🏆 Trọn điểm! Thầy cô rất tự hào về em.', '🌟 Hoàn hảo! Hãy giữ vững phong độ này nhé.']));
-  add('cheer', e.slice(0, e.indexOf(' ')), e.slice(e.indexOf(' ') + 1));
+  if(why === 'low') ph = nOk ? `Con đang hổng kiến thức bài này. Mỗi tối dành 20 phút cùng con làm lại ${wq}; nếu bài sau vẫn dưới 5 điểm, nên liên hệ thầy cô để kèm thêm.` : 'Con chưa làm đúng câu nào. Phụ huynh nên hỏi con vướng ở đâu và liên hệ thầy cô sớm để kèm thêm.';
+  else if(why === 'blank') ph = `Phụ huynh nên hỏi rõ lí do con bỏ trống (chưa học, không hiểu hay không kịp) và nhắc con làm lại ${wq}.`;
+  else if(why === 'easy') ph = `Nhắc con ôn định nghĩa, công thức và làm lại ${wq} trong tuần này.`;
+  else if(why === 'hard') ph = 'Con đã nắm chắc phần cơ bản, hãy ghi nhận cố gắng của con; có thể cho con luyện thêm bài vận dụng.';
+  else if(mood === 'grow') ph = `Phụ huynh kiểm tra con làm lại ${wq} trong tuần này.`;
+  else if(mood === 'pass' || mood === 'fair') ph = `Nhắc con làm lại ${wq} và kiểm tra kĩ bài trước khi nộp.`;
+  else if(bad.length) ph = 'Con làm bài tốt, hãy ghi nhận cố gắng của con; có thể cho con làm thêm bài vận dụng để lên điểm tối đa.';
+  else ph = 'Con làm đúng toàn bộ, hãy khen con.';
+  add('parent', '👪', 'Gửi phụ huynh: ' + ph.replace(/…\.$/, '…'));
   return cmtPack(L, mood, TN); }
 function cmtPack(L, mood, TN){ return {mood, tone:TN.tone, toneWhy:TN.note, lines:L, text:L.map(l=> l.i + ' ' + l.t).join(' ')}; }
 const CMT_COL = {cmp:['#eef6ff', '#4a78b8'], open:['#fff3cd', '#f0a500'], good:['#dcf7e6', '#1f9d55'], fix:['#ffe8d6', '#f06a1f'], tip:['#e3eeff', '#2f6fdf'], goal:['#f1e6ff', '#8a4fd6'], parent:['#dff6f2', '#13a08a'], cheer:['#ffe3ef', '#e0457b'], note:['#eef1f7', '#5a6378']};
@@ -1582,8 +1570,8 @@ function recAutoCm(rec){ let qs = null;   // nhận xét tự động tính lạ
     qs = qs.concat([{n:'tự luận', part:'TL', ok:rec.tl >= tm - 1e-9, blank:false, pt:tm, got:rec.tl, md:q0.md || '', dg:q0.dg || ''}]); }
   const cm = cmtRich(qs, T.pts, T.max, {tl:tm > 0 && !has}); if(!cm) return null;
   if(has){ const q = rec.tl/tm, sc = fmtVN(rec.tl) + '/' + fmtVN(tm) + ' điểm';
-    cm.lines.splice(1, 0, q >= 0.8 ? {k:'good', i:'✍️', t:'Tự luận ' + sc + ': trình bày tốt, lập luận chặt chẽ.'} : q >= 0.5 ? {k:'tip', i:'✍️', t:'Tự luận ' + sc + ': cần trình bày đủ các bước, lập luận chặt hơn để không mất điểm.'} : {k:'fix', i:'✍️', t:'Tự luận ' + sc + ': còn yếu — xem lại lời giải mẫu, tập viết đủ các bước và kiểm tra lại kết quả.'});
-    if(rec.tl === 0 && rec.pts > 0){ const ph = cm.lines.find(l=> l.k === 'parent'); if(ph) ph.t += ' Tự luận 0 điểm: điểm số của con là nhờ may mắn, hay do thời gian không đủ? Phụ huynh nên trao đổi với con về điều này.'; }   // có điểm chấm máy mà tự luận 0
+    cm.lines[0].t += ' Tự luận ' + sc + (q >= 0.8 ? ': trình bày tốt.' : q >= 0.5 ? ': cần trình bày đủ các bước.' : ': còn yếu, cần xem lại lời giải mẫu.');
+    if(rec.tl === 0 && rec.pts > 0){ const ph = cm.lines.find(l=> l.k === 'parent'); if(ph) ph.t += ' Tự luận 0 điểm: điểm số của con là nhờ may mắn, hay do thời gian không đủ?'; }   // có điểm chấm máy mà tự luận 0
     cm.text = cm.lines.map(l=> l.i + ' ' + l.t).join(' '); }
   return cm; }
 /* ===== SO SÁNH VỚI CẢ LỚP trong nhận xét từng bài (dòng 📊, ngay trên lời nhắn phụ huynh): cao nhất (kèm tên bạn cao nhất), thấp nhất (không tên), trung bình, trung vị, vị trí của con.
@@ -1597,7 +1585,13 @@ function cmpLine(rec, S){ const f = fmtVN, me = recTot(rec).pts, isTop = S.tops.
   if(isTop) top += S.tops.length > 1 ? ' — con và ' + (S.tops.length - 1) + ' bạn cùng đạt' : ' — chính là con 🎉';
   else if(S.names.length) top += ' (bạn ' + nm(S.names) + ')';
   const d = r2(me - S.avg), pos = Math.abs(d) < 0.05 ? 'bằng điểm trung bình lớp' : (d > 0 ? 'cao hơn' : 'thấp hơn') + ' trung bình lớp ' + f(Math.abs(d)) + ' điểm';
-  return {k:'cmp', i:'📊', t:'So với lớp (' + S.n + ' bài): ' + top + '; thấp nhất ' + f(S.min) + '; trung bình ' + f(S.avg) + '; trung vị ' + f(S.med) + '. Con được ' + f(me) + ' điểm — ' + pos + '.'}; }
+  return {k:'cmp', i:'📊', t:'Lớp (' + S.n + ' bài): ' + top + '; thấp nhất ' + f(S.min) + '; trung bình ' + f(S.avg) + '; trung vị ' + f(S.med) + '. Con ' + pos + '.'}; }
+/* Rút gọn nhận xét các bài đã chấm (chạy một lần sau khi cập nhật): làm lại nhận xét và ảnh theo mẫu mới. Nhận xét thầy đã sửa tay giữ nguyên; bài đã gửi vẫn giữ dấu “đã gửi”. */
+async function cmtMigrate(){ if(ls('mbpscan_cmtv', 0) >= 2) return; const all = results.concat(...Object.values(xres)), todo = all.filter(r=> r.cmY && !r.cmEdited); let k = 0; cmpBusy = 'cmtv';
+  for(const r of all){ if(r.cmEdited){ try{ const a = recAutoCm(r); if(a) r.cmAuto = a; }catch(e){} } }   // bản khôi phục tự động của bài đã sửa tay cũng theo mẫu mới
+  for(const r of todo){ try{ const cm = recAutoCm(r); if(cm){ await recRecomment(r, cm); r.cmAuto = undefined; delete r.cmpSig; } }catch(e){}
+    if(++k % 10 === 0 || k === todo.length){ saveResults(); saveX(); if(todo.length > 10) toast('Đang rút gọn nhận xét các bài đã chấm… ' + k + '/' + todo.length, 1500); } await new Promise(z=> setTimeout(z, 0)); }
+  saveResults(); saveX(); lsSet('mbpscan_cmtv', 2); cmpBusy = null; if(view === 'res') drawResults(); if(todo.length) toast('Đã rút gọn nhận xét ' + todo.length + ' bài.', 2600); }
 async function cmpUpdate(list, key, prog){ if(list.length < 5) return 0; const S = cmpStats(list, key), todo = list.filter(r=> r.cmY && r.cm && !r.cmpOff && r.cmpSig !== S.sig); let k = 0;
   for(const r of todo){ const lines = r.cm.lines.filter(l=> l.k !== 'cmp'), i = lines.findIndex(l=> l.k === 'parent'); lines.splice(i >= 0 ? i : lines.length, 0, cmpLine(r, S));
     try{ await recRecomment(r, {mood:r.cm.mood, tone:r.cm.tone, toneWhy:r.cm.toneWhy, lines, text:''}); r.cmpSig = S.sig; }catch(e){} if(prog) prog(++k, todo.length); await new Promise(z=> setTimeout(z, 0)); }
@@ -1900,7 +1894,7 @@ $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) ret
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
 (async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; const x = await idb.get('xres'); if(x && typeof x==='object') xres = x;
-  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
+  if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); cmtMigrate(); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
