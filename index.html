@@ -231,7 +231,7 @@ nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11 · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11b · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1417,7 +1417,7 @@ async function takeCode(raw){   // trả về true nếu đã nạp xong một �
   try{ const ex = parseExam(await unpack(s)); if(ex){ addExam(ex); return true; } }catch(e){} toast('Mã nhận được bị lỗi, hãy quét lại.'); return false;
 }
 /* ===== THẺ ĐỀ (giao diện 02/11h): mỗi đề thi một thẻ; bài kiểm tra gộp theo lượt in (cùng tên) — chia 3 mục: chưa chấm / đã chấm (còn ảnh chưa gửi) / đã gửi ===== */
-let tTab = ls('mbpscan_ttab', 'todo'), rTab = ls('mbpscan_rtab', 'unsent'), tQ = '', tMore = 0;
+let tTab = ls('mbpscan_ttab', 'todo'), rTab = ls('mbpscan_rtab', 'unsent'), rKind = ls('mbpscan_rkind', 'all'), tQ = '', tMore = 0;
 const idRange = ids=>{ const a = ids.slice().sort((x, y)=> x - y), out = []; for(let i = 0; i < a.length; i++){ let j = i; while(j + 1 < a.length && a[j + 1] === a[j] + 1) j++; out.push(j > i ? a[i] + '–' + a[j] : String(a[i])); i = j; } return out.join(', '); };
 function items(){ const out = [];
   exams.forEach(e=> out.push({kind:'exam', key:e.id, title:e.title || 'Đề thi', sub:'Đề thi · ' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', res:xres[e.id] || [], total:e.order.length, at:e.at || 0}));
@@ -1743,10 +1743,12 @@ function drawResults(){
   $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
   if(!rv){
     const card = g=> '<div class="grp" data-k="' + g.kind + '" data-key="' + esc(g.key) + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + dayVN(dayKey(g.at)) + ' · ' + esc(g.sub) + '</small></div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + '</b><small>bài · TB ' + fmtVN(g.avg) + '</small><span class="snt" style="' + (g.sent < g.n ? 'color:#8a5a00' : '') + '">' + (g.sent < g.n ? (g.n - g.sent) + ' chưa gửi' : '✓ đã gửi') + '</span></div></div>';
-    const un = gs.filter(g=> g.sent < g.n), sn = gs.filter(g=> g.sent >= g.n), cur = rTab === 'sent' ? sn : un;
-    $('resList').innerHTML = '<div class="seg" id="rSeg"><button data-t="unsent" class="' + (rTab !== 'sent' ? 'on' : '') + '">Chưa gửi<b>' + un.length + '</b></button><button data-t="sent" class="' + (rTab === 'sent' ? 'on' : '') + '">Đã gửi<b>' + sn.length + '</b></button></div>'
-      + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
+    const inTab = g=> rTab === 'sent' ? g.sent >= g.n : g.sent < g.n, ofKind = k=> gs.filter(g=> k === 'all' || g.kind === k), shown = ofKind(rKind);   // lọc theo loại bài: x = bài định kỳ (đề thi), w = bài kiểm tra
+    const un = shown.filter(g=> g.sent < g.n), sn = shown.filter(g=> g.sent >= g.n), cur = rTab === 'sent' ? sn : un, kindN = {x:'bài định kỳ', w:'bài kiểm tra'};
+    $('resList').innerHTML = '<div class="seg" id="rKind" style="position:static;margin-bottom:6px">' + [['all', 'Tất cả'], ['x', '🎓 Định kỳ'], ['w', '📝 Kiểm tra']].map(([k, l])=> '<button data-k="' + k + '" class="' + (rKind === k ? 'on' : '') + '">' + l + '<b>' + ofKind(k).filter(inTab).length + '</b></button>').join('') + '</div><div class="seg" id="rSeg"><button data-t="unsent" class="' + (rTab !== 'sent' ? 'on' : '') + '">Chưa gửi<b>' + un.length + '</b></button><button data-t="sent" class="' + (rTab === 'sent' ? 'on' : '') + '">Đã gửi<b>' + sn.length + '</b></button></div>'
+      + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length && !shown.length ? 'Chưa có ' + kindN[rKind] + ' nào được chấm.' : gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
     $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
+    $('rKind').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rKind = b.dataset.k; lsSet('mbpscan_rkind', rKind); drawResults(); });
     $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; drawResults(); $('v-res').parentElement.scrollTop = 0; });
     return;
   }
