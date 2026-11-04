@@ -242,7 +242,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11i · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11j · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1435,7 +1435,8 @@ function cloudWhy(id){ const w = cloudWait[id] || {}; return w.err ? ['Không t�
 
 /* ===== Đề: nạp bằng QR hoặc dán chữ ===== */
 function addTest(t){ const c = putTest(t), nr = c.changed ? rescore(t) : 0; pinTest = t.id; lsSet('mbpscan_pin', t.id); setMode('ws'); drawTests(); toast((nr ? 'Đã tính lại ' + nr + ' bài theo thang điểm mới. ' : '') + 'Đã nạp đáp án mã bài ' + t.id + ' (' + t.rows.length + ' ô chấm).', 2600); }
-function addExam(ex){ const i = exams.findIndex(x=> x.id===ex.id); if(i >= 0) exams[i] = ex; else exams.push(ex); if(exams.length > 12) exams.shift(); activeExam = ex.id; saveExams(); setMode('exam'); drawTests(); toast('Đã nạp đề thi: ' + Object.keys(ex.variants).length + ' mã đề, ' + ex.order.length + ' học sinh.', 3200); }
+function addExam(ex){ const i = exams.findIndex(x=> x.id===ex.id); if(i >= 0) exams[i] = ex; else exams.push(ex); if(exams.length > 12){ const j = exams.findIndex(e=> e.id !== ex.id && !(xres[e.id] || []).length); if(j >= 0) exams.splice(j, 1); } activeExam = ex.id; saveExams(); xRelink(); setMode('exam');   // đề còn bài chấm thì không bỏ khỏi danh sách
+  drawTests(); toast('Đã nạp đề thi: ' + Object.keys(ex.variants).length + ' mã đề, ' + ex.order.length + ' học sinh.', 3200); }
 async function takeCode(raw){   // trả về true nếu đã nạp xong một đề
   raw = String(raw||'').trim();
   if(raw.startsWith('MBPK1;')){ const k = raw.slice(6).trim(); if(!/^[A-Za-z0-9_-]{22}$/.test(k)) return false; if(!akKeys.includes(k)){ akKeys.push(k); lsSet('mbpscan_keys', akKeys); }
@@ -1792,6 +1793,20 @@ function resMore(list, ex, g, uns, shareAll){ const sh = $('sheet'), mact = (id,
   on('mMark', ()=>{ markSent(list, !!uns.length); drawResults(); toast(uns.length ? 'Đã đánh dấu ' + uns.length + ' ảnh là đã gửi.' : 'Đã bỏ đánh dấu đã gửi.', 2200); });
   on('mRen', resRename); on('mDel', resDelete);
   if(ex){ on('mCsv', ()=> exportCsv(ex, g.title)); on('mPc', ()=> sendToPc(ex)); $('fVne').onchange = e=>{ const f = e.target.files[0]; e.target.value = ''; if(f){ sheetClose(); vneOpen(ex, f); } }; } }
+/* BÀI ĐỀ THI MỒ CÔI: bài lưu theo mã (băm nội dung) của đề; đề không còn trong danh sách hoặc đổi mã thì bài vẫn trong máy nhưng không hiện.
+   Tự gắn lại khi có đề khớp (≥ 80% bài đúng mã đề + SBD + họ tên, không có đề khác khớp bằng); bài trùng SBD với bài đang có thì để nguyên, không xoá. */
+const xOrphans = ()=> Object.keys(xres).filter(k=> Array.isArray(xres[k]) && xres[k].length && !exams.some(e=> e.id === k));
+function xRelink(){ let moved = 0;
+  xOrphans().forEach(k=>{ const a = xres[k], sc = e=> a.filter(r=> e.variants[r.made] && r.sbd && e.students[r.sbd] && (!r.name || e.students[r.sbd].name === r.name)).length, c = exams.map(e=> [e, sc(e)]).sort((x, y)=> y[1] - x[1]);
+    if(!c.length || c[0][1] < Math.ceil(a.length*0.8) || (c[1] && c[1][1] === c[0][1])) return;
+    const id = c[0][0].id, t = xres[id] || (xres[id] = []), keepHere = []; a.forEach(r=>{ if(r.sbd && t.some(x=> x.sbd === r.sbd)) keepHere.push(r); else { r.exId = id; t.push(r); moved++; } });
+    if(keepHere.length) xres[k] = keepHere; else delete xres[k]; });
+  if(moved){ saveX(); toast('Đã tìm lại ' + moved + ' bài đã chấm.', 3200); } return moved; }
+function xRescue(k){ const a = xres[k] || [], sh = $('sheet'), ma = [...new Set(a.map(r=> r.made).filter(Boolean))].slice(0, 6).join(', ');
+  sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">BÀI CHƯA GẮN ĐƯỢC ĐỀ</small><b style="display:block">' + a.length + ' bài · mã đề ' + esc(ma) + '</b></div><div class="shBody"><p class="mut" style="margin:0 0 8px">Bài vẫn còn trên máy. Chĩa camera vào một phiếu của đề này để tải lại đề, các bài sẽ tự gắn vào.</p>'
+    + a.slice().sort(sbdCmp).map(r=> '<div class="tlr"><img src="' + r.url + '" alt=""><div class="tx"><b>' + esc(r.name || 'SBD ' + (r.sbd || '?')) + '</b><small>SBD ' + esc(r.sbd || '?') + ' · mã đề ' + esc(r.made || '?') + ' · chấm máy ' + fmtVN(r.pts) + '/' + fmtVN(r.max) + (r.tl != null ? ' · tự luận ' + fmtVN(r.tl) : '') + '</small></div></div>').join('')
+    + '</div><div class="shFoot"><button class="fab" id="xrClose">Đóng</button><button class="fab go" id="xrSave">⬇ Tải ' + a.length + ' ảnh</button></div></div>';
+  sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('xrClose').onclick = sheetClose; $('xrSave').onclick = ()=> a.slice().sort(sbdCmp).forEach((r, i)=> setTimeout(()=> download(r, i), i*250)); }
 function drawResults(){
   const gs = groups(); if(rv && !gs.some(g=> g.kind===rv.kind && g.key===rv.key)) rv = null;
   $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
@@ -1801,9 +1816,14 @@ function drawResults(){
     const un = shown.filter(g=> g.sent < g.n), sn = shown.filter(g=> g.sent >= g.n), cur = rTab === 'sent' ? sn : un, kindN = {x:'bài định kỳ', w:'bài kiểm tra'};
     $('resList').innerHTML = '<div class="seg" id="rKind" style="position:static;margin-bottom:6px">' + [['all', 'Tất cả'], ['x', '🎓 Định kỳ'], ['w', '📝 Kiểm tra']].map(([k, l])=> '<button data-k="' + k + '" class="' + (rKind === k ? 'on' : '') + '">' + l + '<b>' + ofKind(k).filter(inTab).length + '</b></button>').join('') + '</div><div class="seg" id="rSeg"><button data-t="unsent" class="' + (rTab !== 'sent' ? 'on' : '') + '">Chưa gửi<b>' + un.length + '</b></button><button data-t="sent" class="' + (rTab === 'sent' ? 'on' : '') + '">Đã gửi<b>' + sn.length + '</b></button></div>'
       + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length && !shown.length ? 'Chưa có ' + kindN[rKind] + ' nào được chấm.' : gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
+    const orph = xOrphans(), nX = Object.values(xres).reduce((t, a)=> t + (Array.isArray(a) ? a.length : 0), 0);
+    if(orph.length) $('resList').insertAdjacentHTML('afterbegin', orph.map(k=> '<div class="grp" data-orph="' + esc(k) + '" style="border-color:#f0a500;background:#fff8e6"><div class="ic">🛟</div><div class="tx"><b>' + xres[k].length + ' bài chưa gắn được đề</b><small>Bài vẫn còn trên máy · mã đề ' + esc([...new Set(xres[k].map(r=> r.made).filter(Boolean))].slice(0, 3).join(', ')) + ' · chạm để xem</small></div></div>').join(''));
+    $('resList').insertAdjacentHTML('beforeend', '<p class="mut" id="dataInfo" style="margin:12px 2px 0;font-size:.76rem">Trên máy: ' + exams.length + ' đề thi · ' + nX + ' bài đề thi · ' + results.length + ' bài kiểm tra</p>');
+    if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const d = $('dataInfo'); if(d && e.usage != null) d.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
+    $('resList').querySelectorAll('[data-orph]').forEach(el=> el.onclick = ev=>{ ev.stopPropagation(); xRescue(el.dataset.orph); });
     $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
     $('rKind').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rKind = b.dataset.k; lsSet('mbpscan_rkind', rKind); drawResults(); });
-    $('resList').querySelectorAll('.grp').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; $('fSum').open = $('fMiss').open = false; drawResults(); $('v-res').parentElement.scrollTop = 0; });
+    $('resList').querySelectorAll('.grp:not([data-orph])').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; $('fSum').open = $('fMiss').open = false; drawResults(); $('v-res').parentElement.scrollTop = 0; });
     return;
   }
   const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> recTot(r).pts), mx = list.length ? list[0].max : 0, ex = rvExam();
@@ -1956,6 +1976,7 @@ document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop
   try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}   // xin trình duyệt không tự xoá dữ liệu khi máy thiếu dung lượng
   if(idb.fail) document.body.insertAdjacentHTML('afterbegin', '<div id="idbFail" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không đọc được các bài đã chấm trên máy. Dữ liệu cũ được giữ nguyên, nhưng bài chấm lúc này sẽ không được lưu. Tắt hẳn app rồi mở lại. <button class="btn" onclick="location.reload()" style="display:block;margin-top:8px">↻ Thử lại</button></div>');
   if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const v = document.querySelector('.ver'); if(v && e.usage != null) v.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
+  if(!idb.fail) xRelink();
   if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); cmtMigrate(); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
