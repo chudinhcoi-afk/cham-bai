@@ -242,7 +242,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11h · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 04/11i · đọc phiếu v5</p>
   </section>
 
   <section class="view" id="v-res">
@@ -976,9 +976,11 @@ const saveTests = ()=> lsSet('mbpscan_tests', tests), saveExams = ()=>{ lsSet('m
 const pickTest = id=> tests.find(t=> t.id===id), curExam = ()=> exams.find(e=> e.id===activeExam) || null;
 function toast(t, ms){ const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(()=> el.classList.remove('on'), ms || 2200); }
 const idb = { db:null,
-  open(){ return new Promise(res=>{ try{ const r = indexedDB.open('mbpscan', 1); r.onupgradeneeded = ()=> r.result.createObjectStore('kv'); r.onsuccess = ()=>{ idb.db = r.result; res(); }; r.onerror = ()=> res(); }catch(e){ res(); } }); },
-  get(k){ return new Promise(res=>{ if(!idb.db) return res(null); const q = idb.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=> res(q.result); q.onerror = ()=> res(null); }); },
-  set(k, v){ if(!idb.db) return; try{ idb.db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); }catch(e){} } };
+  open(){ return new Promise(res=>{ try{ const r = indexedDB.open('mbpscan', 1); r.onupgradeneeded = ()=> r.result.createObjectStore('kv'); r.onsuccess = ()=>{ idb.db = r.result; res(); }; r.onerror = ()=>{ idb.fail = true; res(); }; }catch(e){ idb.fail = true; res(); } }); },
+  get(k){ return new Promise((res, no)=>{ if(!idb.db) return res(null); const q = idb.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = ()=> res(q.result); q.onerror = ()=> no(q.error); }); },
+  async load(k){ for(let i = 0; i < 3; i++){ try{ return await idb.get(k); }catch(e){ await new Promise(z=> setTimeout(z, 400)); } } idb.fail = true; return null; },   // đọc lỗi khác với chưa có dữ liệu: idb.fail → không ghi gì lên dữ liệu cũ
+  fail:false,
+  set(k, v){ if(!idb.db || idb.fail) return; try{ idb.db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); }catch(e){} } };
 const saveResults = ()=> idb.set('results', results), saveX = ()=> idb.set('xres', xres);
 const esc = s=> String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -1605,7 +1607,8 @@ function cmpLine(rec, S){ const f = fmtVN, me = recTot(rec).pts, isTop = S.tops.
   const d = r2(me - S.avg), pos = Math.abs(d) < 0.05 ? 'bằng điểm trung bình lớp' : (d > 0 ? 'cao hơn' : 'thấp hơn') + ' trung bình lớp ' + f(Math.abs(d)) + ' điểm';
   return {k:'cmp', i:'📊', t:'Lớp (' + S.n + ' bài): ' + top + '; thấp nhất ' + f(S.min) + '; trung bình ' + f(S.avg) + '; trung vị ' + f(S.med) + '. Con ' + pos + '.'}; }
 /* Rút gọn nhận xét các bài đã chấm (chạy một lần sau khi cập nhật): làm lại nhận xét và ảnh theo mẫu mới. Nhận xét thầy đã sửa tay giữ nguyên; bài đã gửi vẫn giữ dấu “đã gửi”. */
-async function cmtMigrate(){ if(ls('mbpscan_cmtv', 0) >= 2) return; const all = results.concat(...Object.values(xres)), todo = all.filter(r=> r.cmY && !r.cmEdited); let k = 0; cmpBusy = 'cmtv';
+async function cmtMigrate(){ if(ls('mbpscan_cmtv', 0) >= 2 || idb.fail) return; const all = results.concat(...Object.values(xres)), todo = all.filter(r=> r.cmY && !r.cmEdited); let k = 0; if(!all.length) return;   // không có bài nào: không ghi gì, không đánh dấu đã chạy
+  cmpBusy = 'cmtv';
   for(const r of all){ if(r.cmEdited){ try{ const a = recAutoCm(r); if(a) r.cmAuto = a; }catch(e){} } }   // bản khôi phục tự động của bài đã sửa tay cũng theo mẫu mới
   for(const r of todo){ try{ const cm = recAutoCm(r); if(cm){ await recRecomment(r, cm); r.cmAuto = undefined; delete r.cmpSig; } }catch(e){}
     if(++k % 10 === 0 || k === todo.length){ saveResults(); saveX(); if(todo.length > 10) toast('Đang rút gọn nhận xét các bài đã chấm… ' + k + '/' + todo.length, 1500); } await new Promise(z=> setTimeout(z, 0)); }
@@ -1949,7 +1952,10 @@ $('zDel').onclick = ()=>{ if(!confirm('Xoá bài này khỏi kết quả?')) ret
 
 /* ===== Khởi động ===== */
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ camStop(); qrStop(); } else if(view==='scan' && !frozen) camStart(); });
-(async ()=>{ await idb.open(); const r = await idb.get('results'); if(Array.isArray(r)) results = r; const x = await idb.get('xres'); if(x && typeof x==='object') xres = x;
+(async ()=>{ await idb.open(); const r = await idb.load('results'); if(Array.isArray(r)) results = r; const x = await idb.load('xres'); if(x && typeof x==='object') xres = x;
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}   // xin trình duyệt không tự xoá dữ liệu khi máy thiếu dung lượng
+  if(idb.fail) document.body.insertAdjacentHTML('afterbegin', '<div id="idbFail" style="position:fixed;left:8px;right:8px;top:8px;z-index:90;background:#d0302b;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:.92rem">⚠ Không đọc được các bài đã chấm trên máy. Dữ liệu cũ được giữ nguyên, nhưng bài chấm lúc này sẽ không được lưu. Tắt hẳn app rồi mở lại. <button class="btn" onclick="location.reload()" style="display:block;margin-top:8px">↻ Thử lại</button></div>');
+  if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const v = document.querySelector('.ver'); if(v && e.usage != null) v.textContent += ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'; }).catch(()=>{});
   if(mode==='exam' && !curExam()) mode = 'ws'; drawHeader(); go('tests'); cmtMigrate(); })();   // mở app vào thẻ Đề — camera chỉ bật khi bấm 📷 Chấm (tránh giật lúc khởi động)
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
