@@ -774,6 +774,14 @@ function wakRefine(gray, w, h, mp, test, G){
   const sm = off.map(o=> o.slice());
   Object.values(byCol).forEach(ks=>{ ks.sort((a, b)=> G.pos(a, 0).y - G.pos(b, 0).y); ks.forEach((k, i)=>{ if(ks.length < 3) return; const a = ks[Math.max(0, i-1)], c = ks[Math.min(ks.length-1, i+1)];
     sm[k] = [med3(off[a][0], off[k][0], off[c][0]), med3(off[a][1], off[k][1], off[c][1])]; }); });
+  // V21.8 (06/11): 4 cột của MỘT câu trả lời ngắn nằm sát nhau nên cong / lệch gần như y hệt nhau. Một cột dò lệch hẳn ra (gặp nét bút chì
+  // lem, vết tẩy… — thấy trên ảnh: vòng khoanh lệch 2 – 3 mm khỏi ô HS tô) thì kéo về trung vị của cả câu, chỉ cho chênh tối đa 0,6 mm.
+  // Trước đây nhóm làm trơn theo cột chỉ có 2 hàng (2 dãy câu) nên không sửa được, ô đo lệch → vết tô bị đọc thành “mờ” hoặc trống.
+  const med = a=>{ const s = a.slice().sort((x, y)=> x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m])/2; };
+  const clampD = (v, m)=> m + Math.max(-0.6, Math.min(0.6, v - m)), tg = {};
+  test.rows.forEach((r, k)=>{ if(r.t) (tg[r.g] = tg[r.g] || []).push(k); });
+  Object.values(tg).forEach(ks=>{ if(ks.length < 3) return; const mx = med(ks.map(k=> sm[k][0])), my = med(ks.map(k=> sm[k][1]));
+    ks.forEach(k=>{ sm[k] = [clampD(sm[k][0], mx), clampD(sm[k][1], my)]; }); });
   return sm;
 }
 // Đọc khung trả lời — bản 2: độ tương phản CỤC BỘ (so với giấy ngay quanh ô), trừ nền chữ in theo từng cột phương án, ngưỡng TỰ THÍCH NGHI theo chính bài đó.
@@ -827,7 +835,10 @@ function wakRead(img, pickTest){
     for(let yy = Math.max(0, Math.floor(cy - r)); yy <= Math.min(h - 1, Math.ceil(cy + r)); yy += 1) for(let xx = Math.max(0, Math.floor(cx - r)); xx <= Math.min(w - 1, Math.ceil(cx + r)); xx += 1){ if((xx - cx)*(xx - cx) + (yy - cy)*(yy - cy) > r*r) continue; const j = (yy*w + xx) << 2; n++; if(D[j] > 120 && D[j] - Math.max(D[j+1], D[j+2]) > 85) red++; }
     return n ? red/n : 0; };
   const picks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
-    if(r.t && pk.state==='weak' && Math.max(...sc[k]) < 0.6*T.thr) pk = {v:'', state:'blank', i:pk.i};   // trả lời ngắn: hàng chỉ có vết nhạt (chữ in, bụi) coi là để trống
+    if(r.t && pk.state==='weak' && Math.max(...sc[k]) < 0.6*T.thr){   // trả lời ngắn: hàng chỉ có vết nhạt (chữ in, bụi) coi là để trống…
+      const o = sc[k].slice().sort((a, b)=> b - a), o1 = o[0], o2 = o[1] || 0;
+      // …TRỪ KHI có một ô nổi hẳn lên so với cả cột (bút chì nhạt hơn bút mực cùng bài kéo ngưỡng lên): báo “tô mờ” để giáo viên xem, không âm thầm coi là trống
+      if(!(o1 >= Math.max(T.floor, 0.03) && o1 >= 2.5*Math.max(o2, 0.5*T.floor))) pk = {v:'', state:'blank', i:pk.i}; }
     if(hasRed && !r.t && pk.state === 'blank'){ const cov = O.map((_, j)=>{ const q = G.pos(k, j); return redCover(q.x, q.y); }), mx = Math.max(...cov); if(mx > 0.2){ pk = {v:'', state:'weak', i:cov.indexOf(mx), red:true}; warn.push(`câu ${r.lab}: bị nét đỏ che, xem lại`); } }
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak' && !pk.red) warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
     return {k, pk, keyIdx:O.indexOf(r.key)}; });
@@ -1384,23 +1395,30 @@ function drawShot(){
   // câu trắc nghiệm / đúng – sai: chạm ô; câu trả lời ngắn: gộp 4 hàng thành MỘT ô nhập đáp số học sinh đã tô
   const nk = S.fix.filter(k=> !r.test.rows[k].t), gs = [...new Set(S.fix.filter(k=> r.test.rows[k].t).map(k=> r.test.rows[k].g))];
   const tlRead = g=> r.picks.filter(p=> r.test.rows[p.k].t && r.test.rows[p.k].g===g).map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state==='blank' ? '' : '?').join('');
+  // V21.8: hiện máy đọc THEO TỪNG CỘT (“1 · ? · _ · 7”) — gộp liền “1?7” làm mất vị trí cột trống / dấu phẩy
+  const tlCols = g=> r.picks.filter(p=> r.test.rows[p.k].t && r.test.rows[p.k].g===g).sort((a, b)=> a.k - b.k).map(p=> p.pk.state==='ok' ? p.pk.v : p.pk.state==='blank' ? '_' : '?').join(' · ');
   const tlKey = g=> r.test.rows.filter(x=> x.t && x.g===g).map(x=> x.key).join('');
   const tlDone = g=> r.picks.some(p=> r.test.rows[p.k].t && r.test.rows[p.k].g===g && p.pk.manual);
   fx.style.display = ''; fx.innerHTML = '<div class="fxh">✍ Máy chưa chắc ' + (nk.length + gs.length) + ' câu — nhìn ảnh rồi sửa cho đúng bài học sinh</div>' +
     nk.map(k=>{ const p = r.picks[k], row = r.test.rows[k], opts = wakOpts(row), cur = p.pk.state==='ok' ? p.pk.i : -1;
       return '<div class="fxr"><span class="fxl">Câu ' + esc(row.lab) + '<small>' + why(p) + '</small></span>' + opts.map((o,i)=> '<button class="fxb' + (cur===i ? ' on' : '') + '" data-k="' + k + '" data-i="' + i + '">' + o + '</button>').join('') + '<button class="fxb no' + (cur<0 && p.pk.manual ? ' on' : '') + '" data-k="' + k + '" data-i="-1">Trống</button></div>'; }).join('') +
     gs.map(g=>{ const rd = tlRead(g), done = tlDone(g);
-      return '<div class="fxr tl"><span class="fxl">Câu ' + esc(g) + ' <span class="tln">trả lời ngắn</span><small>' + (done ? '✔ đã sửa tay' : 'máy đọc được: <b>' + esc(rd || '(trống)') + '</b> — ô có “?” bị tô mờ / tô nhiều') + '</small></span>' +
-        '<input class="fxt" data-g="' + esc(g) + '" inputmode="decimal" autocomplete="off" value="' + esc(rd.replace(/\?/g, '')) + '" placeholder="đáp số HS tô">' +
+      return '<div class="fxr tl"><span class="fxl">Câu ' + esc(g) + ' <span class="tln">trả lời ngắn</span><small>' + (done ? '✔ đã sửa tay' : 'máy đọc từng cột: <b>' + esc(tlCols(g)) + '</b> — “?” = tô mờ / tô nhiều, “_” = trống') + '</small></span>' +
+        // không điền sẵn khi còn “?”: bỏ “?” đi (1?7 → 17) làm mất chữ số và dấu phẩy, bấm Lưu luôn là chấm sai
+        '<input class="fxt" data-g="' + esc(g) + '" inputmode="decimal" autocomplete="off" value="' + esc(rd.indexOf('?') >= 0 ? '' : rd) + '" placeholder="nhìn ảnh, gõ đủ đáp số HS tô (vd 19,7)">' +
         '<button class="fxb no on" data-g="' + esc(g) + '" data-ok="1">Lưu</button><button class="fxb no" data-g="' + esc(g) + '" data-ok="0">Trống</button>' +
         '<small class="kh">Đáp án đúng: ' + esc(tlKey(g)) + '</small></div>'; }).join('');
   fx.querySelectorAll('.fxb[data-k]').forEach(b=> b.onclick = ()=> manualPick(+b.dataset.k, +b.dataset.i));
-  fx.querySelectorAll('.fxb[data-g]').forEach(b=> b.onclick = ()=>{ const inp = fx.querySelector('.fxt[data-g="' + b.dataset.g + '"]'); manualTln(b.dataset.g, b.dataset.ok==='1' && inp ? inp.value : ''); });
+  fx.querySelectorAll('.fxb[data-g]').forEach(b=> b.onclick = ()=>{ const inp = fx.querySelector('.fxt[data-g="' + b.dataset.g + '"]');
+    if(b.dataset.ok==='1' && inp && !inp.value.trim()){ toast('Gõ đáp số học sinh tô, hoặc bấm “Trống” nếu bỏ trống'); inp.focus(); return; }
+    manualTln(b.dataset.g, b.dataset.ok==='1' && inp ? inp.value : ''); });
   fx.querySelectorAll('.fxt').forEach(inp=> inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); manualTln(inp.dataset.g, inp.value); } });
 }
 // sửa tay cả câu trả lời ngắn: tách đáp số học sinh tô thành 4 kí tự (từ trái sang) rồi chấm lại
 function manualTln(g, val){
-  const S = pendSrc; if(!S) return; const r = S.f.r, t = String(val||'').trim().replace(/\s+/g, '').replace(/[.]/g, ',').replace(/[−–]/g, '-').slice(0, 4);
+  const S = pendSrc; if(!S) return; const r = S.f.r, t0 = String(val||'').trim().replace(/\s+/g, '').replace(/[.]/g, ',').replace(/[−–]/g, '-');
+  if(t0 && (!/^-?[0-9,]+$/.test(t0) || t0.length > 4)){ toast('Đáp số chỉ gồm dấu −, chữ số, dấu phẩy, tối đa 4 kí tự (vd 19,7)'); return; }   // V21.8: không lưu “?” hay kí tự lạ
+  const t = t0;
   r.picks.forEach(p=>{ const row = r.test.rows[p.k]; if(!row.t || row.g !== String(g)) return; const ri = +row.lab.split('.')[1] - 1, c = t[ri] || '', O = wakOpts(row), i = O.indexOf(c);
     p.pk = i >= 0 ? {v:c, state:'ok', i, manual:true} : {v:'', state:'blank', i:p.pk.i, manual:true}; });
   regradeWs(r);
