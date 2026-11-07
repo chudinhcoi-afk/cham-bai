@@ -109,6 +109,10 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
 .kc .kv{font-size:1.25rem;color:var(--navy)}
 .shBox.full{max-height:100vh;height:100%;border-radius:0}
 .shBox.full .shBody{flex:1}
+.tlaTxt{display:block;box-sizing:border-box;width:100%;height:52vh;min-height:220px;padding:10px;border:1px solid #d6dae6;border-radius:10px;background:#fbfbfd;color:#141c3a;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;resize:none}
+.tlaSel{display:block;width:100%;margin:4px 0 8px;padding:10px;border:1px solid #d6dae6;border-radius:10px;background:#fff;font-size:16px;color:#141c3a}
+.tlaNote{margin:6px 0;color:#8a5a00;font-weight:600;font-size:.86rem}
+.tlaWhy{padding:14px;border-radius:12px;background:#fff3cd;color:#6b4a00}.tlaWhy p{margin:6px 0 0}
 .ah{font-size:.8rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 6px}
 .ah:first-child{margin-top:0}
 .ah small{font-weight:600;color:var(--mut);text-transform:none;letter-spacing:0}
@@ -919,7 +923,8 @@ async function unpack(packed){
   return new TextDecoder().decode(bytes);
 }
 function parseExam(text){
-  const lines = String(text||'').split('\n'), hd = (lines[0]||'').split(';'); if(hd[0]!=='MBPE' || hd.length < 8) return null;
+  text = String(text||'').split('\n').filter(l=> l.slice(0, 2) !== 'T:').join('\n');   // dòng T: (chữ đề tự luận, chỉ có trên máy chủ) không tính vào đề: cùng đề thì cùng mã dù nạp bằng QR hay tải về
+  const lines = text.split('\n'), hd = (lines[0]||'').split(';'); if(hd[0]!=='MBPE' || hd.length < 8) return null;
   const ex = {title:hd[1], p:{TN:+hd[2], DSy:+hd[3], TLN:+hd[4]}, n:{nTN:+hd[5], nDS:+hd[6], nTLN:+hd[7]}, variants:{}, students:{}, order:[], at:Date.now()};
   lines.slice(1).forEach(l=>{ const a = l.slice(1).split(':');
     if(l[0]==='V' && a.length >= 4){ ex.variants[a[0]] = {tn:a[1], ds:a[2].replace(/T/g,'Đ').replace(/F/g,'S'), tln:a[3] ? a[3].split('|') : []};
@@ -1697,6 +1702,53 @@ function tlSheet(list, done, cur){ const sh = $('sheet'), ex = rvExam(), rows = 
     saveResults(); saveX(); sheetClose(); if(done) done();
     toast('Đã lưu điểm ' + ch.length + ' bài' + (resent ? ' — ' + resent + ' bài đã gửi trước đó chuyển về “chưa gửi” để gửi bản mới' : '') + (err ? '. ' + err : '') + '.', 4200); };
   sh.querySelectorAll('.tlr img').forEach(im=> im.onclick = ()=>{ sheetClose(); zoom(+im.dataset.z); }); }
+/* ===== ĐỀ + ĐÁP ÁN TỰ LUẬN ĐỂ THẦY CÔ ĐEM SANG AI CHẤM (MathBank V2.51) =====
+   Chữ đề không lưu trong app (repo công khai, máy chủ chỉ giữ bản mã hoá): bấm nút mới tải về bằng khoá liên kết, chỉ hiện trên màn hình. App không gọi dịch vụ AI nào. Nội dung chỉ gồm đề và đáp án, không có tên học sinh. */
+const TLA_GUIDE = 'Bạn là giáo viên Toán. Hãy chấm bài tự luận của học sinh theo đề, đáp án và thang điểm dưới đây.\n1. Tôi sẽ gửi ảnh bài làm ngay sau tin nhắn này. Đọc đúng những gì học sinh viết; chỗ không đọc được thì nói rõ, không đoán.\n2. Kiểm tra mã đề ghi trên bài làm trùng mã đề dưới đây; khác mã thì dừng và báo.\n3. Chấm từng câu, từng ý theo thang điểm. Trong một ý, cho điểm theo các bước của lời giải, làm tròn đến 0,25 điểm. Cách giải khác mà đúng vẫn được đủ điểm; chỉ có kết quả, không có lập luận thì không được đủ điểm.\n4. Không tự đổi đề, số liệu hay thang điểm. Nếu thấy đáp án có vẻ sai thì nêu riêng, nhưng vẫn chấm theo thang điểm này.\n5. Trả kết quả thành bảng: Câu, Ý, Điểm tối đa, Điểm đạt, Lí do ngắn. Dòng cuối ghi tổng điểm tự luận.\nCông thức viết bằng LaTeX trong dấu $...$; hình vẽ (nếu có) viết bằng mã TikZ.';
+const tlaPlain = s=> String(s == null ? '' : s).replace(/<br\s*\/?>/gi, '\n').replace(/<\/?b>/gi, '**').trim();   // chỉ đổi thẻ xuống dòng, in đậm; không lọc thẻ chung vì sẽ ăn mất "a<b" trong công thức
+const tlaParts = q=> String(q || '').split(/<br\s*\/?>/i).slice(1).map(x=> x.trim()).filter(x=> /^[a-h]\)/.test(x)).map(x=> x[0]);   // cùng cách đếm ý với MathBank (wsParts)
+function tlaScale(c, p){ const y = tlaParts(c.q); if(!(p > 0)) return 'thang điểm chưa có, chấm theo các bước của lời giải.'; if(y.length < 2) return 'cả câu ' + fmtVN(p) + ' điểm.';
+  const u = Math.floor(p*4/y.length + 1e-9)/4, last = r2(p - u*(y.length - 1)); return y.map((a, i)=> a + ') ' + fmtVN(i === y.length - 1 ? last : u) + ' điểm').join('; ') + ' (chia theo số ý).'; }
+function tlaBlock(title, ma, cs, total){ const each = total > 0 ? r2(total/cs.length) : 0, sum = cs.reduce((t, c)=> t + (c.p || each), 0);
+  return '=== ' + title + ' · ' + ma + (sum > 0 ? ' · Phần tự luận ' + fmtVN(r2(sum)) + ' điểm' : '') + ' ===\n\n' + cs.map(c=>{ const p = c.p || each;
+    return '--- Câu ' + c.n + (p > 0 ? ' (' + fmtVN(p) + ' điểm)' : '') + ' ---\nĐỀ BÀI:\n' + tlaPlain(c.q) + (c.f === 'anh' ? '\n[Câu này có hình trong đề in, tôi gửi ảnh kèm theo.]' : c.f ? '\n\nHÌNH VẼ (mã TikZ):\n' + c.f : '') + '\n\nĐÁP ÁN, LỜI GIẢI:\n' + (tlaPlain(c.l) || '(đề không có lời giải)') + '\n\nTHANG ĐIỂM: ' + tlaScale(c, p); }).join('\n\n'); }
+/* tải nội dung từ máy chủ → {items:[{ma, cs}], notes:[…]}; không có dữ liệu thì {why:'lí do'}, tuyệt đối không dựng đại */
+async function tlaLoad(list, ex){ const OLD = 'Trên máy tính, MathBank bản mới, mục Đề định kỳ: bấm 📝 Tự luận của đề này để gửi bổ sung, rồi mở lại nút này.';
+  if(!akKeys.length) return {why:'Điện thoại chưa liên kết với MathBank nên không tải được đề. Trên máy tính bấm 🔗 Liên kết điện thoại rồi quét mã.'};
+  if(!navigator.onLine) return {why:'Điện thoại đang mất mạng. Nội dung đề chỉ tải khi cần, không lưu trên máy, nên phải có mạng mới mở được.'};
+  if(ex){ if(!(ex.ak >= 1024)) return {why:'Đề này nạp từ bản MathBank cũ, không có mã bài trên máy chủ nên không có chữ đề tự luận.'};
+    const txt = await cloudDecrypt('e' + ex.ak); if(txt == null) return {why:'Máy chủ không có đề mã bài ' + ex.ak + '. Trên máy tính mở đề rồi lưu đáp án lại.'};
+    const lines = txt.split('\n'), tl = lines.find(l=> l.slice(0, 2) === 'T:'); if(!tl) return {why:'Đề này tạo trước khi MathBank gửi kèm chữ đề tự luận. ' + OLD};
+    const sv = parseExam(txt), sig = e=> JSON.stringify(Object.keys(e.variants).sort().map(k=> [k, e.variants[k].tn, e.variants[k].ds, e.variants[k].tln]));
+    if(!sv || sig(sv) !== sig(ex)) return {why:'Đề trên máy chủ không khớp đáp án đề trên điện thoại (có thể đã trộn lại mã đề). App không dựng để tránh sai mã đề. Hãy tải lại đề từ MathBank.'};
+    const T = JSON.parse(tl.slice(2)), used = [...new Set(list.map(r=> r.made).filter(Boolean))], codes = Object.keys(ex.variants).sort((a, b)=> (used.includes(b) - used.includes(a)) || (a < b ? -1 : 1));
+    const items = codes.filter(c=> (T[c] || []).length).map(c=> ({ma:'Mã đề ' + c, cs:T[c]})), miss = used.filter(c=> !(T[c] || []).length);
+    if(!items.length) return {why:'Đề này không có câu tự luận trong dữ liệu trên máy chủ.'}; return {items, notes:miss.length ? ['Thiếu nội dung mã đề ' + miss.join(', ') + '.'] : []}; }
+  const ids = [...new Set(list.map(r=> r.id))].sort((a, b)=> a - b), items = [], notes = []; let last = '';
+  for(const id of ids){ const txt = await cloudDecrypt(String(id)); if(txt == null){ last = 'Máy chủ không có mã bài ' + id + '.'; notes.push(last); continue; }
+    const m = txt.match(/;Q([A-Za-z0-9_-]+)$/); let q = null; try{ q = m ? JSON.parse(new TextDecoder().decode(b64u(m[1]))) : null; }catch(e){}
+    const sv = parsePayload(txt), t = pickTest(id), rowSig = x=> JSON.stringify(x.rows.map(r=> [r.lab, r.key]));
+    if(sv && t && rowSig(sv) !== rowSig(t)){ last = 'Mã bài ' + id + ' trên máy chủ không khớp đáp án trên điện thoại, app không dựng.'; notes.push(last); continue; }
+    const tl = (q || []).filter(a=> a[0] === 'TL'), cs = tl.map(a=> a[3]).filter(Boolean);
+    if(!tl.length){ last = 'Mã bài ' + id + ' không có câu tự luận.'; notes.push(last); continue; }
+    if(cs.length < tl.length){ last = 'Mã bài ' + id + ' in trước khi MathBank gửi kèm chữ đề tự luận. Muốn dựng thì in và lưu lại đáp án từ MathBank bản mới; máy tính không còn giữ chữ đề của lượt in cũ.'; notes.push(last); continue; }
+    items.push({ma:'Mã bài ' + id, cs}); }
+  return items.length ? {items, notes} : {why:last || 'Không có nội dung tự luận.'}; }
+function tlaSheet(list, ex, title){ const sh = $('sheet'), total = list.map(tlMaxOf).find(x=> x > 0) || 0;
+  sh.innerHTML = '<div class="shBox full"><div class="shHead"><small class="mut">ĐỀ + ĐÁP ÁN TỰ LUẬN CHO AI</small><b style="display:block">' + esc(title) + '</b></div><div class="shBody" id="tlaBody"><p class="mut">Đang tải từ máy chủ…</p></div><div class="shFoot" id="tlaFoot"><button class="fab" id="tlaClose">Đóng</button></div></div>';
+  sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('tlaClose').onclick = sheetClose;
+  const stop = m=>{ if($('tlaBody')) $('tlaBody').innerHTML = '<div class="tlaWhy"><b>Không dựng được đề</b><p>' + esc(m) + '</p></div>'; };
+  tlaLoad(list, ex).then(R=>{ if(!$('tlaBody')) return; if(R.why){ stop(R.why); return; } const I = R.items, all = I.length > 1 ? I.length : -1;
+    const textOf = k=> TLA_GUIDE + '\n\n' + (k === all ? I : [I[k]]).map(x=> tlaBlock(title, x.ma, x.cs, total)).join('\n\n');
+    $('tlaBody').innerHTML = (I.length > 1 ? '<label class="mut" for="tlaMa">Chọn đúng mã của bài cần chấm</label><select id="tlaMa" class="tlaSel">' + I.map((x, k)=> '<option value="' + k + '">' + esc(x.ma) + '</option>').join('') + '<option value="' + all + '">Tất cả (' + I.length + ' mã)</option></select>' : '')
+      + (R.notes.length ? '<p class="tlaNote">' + esc(R.notes.join(' ')) + '</p>' : '') + '<p class="mut" id="tlaPic" style="margin:6px 0"></p><textarea id="tlaTxt" class="tlaTxt" readonly spellcheck="false"></textarea><p class="mut" style="margin:6px 0 0">Đã có sẵn hướng dẫn chấm ở đầu. Chỉ gồm đề và đáp án, không có tên học sinh. Công thức ở dạng LaTeX.</p>';
+    const name = k=> 'De_tu_luan_' + String(title).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '_').slice(0, 40) + '_' + (k === all ? 'tat_ca_ma' : I[k].ma.replace(/\D/g, '')) + '.txt';
+    const cur = ()=> +($('tlaMa') ? $('tlaMa').value : 0), show = ()=>{ const k = cur(), cs = (k === all ? I : [I[k]]).flatMap(x=> x.cs), a = cs.filter(c=> c.f === 'anh'); $('tlaTxt').value = textOf(k); $('tlaPic').textContent = a.length ? 'Lưu ý: ' + a.map(c=> 'câu ' + c.n).join(', ') + ' có hình dạng ảnh, không chép thành chữ được; nhớ chụp hình trong đề gửi kèm cho AI.' : ''; };
+    if($('tlaMa')) $('tlaMa').onchange = show; show();
+    $('tlaFoot').insertAdjacentHTML('beforeend', '<button class="fab" id="tlaDl">⬇ Tải về</button><button class="fab go" id="tlaCopy">📋 Sao chép</button>');
+    $('tlaDl').onclick = ()=>{ const k = cur(); dlFile(new File([textOf(k)], name(k), {type:'text/plain;charset=utf-8'})); };
+    $('tlaCopy').onclick = async ()=>{ const e = $('tlaTxt'); try{ await navigator.clipboard.writeText(e.value); }catch(err){ e.focus(); e.select(); let ok = false; try{ ok = document.execCommand('copy'); }catch(x){} if(!ok){ toast('Không chép được; hãy giữ tay vào ô chữ, chọn tất cả rồi chép.', 3200); return; } } toast('Đã chép đề và đáp án, dán sang AI rồi gửi ảnh bài làm.', 3000); };
+  }, e=> stop(e.message || 'Không tải được đề từ máy chủ.')); }
 const wKey = r=> (r.name ? 'n' + r.name : r.id) + '@' + dayKey(r.at),   // cùng tên đề, cùng ngày (các mã đề của một lượt in) → chung một nhóm, tải ảnh một lần
       wList = key=> results.filter(r=> wKey(r)===key).sort((a,b)=> a.at - b.at);
 function groups(){
@@ -1895,8 +1947,10 @@ function drawResults(){
   steps.push({id:sendDue ? 'bShareNew' : 'bShare', t:'Gửi ảnh cho phụ huynh', ok:!sendDue, s:cmpBusy === gk ? 'Đang cập nhật so sánh vào nhận xét…' : (sendDue ? (uns.length ? uns.length + ' ảnh chưa gửi' : noImg ? 'Không còn ảnh chờ gửi' : 'Đã gửi hết ảnh bài làm') + (sumDue ? (uns.length ? ' + ' : ', còn ') + 'nhận xét cả lớp' : '') : noImg ? 'Không còn ảnh chờ gửi' : 'Đã gửi hết ' + list.length + ' ảnh') + (noImg ? ' · ' + noImg + ' bài chưa có ảnh' : ''), b:sendDue ? '📤 Gửi' : 'Gửi lại'});
   if(ex && ex.ak >= 1024) steps.push({id:'bUp', t:'Xác nhận điểm cho vnEdu', ok:upState === 'ok', s:upState === 'ok' ? 'Đã xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) + ' · MathBank tải về được' : upState === 'changed' ? 'Điểm đã đổi sau lần xác nhận ' + hm(upM.at) + ' ' + dayVN(dayKey(upM.at)) : 'Đẩy điểm lên máy chủ để MathBank dựng file', b:upState === 'ok' ? 'Gửi lại' : upState === 'changed' ? '☁ Xác nhận lại' : '☁ Xác nhận'});
   const stepCur = steps.findIndex(x=> !x.ok);
-  $('gSteps').innerHTML = '<h3>Việc cần làm</h3>' + steps.map((x, k)=> '<div class="stp' + (x.ok ? ' ok' : k === stepCur ? ' cur' : '') + '"><i>' + (x.ok ? '✓' : k + 1) + '</i><div class="tx"><b>' + x.t + '</b><small>' + esc(x.s) + '</small></div><button class="btn' + (k === stepCur ? ' gold' : '') + '" id="' + x.id + '">' + x.b + '</button></div>').join('');
+  const hasTl = tlN.length > 0 || (ex ? !!ex.tl : list.some(r=>{ const t = pickTest(r.id); return t && (t.qs || []).some(q=> q.k === 'TL'); }));   // đề có tự luận: nút dựng lại đề + đáp án để đem sang AI chấm
+  $('gSteps').innerHTML = '<h3>Việc cần làm</h3>' + (hasTl ? '<div class="stp"><i>🤖</i><div class="tx"><b>Đề + đáp án tự luận cho AI</b><small>Dựng lại đúng đề đã in, kèm lời giải, thang điểm; sao chép hoặc tải về</small></div><button class="btn" id="bAiTl">Mở</button></div>' : '') + steps.map((x, k)=> '<div class="stp' + (x.ok ? ' ok' : k === stepCur ? ' cur' : '') + '"><i>' + (x.ok ? '✓' : k + 1) + '</i><div class="tx"><b>' + x.t + '</b><small>' + esc(x.s) + '</small></div><button class="btn' + (k === stepCur ? ' gold' : '') + '" id="' + x.id + '">' + x.b + '</button></div>').join('');
   if(tlN.length) $('bTl').onclick = ()=> tlSheet(list, drawResults);
+  if(hasTl) $('bAiTl').onclick = ()=> tlaSheet(list, ex, g.title);
   if($('bShareNew')) $('bShareNew').onclick = ()=>{ if(tlAsk()) share(uns, sumDue ? sm : null); };
   const shareAll = ()=>{ if(tlAsk()) share(list.map((r,i)=> [r, i]), sm); };
   if($('bShare')) $('bShare').onclick = shareAll;
