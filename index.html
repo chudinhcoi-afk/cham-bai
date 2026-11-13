@@ -1064,7 +1064,7 @@ async function camStart(){
     const tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
     if(caps.torch){ const b = $('bTorch'); b.style.display = ''; let on = false; b.onclick = ()=>{ on = !on; tr.applyConstraints({advanced:[{torch:on}]}).catch(()=>{}); b.style.background = on ? 'var(--gold)' : ''; }; }
     try{ if(caps.focusMode && caps.focusMode.includes('continuous')) tr.applyConstraints({advanced:[{focusMode:'continuous'}]}); }catch(e){}
-    loopOn = true; lastSig = ''; sameCount = 0; tick();
+    loopOn = true; lastSig = ''; sameCount = 0; vote = {k:'', a:[]}; faintCap = false; tick();
   }catch(e){ hint('Chưa được phép dùng camera', 'Hãy cho phép camera cho trang này, hoặc dùng nút “Chọn ảnh”.'); }
 }
 function camStop(){ loopOn = false; if(stream){ stream.getTracks().forEach(t=> t.stop()); stream = null; $('vid').srcObject = null; } }
@@ -1104,11 +1104,14 @@ function tick(){
   const f = readFrame(cx.getImageData(0, 0, work.width, work.height));
   if(!f.ok){ hint(f.why[0], f.why[1]); drawQuad(f.corners || null, 1/k, '#d0302b'); lastSig = ''; sameCount = 0; setTimeout(tick, f.corners ? 250 : 100); return; }
   sameCount = f.sig===lastSig ? sameCount + 1 : 0; lastSig = f.sig;
+  // phiếu tô nhạt / ảnh hơi mờ: ô sát ngưỡng làm kết quả đổi qua lại giữa các khung hình nên không bao giờ có 2 lần đọc liền nhau giống hệt → bỏ phiếu theo nhiều khung
+  const fv = sigVote(vote, f.kind === 'ws' ? 'w' + f.r.id : 'e' + (f.ex ? f.ex.id : '') + '/' + f.r.made, f.sig);
+  if(!sameCount && fv){ lastSig = fv; sameCount = 1; faintCap = true; }
   // phần họ tên, mã bài (trên khung ~27–36 mm) còn ngoài khung hình: nhắc lùi máy, chờ tối đa 1,5 giây rồi vẫn chấm
   const hn = hdrNeed(f, work.width, work.height);
   if(hn){ if(!hdrWait) hdrWait = Date.now();
     if(Date.now() - hdrWait < (hn === 2 ? 4000 : 1500)){ drawQuad(f.corners, 1/k, '#e0b030'); hint('Lùi máy ra một chút', 'Cho thấy cả phần họ tên, mã bài phía trên khung — để ảnh gửi phụ huynh có tên.'); setTimeout(tick, 50); return; } }
-  drawQuad(f.corners, 1/k, sameCount ? '#12a150' : '#e0b030'); hint(sameCount ? 'Đang chấm…' : 'Đã thấy phiếu — giữ yên…', esc(f.label));
+  drawQuad(f.corners, 1/k, sameCount ? '#12a150' : '#e0b030'); hint(sameCount ? (faintCap ? 'Phiếu tô nhạt — đang chấm…' : 'Đang chấm…') : 'Đã thấy phiếu — giữ yên…', faintCap ? 'Câu tô nhạt sẽ được đánh dấu để thầy cô xem lại' : esc(f.label));
   // chấm nhanh mà vẫn chắc: 2 lần đọc ảnh thu nhỏ giống hệt nhau + lần đọc ảnh gốc phải ra đúng như vậy (3 lần khớp — như trước, bớt một lượt chờ)
   if(sameCount >= 1){ requestAnimationFrame(()=> setTimeout(capture, 0)); return; }
   setTimeout(tick, 50);
@@ -1128,13 +1131,20 @@ function hdrNeed(f, W, H){   // 0 = đủ phần họ tên; 1 = (phiếu cũ) ư
   if(t.hm || (t.name && hmTests().has(t.name))) return 2;
   return [[12, -34], [WAK.W - 12, -34]].every(([X, Y])=>{ const [x, y] = r.mapMm(X, Y); return x >= 0 && x < W && y >= 0 && y < H; }) ? 0 : 1; }
 const hdrInView = (f, W, H)=> hdrNeed(f, W, H) === 0;
+/* V22.0: bỏ phiếu nhiều khung hình cho phiếu tô nhạt — giữ 8 lần đọc gần nhất của CÙNG một phiếu (cùng mã bài / cùng đề + mã đề);
+   kết quả nào lặp lại ≥ 2 lần trong ≥ 3 khung (không cần liền nhau) thì chấm theo kết quả đó; đủ 8 khung mà vẫn chưa có thì chấm theo khung mới nhất.
+   Ảnh gốc vẫn đọc lại ở capture(); câu tô nhạt, tô mờ vẫn vào danh sách chấm tay như trước. */
+let vote = {k:'', a:[]}, faintCap = false;
+function sigVote(V, key, sig){ if(V.k !== key){ V.k = key; V.a = []; } V.a.push(sig); if(V.a.length > 8) V.a.shift();
+  if(V.a.length < 3) return null; const c = new Map(); V.a.forEach(x=> c.set(x, (c.get(x) || 0) + 1)); let best = null, n = 0; c.forEach((v, x)=>{ if(v > n || (v === n && x === sig)){ best = x; n = v; } });
+  return n >= 2 ? best : V.a.length >= 8 ? sig : null; }
 let capMiss = 0;   // số lần ảnh gốc đọc khác ảnh thu nhỏ liên tiếp (ô tô sát ngưỡng): lần thứ 2 thì lấy kết quả ảnh gốc (rõ hơn), ô chưa chắc vẫn báo để chấm tay
 function capture(){
   const v = $('vid'), full = document.createElement('canvas'); full.width = v.videoWidth; full.height = v.videoHeight; const cx = full.getContext('2d'); cx.drawImage(v, 0, 0);
   const f = readFrame(cx.getImageData(0, 0, full.width, full.height));
   if(!f.ok){ lastSig = ''; sameCount = 0; setTimeout(tick, 60); return; }
   if(f.sig !== lastSig && capMiss < 1){ capMiss++; lastSig = ''; sameCount = 0; setTimeout(tick, 30); return; }
-  capMiss = 0; hdrWait = 0; showShot(full, f);
+  capMiss = 0; hdrWait = 0; vote = {k:'', a:[]}; faintCap = false; showShot(full, f);
 }
 /* ===== NHẬN XÉT THEO 3 GIỌNG: Nghiêm khắc · Ôn hoà · Tích cực — phần mềm tự chọn theo bài làm; gộp ý trong 3 bong bóng (4 nếu có so sánh lớp) =====
    qs: [{n: số câu in trên đề, part:'TN'|'DS'|'TLN', ok, blank, sub, subBad, md:'NB'|'TH'|'VD'|'VDC'|'', dg: tên dạng, pt: điểm tối đa, got: điểm đạt}] */
