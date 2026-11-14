@@ -6,8 +6,10 @@ import json, sys, math, random
 import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont
 
-FONT = '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'
-FONTB = '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'
+import os
+_LIB = '/usr/share/fonts/truetype/liberation/LiberationSans-%s.ttf'; _MAC = '/System/Library/Fonts/Supplemental/Arial%s.ttf'   # Linux: Liberation; máy Mac: Arial
+FONT = _LIB % 'Regular' if os.path.exists(_LIB % 'Regular') else _MAC % ''
+FONTB = _LIB % 'Bold' if os.path.exists(_LIB % 'Bold') else _MAC % ' Bold'
 
 def id_bits(i):
     b = [1]; o = 0

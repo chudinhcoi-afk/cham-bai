@@ -1,5 +1,5 @@
 // in ra hình học phiếu (mm) cho bộ vẽ phiếu giả
-const m = require(process.argv[2] || './omr_orig.js');
+const m = require(require('path').resolve(process.argv[2] || './omr_orig.js'));
 const spec = JSON.parse(process.argv[3]);   // {id, v, tn:[keys], ds:[[...]], tln:[keys]}
 const rows = [];
 (spec.tn||[]).forEach((k,i)=> rows.push({lab:String(i+1), n:4, key:k, pt:0.25}));
