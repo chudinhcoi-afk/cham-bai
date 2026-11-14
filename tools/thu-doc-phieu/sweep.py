@@ -28,6 +28,7 @@ def cases(gpath, n, kind, seed0=0):
                     key = ''.join(rows[k]['key'] for k in ks)
                     # học sinh tô đáp số ngẫu nhiên đúng/sai, ghi từ cột trái
                     ans = key if R.random() < .5 else R.choice(['12','-3','0,5','7','250','-1,5','9','48'])
+                    if kind == 'comma': ans = key if R.random() < .7 else R.choice(['16,5','2,25','-1,5','0,75','12,5','-0,5'])
                     for i, k in enumerate(ks):
                         if i < len(ans):
                             o = rows[k]['o']; j = o.index(ans[i]) if ans[i] in o else None
@@ -44,6 +45,9 @@ def cases(gpath, n, kind, seed0=0):
                 lvl = kind if kind in ('dark','faint') else R.choice(['dark','pencil','faint']) if kind=='sparse' else R.choice(['dark','dark','pencil','faint'])
                 gray = {'dark':R.uniform(20,70),'pencil':R.uniform(70,120),'faint':R.uniform(120,165)}[lvl]
                 if kind == 'veryfaint': gray = R.uniform(160, 195)
+                if kind == 'comma': gray = R.uniform(20, 110)
+                if kind == 'comma' and v in ',-':   # ô dấu phẩy / dấu trừ học sinh hay tô nhẹ tay, chỉ chấm một chấm nhỏ
+                    sp['fills'].append([k, j, R.uniform(90, 175), R.uniform(.15, .55)]); continue
                 sp['fills'].append([k, j, gray, R.uniform(.35,.6) if kind=='partial' else R.uniform(.6,1.0)])
         out.append((sp, truth))
     return out
@@ -52,7 +56,7 @@ def evaluate(mod, gpath, items, workers=8):
     def one(it):
         sp, truth = it; arr, MS = render_sheet(g, sp); img = photo(arr, MS, sp); r = run(mod, gpath, img); return sp, truth, r
     res = list(ThreadPoolExecutor(workers).map(one, items))
-    st = {'sheets':len(res), 'notfound':0, 'wrong':0, 'blank_as_mark':0, 'mark_missed':0, 'review':0, 'rows':0}
+    st = {'sheets':len(res), 'notfound':0, 'wrong':0, 'blank_as_mark':0, 'mark_missed':0, 'review':0, 'rows':0, 'tln':0, 'tln_review':0, 'tln_wrong':0}
     for sp, truth, r in res:
         if not r['ok']: st['notfound'] += 1; continue
         for p in r['picks']:
@@ -61,6 +65,15 @@ def evaluate(mod, gpath, items, workers=8):
             if p['st']=='ok' and t=='': st['blank_as_mark'] += 1
             elif p['st']=='blank' and t!='': st['mark_missed'] += 1
             elif p['st']=='ok' and p['v']!=t: st['wrong'] += 1
+        # theo CÂU trả lời ngắn: đọc ra cả đáp số (ghép các cột) có đúng bài học sinh không
+        grp = {}
+        for p in r['picks']:
+            row = g['rows'][p['k']]
+            if row.get('t'): grp.setdefault(row['g'], []).append(p)
+        for gk, ps in grp.items():
+            st['tln'] += 1; t = ''.join(truth.get(p['k'], '') for p in ps)
+            if any(p['st'] in ('weak','multi') for p in ps): st['tln_review'] += 1
+            elif ''.join(p['v'] for p in ps if p['st']=='ok') != t: st['tln_wrong'] += 1
     return st, res
 if __name__ == '__main__':
     mod, gpath, kind, n = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])

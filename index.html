@@ -244,7 +244,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 04/11l · đọc phiếu v5</p>
+    <p class="ver">MBP Chấm bài · bản 14/11 (V22.2) · đọc phiếu v6</p>
   </section>
 
   <section class="view" id="v-res">
@@ -293,6 +293,29 @@ function sameShortAnswer(hs, key){
   if(isNum(a) && isNum(b)) return Math.abs(num(a) - num(b)) < 1e-9;
   return a===b;
 }
+// V22.2 (14/11): TRẢ LỜI NGẮN — ghép cả câu thành MỘT số viết đúng dạng rồi mới quyết, không quyết riêng từng cột.
+// Học sinh hay tô ô dấu phẩy / dấu trừ rất nhẹ (chỉ chấm một chấm): cột đó bị báo “tô mờ” hoặc bị bỏ qua, các cột còn lại ghép thành 165 thay cho 16,5.
+// Mà đáp số không thể bỏ cách cột (1 6 _ 5), nên nếu trong các cách đọc các cột chưa chắc chỉ có ĐÚNG MỘT cách cho ra số hợp lệ thì nhận cách đó.
+// cols: mỗi cột {st, i, i2, s:[điểm từng ô], o:[kí tự từng ô]}; lo: mức nhô lên tối thiểu (so với trung vị cột) để ô nhạt “nổi hẳn” (gấp ratio lần ô kế tiếp) được tính là có thể đã tô.
+// Trả về chỉ số ô chọn cho từng cột (−1 = để trống), hoặc null nếu không cần / không thể quyết (giữ nguyên, giáo viên chấm tay).
+function tlnJoin(vs, lead){ let s = '', gap = false; for(const v of vs){ if(!v){ if(s || !lead) gap = true; continue; } if(gap) return null; s += v; } return s; }   // cột trống kẹp giữa: vô lý. lead: cho phép trống cột đầu (phiếu giữa kỳ chấm bỏ qua ô trống, có em viết lệch phải); khung trả lời thì phải ghi từ cột trái như wakGrade
+function tlnValid(s){ return s === '' || /^-?\d+(,\d+)?$/.test(s); }   // để trống cả câu cũng là một cách đọc hợp lệ
+function tlnTop(c){ const idx = c.s.map((_, i)=> i).sort((a, b)=> c.s[b] - c.s[a]), a = idx[0], b = idx[1], md = c.s[idx[idx.length >> 1]] || 0;   // so phần NHÔ LÊN trên nền của chính cột (phiếu giữa kỳ: điểm ô trống chưa trừ chữ in)
+  return {a, b, s1:(c.s[a] || 0) - md, s2:b == null ? 0 : c.s[b] - md}; }
+function tlnResolve(cols, lo, ratio, lead){
+  if(cols.every(c=> c.st === 'ok' || c.st === 'blank') && tlnJoin(cols.map(c=> c.st === 'ok' ? c.o[c.i] : ''), lead) != null) return null;   // đã liền mạch: giữ nguyên
+  const cand = cols.map(c=>{ if(c.st === 'ok') return [c.i];
+    const {a, b, s1, s2} = tlnTop(c);
+    if(c.st === 'multi') return [c.i, c.i2 != null ? c.i2 : b];
+    const L = [-1]; if(c.st === 'weak' || (s1 >= lo && s1 >= (ratio || 3)*Math.max(s2, 0.01))) L.push(a);
+    if(c.st === 'weak' && b != null && s2 >= Math.max(lo, 0.4*s1)) L.push(b);
+    return L; });
+  let hit = null, n = 0; const acc = [];
+  const rec = c=>{ if(n > 1) return; if(c === cols.length){ const s = tlnJoin(acc.map((i, j)=> i < 0 ? '' : cols[j].o[i]), lead); if(s != null && tlnValid(s)){ n++; hit = acc.slice(); } return; }
+    for(const i of cand[c]){ acc.push(i); rec(c + 1); acc.pop(); } };
+  rec(0); return n === 1 ? hit : null;
+}
+function tlnGap(cols){ let seen = false, gap = -1; for(let j = 0; j < cols.length; j++){ if(cols[j].st === 'ok'){ if(gap >= 0) return gap; seen = true; } else if(seen && gap < 0) gap = j; } return -1; }   // cột trống kẹp giữa hai cột đã tô
 function omrGrayFromImageData(img){
   const {width:w, height:h, data} = img;
   const g = new Uint8Array(w*h);
@@ -580,6 +603,10 @@ function omrReadImageData(img, counts){
     const sc = groupScores(g, rob);
     let r = omrPickGroupT(g, sc, T);
     if(rob && r.state === 'blank'){ const o = sc.slice().sort((a, b)=> b - a); const o1 = o[1] || 0; if(o[0] >= 0.07 && o[0] - o1 >= 0.055 && o[0] >= 1.35*Math.max(o1, 0.02)) r = {v:'', state:'weak', i:sc.indexOf(o[0])}; }   // có một ô nhỉnh hẳn lên nhưng còn nhạt: báo “tô mờ” để giáo viên chấm tay, không coi là bỏ trống
+    return emit(g, r, label);
+  };
+  const emit = (g, r, label)=>{
+    if(r.gap || r.sign){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: ${r.gap ? 'bỏ trống cột giữa đáp số' : 'ô dấu trừ tô nhạt'}, xem lại`); return r; }
     if(r.state==='ok') marks.push({b:g[r.i], c:'ok'});
     else if(r.state==='multi'){ marks.push({b:g[r.i], c:'bad'}); marks.push({b:g[r.i2], c:'bad'}); warnings.push(`${label}: tô nhiều hơn 1 ô`); }
     else if(r.state==='weak'){ marks.push({b:g[r.i], c:'weak'}); warnings.push(`${label}: tô mờ, chưa chắc`); }
@@ -599,7 +626,14 @@ function omrReadImageData(img, counts){
   const tln = [], tlnSel = [];
   for(let q=0;q<Math.min(nTLN,6);q++){
     let s = '', bad = null; const sel = [];
-    L.p3[q].forEach((g,ci)=>{ const r = pick(g, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; sel.push(r.state==='ok' ? r.i : -1); if(r.state==='weak' || r.state==='multi') bad = r.state; });
+    // V22.2: ghép cả câu (tlnResolve) — ô dấu phẩy / dấu trừ tô nhẹ không còn làm 16,5 thành 165
+    const cols = L.p3[q].map(g=>{ const sc = groupScores(g); return {g, sc, r:omrPickGroupT(g, sc, T)}; });
+    const C = cols.map(c=> ({st:c.r.state, i:c.r.i, i2:c.r.i2, s:c.sc, o:c.g.map(b=> b.v)})), hit = tlnResolve(C, 0.05, 2.5, true);
+    if(hit){ cols.forEach((c, j)=>{ const i = hit[j]; if(i >= 0 && C[j].st !== 'ok') c.r = {v:C[j].o[i], state:'ok', i, faint:true}; else if(i < 0 && C[j].st !== 'blank') c.r = {v:'', state:'blank', i:C[j].i}; });
+      const j0 = hit.findIndex((i, j)=> (i >= 0) !== (C[j].st === 'ok')); warnings.push(`Phần III câu ${q+1} cột ${j0 + 1}: có ô tô nhạt, máy ghép đáp số thành ${hit.map((i, j)=> i < 0 ? '' : C[j].o[i]).join('') || '(để trống)'}`); }
+    else { const gp = tlnGap(C), t0 = tlnTop(C[0]); if(gp >= 0 && C.every(c=> c.st === 'ok' || c.st === 'blank')) cols[gp].r = {v:'', state:'weak', i:C[gp].i, gap:true};   // bỏ cách cột mà không ghép được: báo để chấm tay
+      else if(C[0].st === 'blank' && C[0].o[t0.a] === '-' && t0.s1 >= 0.03 && t0.s1 >= 3*Math.max(t0.s2, 0.01) && C.slice(1).some(c=> c.st === 'ok')) cols[0].r = {v:'', state:'weak', i:t0.a, sign:true}; }   // ô dấu trừ tô nhạt: −2,5 hay 2,5 (phiếu này cho viết lệch phải) — không đoán dấu, để giáo viên xem
+    cols.forEach((c, ci)=>{ const r = emit(c.g, c.r, `Phần III câu ${q+1} cột ${ci+1}`); if(r.v) s += r.v; sel.push(r.state==='ok' ? r.i : -1); if(r.state==='weak' || r.state==='multi') bad = r.state; });
     tln.push(s); tlnSel.push(sel); if(bad) unsure.push({k:'tln', q, why:bad});
   }
   let ak = 0; try{ ak = omrReadAk(gray, w, h, map, loc); }catch(e){}
@@ -841,11 +875,23 @@ function wakRead(img, pickTest){
   const redCover = (x, y)=>{ const [cx, cy] = mapMm(x, y), [ex] = mapMm(x + 1.4, y), r = Math.max(2, Math.abs(ex - cx)); let n = 0, red = 0;
     for(let yy = Math.max(0, Math.floor(cy - r)); yy <= Math.min(h - 1, Math.ceil(cy + r)); yy += 1) for(let xx = Math.max(0, Math.floor(cx - r)); xx <= Math.min(w - 1, Math.ceil(cx + r)); xx += 1){ if((xx - cx)*(xx - cx) + (yy - cy)*(yy - cy) > r*r) continue; const j = (yy*w + xx) << 2; n++; if(D[j] > 120 && D[j] - Math.max(D[j+1], D[j+2]) > 85) red++; }
     return n ? red/n : 0; };
-  const picks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
+  const pks = test.rows.map((r,k)=>{ const O = wakOpts(r); let pk = wakPick2(O.map(v=> ({v})), sc[k], T);
     if(r.t && pk.state==='weak' && Math.max(...sc[k]) < Math.min(0.6*T.thr, 0.6*(T.fa || 1))) pk = {v:'', state:'blank', i:pk.i};   // trả lời ngắn: hàng chỉ có vết nhạt (chữ in, bụi) coi là để trống; V22.1: mốc theo mực in (≈0,12) — ngưỡng thr nay có sàn cao hơn nên không lấy 0,6·thr kẻo bỏ sót ô tô nhạt, tô không kín
     if(hasRed && !r.t && pk.state === 'blank'){ const cov = O.map((_, j)=>{ const q = G.pos(k, j); return redCover(q.x, q.y); }), mx = Math.max(...cov); if(mx > 0.2){ pk = {v:'', state:'weak', i:cov.indexOf(mx), red:true}; warn.push(`câu ${r.lab}: bị nét đỏ che, xem lại`); } }
+    return pk; });
+  // V22.2: trả lời ngắn — ghép cả câu (xem tlnResolve): ô dấu phẩy tô nhẹ không còn làm 16,5 thành 165
+  const tg = {}; test.rows.forEach((r, k)=>{ if(r.t) (tg[r.g] = tg[r.g] || []).push(k); });
+  Object.values(tg).forEach(ks=>{ ks.sort((a, b)=> a - b); const cols = ks.map(k=> ({st:pks[k].state, i:pks[k].i, i2:pks[k].i2, s:sc[k], o:wakOpts(test.rows[k])}));
+    const hit = tlnResolve(cols, Math.max(0.04, 0.5*T.floor), 2);
+    if(hit){ const now = hit.map((i, j)=> i < 0 ? '' : cols[j].o[i]).join('');
+      ks.forEach((k, j)=>{ const i = hit[j]; if(i >= 0 && cols[j].st !== 'ok') pks[k] = {v:cols[j].o[i], state:'ok', i, faint:true, fix:true}; else if(i < 0 && cols[j].st !== 'blank') pks[k] = {v:'', state:'blank', i:cols[j].i, fix:true}; });
+      warn.push(`câu ${test.rows[ks[0]].g}: có ô tô nhạt, máy ghép đáp số thành ${now || '(để trống)'}`); return; }
+    const gp = tlnGap(cols); if(gp >= 0 && cols.every(c=> c.st === 'ok' || c.st === 'blank')) pks[ks[gp]] = {v:'', state:'weak', i:cols[gp].i, gap:true}; });   // bỏ cách cột mà không ghép được: báo để chấm tay, không lặng lẽ chấm sai
+  const picks = test.rows.map((r,k)=>{ const pk = pks[k];
+    if(pk.fix){ return {k, pk, keyIdx:wakOpts(r).indexOf(r.key)}; }
+    if(pk.gap) warn.push(`câu ${r.lab}: bỏ trống cột giữa đáp số, xem lại`); else
     if(pk.state==='multi') warn.push(`câu ${r.lab}: tô nhiều ô`); else if(pk.state==='weak' && !pk.red) warn.push(`câu ${r.lab}: tô mờ`); else if(pk.faint) warn.push(`câu ${r.lab}: tô nhạt (nhận ${pk.v})`);
-    return {k, pk, keyIdx:O.indexOf(r.key)}; });
+    return {k, pk, keyIdx:wakOpts(r).indexOf(r.key)}; });
   const gr = wakGrade(test, picks);
   return {ok:true, id:loc.id, test, G, mapMm, pxPerMm:loc.pxPerMm, cands:loc.cands, picks, pts:gr.pts, max:gr.max, right:gr.right, total:gr.total, warn, corners:loc.corners, thr, comment:wakComment(test, picks, gr)};
 }

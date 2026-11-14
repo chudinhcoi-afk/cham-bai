@@ -1,7 +1,7 @@
 // trích các hàm/const cần cho đọc khung trả lời từ index.html
 const fs = require('fs');
 const src = fs.readFileSync(process.argv[2], 'utf8');
-const names = ['fmtVN','sameShortAnswer','omrGrayFromImageData','omrRedInk','omrGrayAuto','omrOtsu','omrInkGray','omrFindMarkerCandidates','omrSolveHomography','omrMeanGray','WAK','WAK_TO','wakOpts','wakTlnKey','wakTlnRows','wakGrade','WAK3','wakGeom3','WAK5','wakGeom45','wakGeom','wakLocate','wakRefine','wakScores','wakThreshold','wakPick2','wakRead','wakComment'];
+const names = ['fmtVN','sameShortAnswer','tlnJoin','tlnValid','tlnTop','tlnResolve','tlnGap','omrGrayFromImageData','omrRedInk','omrGrayAuto','omrOtsu','omrInkGray','omrFindMarkerCandidates','omrSolveHomography','omrMeanGray','WAK','WAK_TO','wakOpts','wakTlnKey','wakTlnRows','wakGrade','WAK3','wakGeom3','WAK5','wakGeom45','wakGeom','wakLocate','wakRefine','wakScores','wakThreshold','wakPick2','wakRead','wakComment'];
 let out = '';
 for(const n of names){
   const re = new RegExp('^(function '+n+'\\(|const '+n+' = )', 'm'); const m = re.exec(src); if(!m){ console.error('missing', n); continue; }
