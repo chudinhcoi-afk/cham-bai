@@ -1,6 +1,6 @@
 {
-  "name": "MBP Chấm bài",
-  "short_name": "MBP Chấm",
+  "name": "MB Chấm",
+  "short_name": "MB Chấm",
   "description": "Chấm bài kiểm tra MathBankPro bằng camera điện thoại",
   "start_url": "./",
   "scope": "./",

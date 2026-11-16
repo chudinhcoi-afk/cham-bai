@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>MBP Chấm bài</title>
+<title>MB Chấm</title>
 <style>
 :root{--navy:#0b8f84;--teal:#14b8a6;--violet:#7c5cff;--gold:#f97a1f;--ink:#1b2433;--mut:#667085;--line:#dbe7ea;--bg:#eef7f6;--ok:#12a150;--bad:#e0383e}   /* V22.3: màu tươi — xanh ngọc (chính), tím (đề định kỳ), cam (nhấn, bài kiểm tra) */
 *{box-sizing:border-box}
@@ -227,7 +227,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
 </style>
 </head>
 <body>
-<header><b>MBP Chấm bài</b><span id="hdInfo"></span></header>
+<header><b>MB Chấm</b><span id="hdInfo"></span></header>
 <main>
   <section class="view on" id="v-scan">
     <div class="cam">
@@ -269,7 +269,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 16/11 (V22.4) · đọc phiếu v6</p>
+    <p class="ver">MB Chấm · bản 16/11 (V22.5) · đọc phiếu v6</p>
   </section>
 
   <section class="view" id="v-res">
@@ -1949,7 +1949,7 @@ function classSummaryCanvas(list, ex, title, sub){
     const ez = S.easy.filter(o=> o.wrong + o.blank);
     block('#e3eeff', '#2f6fdf', '💡 Câu dễ nhưng vẫn sai', ez.length ? ez.map(o=> '• ' + o.label + (o.md ? ' (' + MDN2[o.md] + ')' : ' (đa số lớp làm đúng)') + ': ' + (o.wrong + o.blank) + '/' + o.n + ' bài sai') : ['Không có — các câu dễ cả lớp đều làm đúng. 👏']); }
   block('#f1e6ff', '#8a4fd6', '🎯 Hướng khắc phục', S.tips.length ? S.tips.map(t=> '• ' + t) : ['• Duy trì nề nếp ôn bài như hiện nay.']);
-  x.fillStyle = '#9aa0b3'; x.font = `500 24px ${F}`; x.fillText('MBP Chấm bài · ' + dayVN(dayKey(Date.now())) + ' · nhận xét tự động, không nêu tên học sinh', pad, y + 6); y += 34;
+  x.fillStyle = '#9aa0b3'; x.font = `500 24px ${F}`; x.fillText('MB Chấm · ' + dayVN(dayKey(Date.now())) + ' · nhận xét tự động, không nêu tên học sinh', pad, y + 6); y += 34;
   const o = document.createElement('canvas'), B = 22; o.width = W + 2*B; o.height = Math.ceil(y) + 2*B; const ox = o.getContext('2d');   // khung vàng dày bao quanh
   ox.fillStyle = '#e0a800'; ox.fillRect(0, 0, o.width, o.height); ox.fillStyle = '#141c3a'; ox.fillRect(B - 6, B - 6, W + 12, Math.ceil(y) + 12); ox.drawImage(c, 0, 0, W, Math.ceil(y), B, B, W, Math.ceil(y)); return o; }
 const slugVN = t=> String(t).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
