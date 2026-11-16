@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#141c3a">
+<meta name="theme-color" content="#0fb5a6">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>MBP Chấm bài</title>
 <style>
-:root{--navy:#141c3a;--gold:#b8892b;--ink:#1c2233;--mut:#6b7286;--line:#e2e5ee;--bg:#f4f5f9;--ok:#12a150;--bad:#d0302b}
+:root{--navy:#0b8f84;--teal:#14b8a6;--violet:#7c5cff;--gold:#f97a1f;--ink:#1b2433;--mut:#667085;--line:#dbe7ea;--bg:#eef7f6;--ok:#12a150;--bad:#e0383e}   /* V22.3: màu tươi — xanh ngọc (chính), tím (đề định kỳ), cam (nhấn, bài kiểm tra) */
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;-webkit-tap-highlight-color:transparent}
 body{display:flex;flex-direction:column}
-header{background:var(--navy);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px}
+header{background:linear-gradient(115deg,#0fb5a6 0%,#2fa3d6 55%,#7c5cff 100%);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;display:flex;align-items:center;gap:10px}
 header b{font-size:1.1rem;letter-spacing:.01em}
 header span{margin-left:auto;font-size:.8rem;opacity:.8}
 main{flex:1;overflow:auto;position:relative}
@@ -25,7 +25,7 @@ nav button.on{color:var(--navy);box-shadow:inset 0 3px 0 var(--gold)}
 .view.on{display:block}
 .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:11px;padding:11px 14px;font-size:.95rem;font-weight:650;min-height:44px}
-.btn.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+.btn.pri{background:linear-gradient(135deg,#17c3b2,#0b8f84);border-color:#0b8f84;color:#fff}
 .btn.gold{background:var(--gold);border-color:var(--gold);color:#fff}
 .btn.wide{width:100%}
 .btn:disabled{opacity:.45}
@@ -49,27 +49,58 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 .miss .mb{flex:1;height:9px;border-radius:5px;background:#eef0f5;overflow:hidden}
 .miss .mb i{display:block;height:100%}
 .miss .mp{width:42px;text-align:right;font-weight:800;font-size:.9rem}
-.titem{padding:12px;border:1px solid var(--line);border-radius:14px;margin-top:10px;background:#fff;box-shadow:0 1px 3px rgba(20,28,58,.06)}
-.titem.cur{border-color:var(--gold);background:#fffaf0}
-.titem .test{padding:0;border:0}
+.titem{padding:10px 11px;border:1px solid var(--line);border-radius:12px;margin-top:8px;background:#fff;box-shadow:0 1px 2px rgba(20,28,58,.05);cursor:pointer}
+.titem.cur{border-color:var(--gold);background:#fff7ef}
+.titem .test{padding:0;border:0;gap:8px}
+.titem .test .id{padding:4px 7px;font-size:.85rem;background:#fff0e3}.titem.k-x .test .id{background:#efeaff}
+.titem.k-w{border-left:4px solid var(--gold)}.titem.k-x{border-left:4px solid var(--violet)}
+.titem .nm{font-size:.92rem;line-height:1.25}
+.titem .nm>span{display:block;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.titem .nm small{font-size:.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tfoot{display:flex;align-items:center;gap:6px;margin-top:8px}
+.tfoot .iinfo{flex:1;min-width:0;margin:0;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sbtn{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:36px;min-width:38px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:.86rem;font-weight:700}
+.sbtn.go{background:linear-gradient(135deg,#17c3b2,#0b8f84);border-color:#0b8f84;color:#fff}
+/* V22.3: danh sách kết quả gọn — ô tìm + một hàng lọc + chia theo thời gian */
+.rhead{position:sticky;top:0;z-index:5;background:var(--bg);margin:-14px -14px 0;padding:14px 14px 4px}
+.rhead .search{margin:0 0 8px}
+.chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}.chips::-webkit-scrollbar{display:none}
+.chips button{flex:1 0 auto;border:1px solid var(--line);background:#fff;border-radius:18px;padding:6px 8px;font:inherit;font-size:.82rem;font-weight:700;color:var(--mut)}
+.chips button.on{background:var(--violet);border-color:var(--violet);color:#fff}
+.chips button b{margin-left:4px;font-size:.72rem;opacity:.75}
+.dgh{font-size:.72rem;font-weight:800;color:var(--violet);letter-spacing:.04em;text-transform:uppercase;margin:14px 2px 2px}
+.rrow{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 11px;margin-top:6px;cursor:pointer}
+.rrow.orph{border-color:#f0a500;background:#fff8e6}
+.rrow.k-w{border-left:4px solid var(--gold)}.rrow.k-x{border-left:4px solid var(--violet)}
+.rrow .ic{flex:none;width:32px;height:32px;border-radius:9px;background:#fff0e3;display:flex;align-items:center;justify-content:center;font-size:1rem}.rrow.k-x .ic{background:#efeaff}.rrow.orph .ic{background:#ffe7c2}
+.rrow .tx{flex:1;min-width:0}
+.rrow .tx b{display:block;font-size:.92rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .tx small{display:block;color:var(--mut);font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rrow .sc{flex:none;text-align:right;line-height:1.2}
+.rrow .sc b{display:block;font-size:.9rem;color:var(--navy)}
+.rrow .sc small{display:block;font-size:.7rem;color:var(--mut)}
+.rrow .sc small.un{color:#d4600c;font-weight:700}.rrow .sc small.ok{color:#0f7a3d;font-weight:700}
+.rrow .who{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;font-size:.72rem;color:var(--mut)}
+.rrow .who button{border:1px solid #ecd9a8;background:#fffaf0;border-radius:14px;padding:3px 9px;font:inherit;font-size:.76rem;font-weight:600;color:#5a3c00}
 .titem .now{font-size:.72rem;font-weight:700;color:#fff;background:var(--gold);border-radius:20px;padding:3px 9px;white-space:nowrap}
 .acts{display:flex;gap:8px;margin-top:11px}
 .fab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;border:0;background:#fff;color:var(--ink);border-radius:12px;padding:0 10px;min-height:46px;font-size:.92rem;font-weight:700;box-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 3px 0 #d6dae6,0 5px 10px rgba(20,28,58,.14);transition:transform .06s,box-shadow .06s;white-space:nowrap}
 .fab:active{transform:translateY(3px);box-shadow:0 0 0 #d6dae6,0 1px 3px rgba(20,28,58,.2)}
-.fab.go{flex:1.5;background:linear-gradient(#22306a,#141c3a);color:#fff;box-shadow:0 3px 0 #0a0f24,0 6px 12px rgba(20,28,58,.3)}
+.fab.go{flex:1.5;background:linear-gradient(#17c3b2,#0b8f84);color:#fff;box-shadow:0 3px 0 #07685f,0 6px 12px rgba(11,143,132,.3)}
 .fab.del{flex:0 0 46px;color:var(--bad)}
 .fab.more{flex:0 0 46px;font-size:1.2rem}
 /* giao diện mới: thanh công cụ, ô tìm, mục chia theo trạng thái */
 .toolbar{display:flex;gap:8px;margin-bottom:10px}
-.toolbar .btn{min-height:52px;font-size:1rem;border-radius:14px}
+.toolbar .btn{min-height:52px;font-size:1rem;border-radius:14px}.toolbar .btn:not(.pri){background:#f1edff;border-color:#ddd3ff;color:#5b3fd6}
+.search:focus{outline:2px solid var(--teal);outline-offset:-1px}
 .search{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:.95rem;background:#fff;color:var(--ink);margin:2px 0 10px}
-.seg{display:flex;background:#e6e9f1;border-radius:13px;padding:3px;gap:3px;margin:0 0 4px;position:sticky;top:0;z-index:5}
+.seg{display:flex;background:#dcefec;border-radius:13px;padding:3px;gap:3px;margin:0 0 4px;position:sticky;top:0;z-index:5}
 .seg button{flex:1;border:0;background:none;border-radius:10px;padding:9px 2px;font-weight:700;font-size:.86rem;color:var(--mut);white-space:nowrap}
 .seg button.on{background:#fff;color:var(--navy);box-shadow:0 1px 3px rgba(20,28,58,.16)}
 .seg button b{display:inline-block;min-width:1.5em;margin-left:5px;padding:1px 6px;border-radius:10px;background:#d6dae6;color:var(--ink);font-size:.74rem}
 .seg button.on b{background:var(--gold);color:#fff}
 .pill{font-size:.72rem;font-weight:700;border-radius:20px;padding:3px 9px;white-space:nowrap;flex:none}
-.pill.todo{background:#eef0f7;color:var(--mut)}.pill.done{background:#fff1d6;color:#8a5a00}.pill.sent{background:#dcf7e6;color:#0f7a3d}
+.pill.todo{background:#edf1f5;color:var(--mut)}.pill.done{background:#ffecdc;color:#b4500a}.pill.sent{background:#d6f5ef;color:#0a7a70}
 .iinfo{font-size:.84rem;color:var(--mut);margin-top:6px}.iinfo b{color:var(--ink)}
 .prog{height:6px;border-radius:4px;background:#eef0f5;overflow:hidden;margin-top:6px}.prog i{display:block;height:100%;background:var(--ok)}
 .empty{text-align:center;color:var(--mut);font-size:.9rem;line-height:1.5;padding:28px 16px;background:#fff;border:1px dashed var(--line);border-radius:14px;margin-top:10px}
@@ -77,11 +108,10 @@ textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px
 details.help{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 details.help summary{color:var(--mut);font-size:.88rem;font-weight:600}
 .res{position:relative}.res .snt{position:absolute;top:6px;right:6px;background:#12a150;color:#fff;font-size:.7rem;font-weight:700;font-style:normal;border-radius:12px;padding:2px 8px}
-.grp .sc .snt{display:block;font-size:.72rem;color:#0f7a3d;font-weight:700}
 .mrow{display:flex;align-items:center;gap:8px;padding:9px 0;border-top:1px solid var(--line)}.mlist .mrow:first-child{border-top:0}
 .mrow .tx{flex:1;min-width:0}.mrow .tx b{display:block}.mrow .tx small{display:block;color:var(--mut);font-size:.78rem}
 .mrow .btn{min-height:40px;padding:8px 11px;flex:none}
-nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-radius:50%;background:linear-gradient(#22306a,#141c3a);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(20,28,58,.35);border:3px solid #fff}
+nav button[data-v="scan"] i{width:50px;height:50px;margin:-20px auto 1px;border-radius:50%;background:linear-gradient(135deg,#14b8a6,#7c5cff);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(20,28,58,.35);border:3px solid #fff}
 #sheet{position:fixed;inset:0;background:rgba(10,14,30,.5);display:none;align-items:flex-end;z-index:70}
 .tlr{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}.tlr:first-of-type{border-top:0}.tlr img{flex:none;width:96px;height:56px;object-fit:cover;object-position:top;border-radius:8px;border:1px solid var(--line)}.tlr .tx{flex:1;min-width:0}.tlr .tx b{display:block;font-size:.92rem}.tlr .tx small{display:block;color:var(--mut);font-size:.76rem}.tlr .tlIn{flex:0 0 64px;width:64px;text-align:center;font-size:1.15rem;font-weight:800;padding:8px 4px}.tbL{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--mut);font-size:.8rem}.tbIn{flex:0 0 56px;width:56px;text-align:center;font-size:.95rem;font-weight:700;padding:4px}.tlr.cur{background:#fff6dc;border-radius:10px;box-shadow:0 0 0 2px #f0a500}.tlr .tot{color:var(--ink,#141c3a);font-weight:700}
 .sttL{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:.85rem;font-weight:700;color:var(--ink,#141c3a)}.sttL input{width:112px;font-size:1.1rem;font-weight:800;text-align:center;padding:4px}.sttL span{font-weight:400;color:var(--mut);font-size:.74rem}.sttL em{color:var(--bad);font-style:normal}
@@ -156,13 +186,14 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
 .fxl small{display:block;font-weight:500;color:#9a5b00;font-size:.72rem}
 .fxb{min-width:42px;min-height:42px;border-radius:50%;border:2px solid #c9ced9;background:#fff;font-weight:800;font-size:1rem;color:var(--ink);box-shadow:0 2px 0 #d6dae6}
 .fxb.no{border-radius:21px;font-size:.78rem;padding:0 9px;font-weight:700}
-.fxb.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 2px 0 #0a0f24}
+.fxb.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 2px 0 #07685f}
 .warn{color:#9a5b00;font-size:.84rem}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-.res{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.res img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block}
-.res div{padding:7px 9px;display:flex;align-items:center;gap:6px;font-weight:700}
-.res div span{margin-left:auto;font-weight:500;color:var(--mut);font-size:.8rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.res{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer}
+.res img{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:top;display:block}
+.res div{padding:5px 7px 0;display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-weight:800;font-size:.9rem}
+.res small{display:block;padding:1px 7px 6px;color:var(--mut);font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res .snt{top:4px;right:4px;padding:1px 6px}
 .test{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .test:first-of-type{border-top:0}
 .test .id{background:var(--navy);color:#fff;border-radius:8px;padding:5px 9px;font-weight:700;font-size:.9rem;white-space:nowrap}
@@ -186,17 +217,9 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
 .tb tr.bad td{background:#fff4f2}
 .tb b{color:var(--bad)}
 .test input[type=radio]{width:20px;height:20px}
-.grp{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
-.grp .ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:#eef0f7;flex:none}
-.grp .tx{flex:1;min-width:0}
-.grp .tx b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:.98rem;line-height:1.25;overflow:hidden}
-.grp .tx small{color:var(--mut);font-size:.82rem}
-.grp .sc{text-align:right;flex:none}
-.grp .sc b{display:block;font-size:1.15rem;color:var(--navy)}
-.grp .sc small{color:var(--mut);font-size:.74rem}
 .sec{font-size:.78rem;font-weight:700;letter-spacing:.06em;color:var(--mut);text-transform:uppercase;margin:14px 2px 8px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-.stats div{background:#f4f5f9;border-radius:10px;padding:8px 4px;text-align:center}
+.stats div{background:#e3f6f3;border-radius:10px;padding:8px 4px;text-align:center}.stats div:nth-child(2){background:#efeaff}.stats div:nth-child(3){background:#ddf5e6}.stats div:nth-child(4){background:#ffecdc}
 .stats b{display:block;font-size:1.15rem}
 .stats small{color:var(--mut);font-size:.72rem}
 </style>
@@ -244,10 +267,11 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MBP Chấm bài · bản 14/11 (V22.2) · đọc phiếu v6</p>
+    <p class="ver">MBP Chấm bài · bản 16/11 (V22.3) · đọc phiếu v6</p>
   </section>
 
   <section class="view" id="v-res">
+    <div class="rhead" id="resTop"><input class="search" id="rSearch" type="search" placeholder="🔍 Tìm lớp, tên học sinh, ngày, mã bài…"><div class="chips" id="rChips"></div></div>
     <div id="resList"></div>
     <div id="resDetail" style="display:none">
       <div class="rtop"><button class="btn" id="bBack">‹ Các lần chấm</button><button class="btn" id="bMore">⋯ Thêm</button></div>
@@ -1588,7 +1612,11 @@ async function takeCode(raw){   // trả về true nếu đã nạp xong một �
   try{ const ex = parseExam(await unpack(s)); if(ex){ addExam(ex); return true; } }catch(e){} toast('Mã nhận được bị lỗi, hãy quét lại.'); return false;
 }
 /* ===== THẺ ĐỀ (giao diện 02/11h): mỗi đề thi một thẻ; bài kiểm tra gộp theo lượt in (cùng tên) — chia 3 mục: chưa chấm / đã chấm (còn ảnh chưa gửi) / đã gửi ===== */
-let tTab = ls('mbpscan_ttab', 'todo'), rTab = ls('mbpscan_rtab', 'unsent'), rKind = ls('mbpscan_rkind', 'all'), tQ = '', tMore = 0;
+let tTab = ls('mbpscan_ttab', 'todo'), rF = ls('mbpscan_rf', 'all'), rQ = '', rMore = 0, rScroll = 0, tQ = '', tMore = 0;
+const fold = s=> String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');   // tìm không dấu: "kiem tra" khớp "Kiểm tra"
+const dShort = t=>{ const d = new Date(t), p = x=> String(x).padStart(2, '0'); return p(d.getDate()) + '/' + p(d.getMonth() + 1) + (d.getFullYear() !== new Date().getFullYear() ? '/' + String(d.getFullYear()).slice(2) : ''); };
+const dGroup = t=>{ const d = new Date(t), d0 = new Date(); d0.setHours(0, 0, 0, 0); const k = Math.round((d0 - new Date(d.getFullYear(), d.getMonth(), d.getDate()))/864e5);
+  return k <= 0 ? 'Hôm nay' : k === 1 ? 'Hôm qua' : k < 7 ? '7 ngày qua' : 'Tháng ' + (d.getMonth() + 1) + '/' + d.getFullYear(); };
 const idRange = ids=>{ const a = ids.slice().sort((x, y)=> x - y), out = []; for(let i = 0; i < a.length; i++){ let j = i; while(j + 1 < a.length && a[j + 1] === a[j] + 1) j++; out.push(j > i ? a[i] + '–' + a[j] : String(a[i])); i = j; } return out.join(', '); };
 function items(){ const out = [];
   exams.forEach(e=> out.push({kind:'exam', key:e.id, title:e.title || 'Đề thi', sub:'Đề thi · ' + Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', res:xres[e.id] || [], total:e.order.length, at:e.at || 0}));
@@ -1597,12 +1625,13 @@ function items(){ const out = [];
   out.forEach(it=>{ it.st = !it.res.length ? 'todo' : it.res.every(r=> r.sent) ? 'sent' : 'done'; it.last = it.res.length ? Math.max(...it.res.map(r=> r.at)) : it.at; });
   return out; }
 function itemCard(it, i){ const n = it.res.length, sent = it.res.filter(r=> r.sent).length, cur = it.kind==='exam' ? (mode==='exam' && it.key===activeExam) : (mode==='ws' && pinTest != null && it.ids.includes(pinTest));
+  // V22.3: thẻ gọn (~100px thay vì ~155px) — bỏ thanh tiến độ, nút nhỏ cùng hàng; chạm vào thẻ = xem kết quả (chưa chấm thì xem đáp án)
   const pill = it.st==='todo' ? '<span class="pill todo">Chưa chấm</span>' : it.st==='sent' ? '<span class="pill sent">✓ Đã gửi</span>' : '<span class="pill done">' + (n - sent) + ' chưa gửi</span>';
-  const info = n ? '<div class="iinfo">Đã chấm <b>' + n + (it.total ? '/' + it.total : '') + '</b> bài · TB <b>' + fmtVN(avgOf(it.res)) + '</b> · đã gửi <b>' + sent + '/' + n + '</b>' + (it.st !== 'todo' ? ' · ' + dayVN(dayKey(it.last)) : '') + '</div><div class="prog"><i style="width:' + Math.round(100*sent/n) + '%"></i></div>' : '';
-  return '<div class="titem' + (cur ? ' cur' : '') + '" data-i="' + i + '"><div class="test"><span class="id">' + (it.kind==='exam' ? '🎓' : '📝') + '</span><div class="nm">' + esc(it.title) + '<small>' + esc(it.sub) + '</small></div>' + pill + '</div>' + info
-    + '<div class="acts"><button class="fab go" data-a="go">📷 Chấm</button>' + (n ? '<button class="fab" data-a="res">📑 Kết quả</button>' : '<button class="fab" data-a="view">👁 Đáp án</button>') + '<button class="fab more" data-a="more" aria-label="Thêm">⋯</button></div></div>'; }
+  const info = n ? '<b>' + n + (it.total ? '/' + it.total : '') + '</b> bài · TB <b>' + fmtVN(avgOf(it.res)) + '</b> · ' + dShort(it.last) : it.at ? 'Nạp đáp án ' + dShort(it.at) : 'Chưa chấm bài nào';
+  return '<div class="titem k-' + (it.kind==='exam' ? 'x' : 'w') + (cur ? ' cur' : '') + '" data-i="' + i + '"><div class="test"><span class="id">' + (it.kind==='exam' ? '🎓' : '📝') + '</span><div class="nm"><span>' + esc(it.title) + '</span><small>' + esc(it.sub) + '</small></div>' + pill + '</div>'
+    + '<div class="tfoot"><div class="iinfo">' + info + '</div><button class="sbtn go" data-a="go">📷 Chấm</button>' + (n ? '<button class="sbtn" data-a="res" aria-label="Kết quả">📑</button>' : '<button class="sbtn" data-a="view" aria-label="Xem đáp án">👁</button>') + '<button class="sbtn" data-a="more" aria-label="Thêm">⋯</button></div></div>'; }
 function itemGo(it){ if(it.kind==='exam') return startGrade('exam', it.key); if(it.ids.length === 1) return startGrade('ws', it.ids[0]); pinTest = null; lsSet('mbpscan_pin', null); setMode('ws'); go('scan'); }
-function itemRes(it){ if(!it.res.length) return; const r = it.res.reduce((a, b)=> b.at > a.at ? b : a); rv = it.kind==='exam' ? {kind:'x', key:it.key} : {kind:'w', key:wKey(r)}; go('res'); $('v-res').parentElement.scrollTop = 0; }
+function itemRes(it){ if(!it.res.length) return; const r = it.res.reduce((a, b)=> b.at > a.at ? b : a); rv = it.kind==='exam' ? {kind:'x', key:it.key} : {kind:'w', key:wKey(r)}; rScroll = 0; go('res'); $('v-res').parentElement.scrollTop = 0; }
 function markSent(list, on){ const t = Date.now(); list.forEach(r=>{ if(on) r.sent = r.sent || t; else delete r.sent; }); saveResults(); saveX(); }
 function itemMore(it){ const sh = $('sheet'), n = it.res.length, uns = it.res.filter(r=> !r.sent).length;
   const rows = it.kind==='exam' ? '<div class="mrow"><div class="tx"><b>Đáp án đề thi</b><small>' + esc(it.sub) + '</small></div><button class="btn" data-a="view" data-id="' + esc(it.key) + '">👁 Xem</button><button class="btn" data-a="edit" data-id="' + esc(it.key) + '">✏ Sửa</button></div>'
@@ -1618,14 +1647,15 @@ function itemMore(it){ const sh = $('sheet'), n = it.res.length, uns = it.res.fi
     if(!confirm('Xoá đáp án ' + it.ids.length + ' mã bài (' + idRange(it.ids) + ')? Bài đã chấm vẫn giữ ở mục Kết quả.')) return; const S = new Set(it.ids); tests = tests.filter(t=> !S.has(t.id)); saveTests(); drawTests(); drawHeader(); }; }
 const EMPTY = {todo:'Không có đề nào đang chờ chấm.<br>Bấm <b>📷 Chấm bài</b> rồi chĩa camera vào phiếu có mã bài — app tự tải đáp án; hoặc <b>⬇ Nạp đáp án</b> bằng mã QR.', done:'Không có đề nào còn ảnh chưa gửi.', sent:'Chưa có đề nào gửi xong.<br>Gửi ảnh qua Zalo ở mục <b>Kết quả</b>, app tự đánh dấu “đã gửi”.'};
 function drawTests(){
-  const all = items(), q = tQ.trim().toLowerCase(), m = it=> !q || (it.title + ' ' + it.sub).toLowerCase().includes(q), cnt = {todo:0, done:0, sent:0};
+  // V22.3: đang tìm thì tìm trong CẢ 3 mục (không phải đoán đề nằm ở mục nào), tìm không dấu, khớp cả ngày chấm
+  const all = items(), q = fold(tQ.trim()), m = it=> !q || fold(it.title + ' ' + (it.ids ? 'ma bai ' + it.ids.join(' ') : '') + ' ' + dayVN(dayKey(it.last || it.at || 0))).includes(q), cnt = {todo:0, done:0, sent:0};
   all.forEach(it=>{ if(m(it)) cnt[it.st]++; });
-  $('tSeg').innerHTML = [['todo', 'Chưa chấm'], ['done', 'Đã chấm'], ['sent', 'Đã gửi']].map(([k, l])=> '<button data-t="' + k + '" class="' + (tTab===k ? 'on' : '') + '">' + l + '<b>' + cnt[k] + '</b></button>').join('');
-  $('tSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ tTab = b.dataset.t; lsSet('mbpscan_ttab', tTab); tMore = 0; drawTests(); });
-  const list = all.filter(it=> it.st===tTab && m(it)).sort((a, b)=> tTab==='todo' ? b.at - a.at : b.last - a.last), lim = 25 + tMore;
-  $('itemList').innerHTML = list.length ? list.slice(0, lim).map(itemCard).join('') + (list.length > lim ? '<button class="btn wide" id="bMoreT" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' đề</button>' : '')
-    : '<div class="empty">' + (q ? 'Không tìm thấy đề nào khớp “' + esc(tQ) + '”.' : EMPTY[tTab]) + '</div>';
-  $('itemList').querySelectorAll('.titem .fab').forEach(b=> b.onclick = ()=>{ const it = list[+b.closest('.titem').dataset.i], a = b.dataset.a;
+  $('tSeg').innerHTML = [['todo', 'Chưa chấm'], ['done', 'Đã chấm'], ['sent', 'Đã gửi']].map(([k, l])=> '<button data-t="' + k + '" class="' + (!q && tTab===k ? 'on' : '') + '">' + l + '<b>' + cnt[k] + '</b></button>').join('');
+  $('tSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ tTab = b.dataset.t; lsSet('mbpscan_ttab', tTab); tMore = 0; if(tQ){ tQ = ''; $('tSearch').value = ''; } drawTests(); });
+  const list = all.filter(it=> (q || it.st===tTab) && m(it)).sort((a, b)=> !q && tTab==='todo' ? b.at - a.at : b.last - a.last), lim = 25 + tMore;
+  $('itemList').innerHTML = (q && list.length ? '<p class="mut" style="margin:6px 2px 0;font-size:.78rem">' + list.length + ' đề khớp, tìm trong cả 3 mục</p>' : '') + (list.length ? list.slice(0, lim).map(itemCard).join('') + (list.length > lim ? '<button class="btn wide" id="bMoreT" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' đề</button>' : '')
+    : '<div class="empty">' + (q ? 'Không tìm thấy đề nào khớp “' + esc(tQ) + '”.' : EMPTY[tTab]) + '</div>');
+  $('itemList').querySelectorAll('.titem').forEach(el=> el.onclick = ev=>{ const it = list[+el.dataset.i], b = ev.target.closest('.sbtn'), a = b ? b.dataset.a : it.res.length ? 'res' : 'view';
     if(a==='go') itemGo(it); else if(a==='res') itemRes(it); else if(a==='view'){ if(it.kind==='exam') sheetKey('exam', it.key, false); else if(it.ids.length === 1) sheetKey('ws', it.ids[0], false); else itemMore(it); } else itemMore(it); });
   if($('bMoreT')) $('bMoreT').onclick = ()=>{ tMore += 25; drawTests(); };
 }
@@ -1797,10 +1827,10 @@ const wKey = r=> (r.name ? 'n' + r.name : r.id) + '@' + dayKey(r.at),   // cùng
       wList = key=> results.filter(r=> wKey(r)===key).sort((a,b)=> a.at - b.at);
 function groups(){
   const out = [];
-  exams.forEach(e=>{ const a = xres[e.id] || []; if(a.length) out.push({kind:'x', key:e.id, title:labels['x'+e.id] || e.title, sub:Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', n:a.length, sent:a.filter(r=> r.sent).length, total:e.order.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+  exams.forEach(e=>{ const a = xres[e.id] || []; if(a.length) out.push({kind:'x', key:e.id, title:labels['x'+e.id] || e.title, sub:Object.keys(e.variants).length + ' mã đề · ' + e.order.length + ' học sinh', n:a.length, sent:a.filter(r=> r.sent).length, total:e.order.length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at)), recs:a}); });
   const by = {}; results.forEach(r=> (by[wKey(r)] = by[wKey(r)] || []).push(r));
   Object.keys(by).forEach(key=>{ const a = by[key], id = a[0].id, t = pickTest(id), nm = a[0].name || (t && t.name) || 'Bài kiểm tra';
-    const ids = [...new Set(a.map(r=> r.id))].sort((x, y)=> x - y); out.push({kind:'w', key, title:labels['w'+key] || nm, sub:'Mã bài ' + idRange(ids), n:a.length, sent:a.filter(r=> r.sent).length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at))}); });
+    const ids = [...new Set(a.map(r=> r.id))].sort((x, y)=> x - y); out.push({kind:'w', key, title:labels['w'+key] || nm, sub:'Mã bài ' + idRange(ids), n:a.length, sent:a.filter(r=> r.sent).length, avg:avgOf(a), at:Math.max(...a.map(r=> r.at)), recs:a}); });
   return out.sort((a,b)=> b.at - a.at);
 }
 const fileName = (r, i)=>{ const d = new Date(r.at || Date.now()), p = x=> String(x).padStart(2, '0'), tm = p(d.getDate()) + '-' + p(d.getMonth()+1) + '_' + p(d.getHours()) + 'h' + p(d.getMinutes()) + 'm' + p(d.getSeconds());   // tên có ngày giờ chấm → không trùng ảnh đã gửi trước đó
@@ -1953,21 +1983,34 @@ function xRescue(k){ const a = xres[k] || [], sh = $('sheet'), ma = [...new Set(
   sh.classList.add('on'); sh.onclick = ev=>{ if(ev.target === sh) sheetClose(); }; $('xrClose').onclick = sheetClose; $('xrSave').onclick = ()=> a.slice().sort(sbdCmp).forEach((r, i)=> setTimeout(()=> download(r, i), i*250)); }
 function drawResults(){
   const gs = groups(); if(rv && !gs.some(g=> g.kind===rv.kind && g.key===rv.key)) rv = null;
-  $('resList').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
+  $('resList').style.display = $('resTop').style.display = rv ? 'none' : ''; $('resDetail').style.display = rv ? '' : 'none';
   if(!rv){
-    const card = g=> '<div class="grp" data-k="' + g.kind + '" data-key="' + esc(g.key) + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + dayVN(dayKey(g.at)) + ' · ' + esc(g.sub) + '</small></div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + '</b><small>bài · TB ' + fmtVN(g.avg) + '</small><span class="snt" style="' + (g.sent < g.n ? 'color:#8a5a00' : '') + '">' + (g.sent < g.n ? (g.n - g.sent) + ' chưa gửi' : '✓ đã gửi') + '</span></div></div>';
-    const inTab = g=> rTab === 'sent' ? g.sent >= g.n : g.sent < g.n, ofKind = k=> gs.filter(g=> k === 'all' || g.kind === k), shown = ofKind(rKind);   // lọc theo loại bài: x = bài định kỳ (đề thi), w = bài kiểm tra
-    const un = shown.filter(g=> g.sent < g.n), sn = shown.filter(g=> g.sent >= g.n), cur = rTab === 'sent' ? sn : un, kindN = {x:'bài định kỳ', w:'bài kiểm tra'};
-    $('resList').innerHTML = '<div class="seg" id="rKind" style="position:static;margin-bottom:6px">' + [['all', 'Tất cả'], ['x', '🎓 Định kỳ'], ['w', '📝 Kiểm tra']].map(([k, l])=> '<button data-k="' + k + '" class="' + (rKind === k ? 'on' : '') + '">' + l + '<b>' + ofKind(k).filter(inTab).length + '</b></button>').join('') + '</div><div class="seg" id="rSeg"><button data-t="unsent" class="' + (rTab !== 'sent' ? 'on' : '') + '">Chưa gửi<b>' + un.length + '</b></button><button data-t="sent" class="' + (rTab === 'sent' ? 'on' : '') + '">Đã gửi<b>' + sn.length + '</b></button></div>'
-      + (cur.length ? cur.map(card).join('') : '<div class="empty">' + (gs.length && !shown.length ? 'Chưa có ' + kindN[rKind] + ' nào được chấm.' : gs.length ? (rTab === 'sent' ? 'Chưa có lần chấm nào gửi xong.<br>Mở một lần chấm ở mục <b>Chưa gửi</b> → <b>📤 Gửi ảnh chưa gửi</b>.' : 'Đã gửi hết ảnh của mọi lần chấm. 👍') : 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.') + '</div>');
+    /* V22.3: TÌM LẠI BÀI CŨ — mọi lần chấm trên một danh sách (mới nhất trên cùng, chia Hôm nay / Hôm qua / 7 ngày qua / theo tháng),
+       một hàng lọc thay cho 2 hàng cũ, ô tìm không dấu khớp tên lớp, mã bài, ngày chấm và TÊN HỌC SINH (chạm tên → mở thẳng ảnh bài của em đó) */
+    const q = fold(rQ.trim()), who = r=> r.kind === 'exam' ? r.name || '' : r.hs ? r.hs.ten || '' : '', M = new Map();
+    gs.forEach(g=>{ if(!q) return M.set(g, []); const w = q.length >= 2 ? g.recs.filter(r=> fold(who(r)).includes(q)).sort((a, b)=> who(a).localeCompare(who(b), 'vi')) : [];
+      if(w.length || fold(g.title + ' ' + g.sub + ' ' + dayVN(dayKey(g.at))).includes(q)) M.set(g, w); });
+    const found = gs.filter(g=> M.has(g)), F = {all:()=> true, unsent:g=> g.sent < g.n, x:g=> g.kind === 'x', w:g=> g.kind === 'w'};
+    if(!F[rF]) rF = 'all';
+    $('rChips').innerHTML = [['all', 'Tất cả'], ['unsent', 'Chưa gửi'], ['x', 'Định kỳ'], ['w', 'Kiểm tra']].map(([k, l])=> '<button data-f="' + k + '" class="' + (rF === k ? 'on' : '') + '">' + l + '<b>' + found.filter(F[k]).length + '</b></button>').join('');
+    $('rChips').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rF = b.dataset.f; lsSet('mbpscan_rf', rF); rMore = 0; drawResults(); });
+    const list = found.filter(F[rF]), lim = 30 + rMore; let sec0 = '';
+    const card = (g, i)=>{ const sec = dGroup(g.at), h = sec !== sec0 ? '<div class="dgh">' + sec + '</div>' : '', w = M.get(g); sec0 = sec;
+      return h + '<div class="rrow k-' + g.kind + '" data-i="' + i + '"><div class="ic">' + (g.kind==='x' ? '🎓' : '📝') + '</div><div class="tx"><b>' + esc(g.title) + '</b><small>' + (sec === 'Hôm nay' ? hm(g.at) : dShort(g.at)) + ' · ' + esc(g.sub) + '</small>'
+        + (w.length ? '<div class="who">' + w.slice(0, 4).map((r, j)=> '<button data-w="' + j + '">👤 ' + esc(who(r)) + ' · ' + fmtVN(recTot(r).pts) + '</button>').join('') + (w.length > 4 ? '<span>+' + (w.length - 4) + ' em</span>' : '') + '</div>' : '')
+        + '</div><div class="sc"><b>' + (g.kind==='x' ? g.n + '/' + g.total : g.n) + ' bài</b><small>TB ' + fmtVN(g.avg) + '</small><small class="' + (g.sent < g.n ? 'un">' + (g.n - g.sent) + ' chưa gửi' : 'ok">✓ đã gửi') + '</small></div></div>'; };
+    const kindN = {unsent:'Đã gửi hết ảnh của mọi lần chấm. 👍', x:'Chưa có bài định kỳ nào được chấm.', w:'Chưa có bài kiểm tra nào được chấm.'};
+    $('resList').innerHTML = list.length ? list.slice(0, lim).map(card).join('') + (list.length > lim ? '<button class="btn wide" id="bMoreR" style="margin-top:10px">Xem thêm ' + (list.length - lim) + ' lần chấm</button>' : '')
+      : '<div class="empty">' + (!gs.length ? 'Chưa có bài nào được chấm.<br>Mỗi lần chấm thành một mục ở đây: đề thi theo từng đề, bài kiểm tra theo lượt in và ngày chấm.' : q && !found.length ? 'Không tìm thấy lần chấm nào khớp “' + esc(rQ.trim()) + '”.<br>Thử tên lớp, tên học sinh hoặc ngày chấm (vd 14/11).' : kindN[rF] || 'Không có lần chấm nào.') + '</div>';
+    if($('bMoreR')) $('bMoreR').onclick = ()=>{ rMore += 30; drawResults(); };
     const orph = xOrphans(), nX = Object.values(xres).reduce((t, a)=> t + (Array.isArray(a) ? a.length : 0), 0);
-    if(orph.length) $('resList').insertAdjacentHTML('afterbegin', orph.map(k=> '<div class="grp" data-orph="' + esc(k) + '" style="border-color:#f0a500;background:#fff8e6"><div class="ic">🛟</div><div class="tx"><b>' + xres[k].length + ' bài chưa gắn được đề</b><small>Bài vẫn còn trên máy · mã đề ' + esc([...new Set(xres[k].map(r=> r.made).filter(Boolean))].slice(0, 3).join(', ')) + ' · chạm để xem</small></div></div>').join(''));
+    if(orph.length && !q) $('resList').insertAdjacentHTML('afterbegin', orph.map(k=> '<div class="rrow orph" data-orph="' + esc(k) + '"><div class="ic">🛟</div><div class="tx"><b>' + xres[k].length + ' bài chưa gắn được đề</b><small>Bài vẫn còn trên máy · mã đề ' + esc([...new Set(xres[k].map(r=> r.made).filter(Boolean))].slice(0, 3).join(', ')) + ' · chạm để xem</small></div></div>').join(''));
     $('resList').insertAdjacentHTML('beforeend', '<p class="mut" id="dataInfo" style="margin:12px 2px 0;font-size:.76rem">Trên máy: ' + exams.length + ' đề thi · ' + nX + ' bài đề thi · ' + results.length + ' bài kiểm tra<br><span id="bakInfo">' + esc(bakText()) + '</span></p>');
     if(navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e=>{ const d = $('dataInfo'); if(d && e.usage != null) d.insertAdjacentText('beforeend', ' · dữ liệu ' + Math.round(e.usage/1048576) + ' MB'); }).catch(()=>{});
     $('resList').querySelectorAll('[data-orph]').forEach(el=> el.onclick = ev=>{ ev.stopPropagation(); xRescue(el.dataset.orph); });
-    $('rSeg').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rTab = b.dataset.t; lsSet('mbpscan_rtab', rTab); drawResults(); });
-    $('rKind').querySelectorAll('button').forEach(b=> b.onclick = ()=>{ rKind = b.dataset.k; lsSet('mbpscan_rkind', rKind); drawResults(); });
-    $('resList').querySelectorAll('.grp:not([data-orph])').forEach(el=> el.onclick = ()=>{ rv = {kind:el.dataset.k, key:el.dataset.key}; $('fSum').open = $('fMiss').open = false; drawResults(); $('v-res').parentElement.scrollTop = 0; });
+    $('resList').querySelectorAll('.rrow[data-i]').forEach(el=> el.onclick = ev=>{ const g = list[+el.dataset.i], wb = ev.target.closest('[data-w]'), sc = $('v-res').parentElement;
+      rScroll = sc.scrollTop; rv = {kind:g.kind, key:g.key}; $('fSum').open = $('fMiss').open = false; drawResults(); sc.scrollTop = 0;
+      if(wb){ const i = curList().indexOf(M.get(g)[+wb.dataset.w]); if(i >= 0) zoom(i); } });
     return;
   }
   const g = gs.find(x=> x.kind===rv.kind && x.key===rv.key), list = curList(), pts = list.map(r=> recTot(r).pts), mx = list.length ? list[0].max : 0, ex = rvExam();
@@ -2008,12 +2051,14 @@ function drawResults(){
     $('xTable').querySelectorAll('tr.done, tr.bad').forEach(tr=> tr.onclick = ()=>{ const i = list.findIndex(r=> (r.sbd || '?')===tr.dataset.s); if(i >= 0) zoom(i); });
     $('xTable').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list.find(r=> (r.sbd || '?')===b.dataset.tl)); });
   } else {
-    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + (r.url || IMG_NONE) + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓ đã gửi</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + (r.thuong ? ' +' + fmtVN(r.thuong) : '') + ' ✎' : '+ TL') + '</button>' : '') + '<span>' + (r.stt ? 'SBD ' + r.stt : '#' + (i+1)) + ' · ' + hm(r.at) + (new Set(list.map(x=> x.id)).size > 1 ? ' · mã ' + r.id : '') + (r.warn.length ? ' ⚠' : '') + '</span></div></div>').join('');
+    const multi = new Set(list.map(x=> x.id)).size > 1;   // V22.3: ô ảnh nhỏ hơn (3 cột trên điện thoại), có tên học sinh nếu phiếu in sẵn tên
+    $('resGrid').innerHTML = list.map((r,i)=> '<div class="res" data-i="' + i + '"><img src="' + (r.url || IMG_NONE) + '" loading="lazy" alt="">' + (r.sent ? '<em class="snt">✓</em>' : '') + '<div>' + fmtVN(recTot(r).pts) + '/' + fmtVN(recTot(r).max) + (r.warn.length ? ' ⚠' : '') + (tlMaxOf(r) ? '<button class="tlc' + (r.tl != null ? '' : ' no') + '" data-tl="' + i + '">' + (r.tl != null ? 'TL ' + fmtVN(r.tl) + (r.thuong ? ' +' + fmtVN(r.thuong) : '') + ' ✎' : '+ TL') + '</button>' : '') + '</div><small>' + esc(r.hs ? r.hs.ten : r.stt ? 'SBD ' + r.stt : '#' + (i+1)) + ' · ' + hm(r.at) + (multi ? ' · mã ' + r.id : '') + '</small></div>').join('');
     $('resGrid').querySelectorAll('.res').forEach(el=> el.onclick = ()=> zoom(+el.dataset.i));
     $('resGrid').querySelectorAll('.tlc').forEach(b=> b.onclick = ev=>{ ev.stopPropagation(); tlSheet(list, drawResults, list[+b.dataset.tl]); });
   }
 }
-$('bBack').onclick = ()=>{ rv = null; drawResults(); };
+$('bBack').onclick = ()=>{ rv = null; drawResults(); $('v-res').parentElement.scrollTop = rScroll; };   // quay lại đúng chỗ đang xem trong danh sách
+$('rSearch').oninput = e=>{ rQ = e.target.value; rMore = 0; drawResults(); };
 const resRename = ()=>{ if(!rv) return; const k = rv.kind + rv.key, g = groups().find(x=> x.kind===rv.kind && x.key===rv.key), v = prompt('Tên của lần chấm này (ví dụ: 11A3 – kiểm tra 15 phút):', g ? g.title : ''); if(v === null) return; if(v.trim()) labels[k] = v.trim(); else delete labels[k]; lsSet('mbpscan_labels', labels); drawResults(); };
 const resDelete = ()=>{ if(!rv) return; const n = curList().length; if(!confirm('Xoá toàn bộ ' + n + ' bài của lần chấm này trên điện thoại?')) return;
   if(rv.kind==='x'){ delete xres[rv.key]; saveX(); } else { const key = rv.key; results = results.filter(r=> wKey(r)!==key); saveResults(); } delete labels[rv.kind + rv.key]; lsSet('mbpscan_labels', labels); rv = null; drawResults(); drawHeader(); };
