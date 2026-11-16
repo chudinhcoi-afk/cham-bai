@@ -269,7 +269,7 @@ details.fold summary small{margin-left:auto;color:var(--mut);font-weight:600;fon
     <input class="search" id="tSearch" type="search" placeholder="🔍 Tìm đề: tên lớp, ngày, mã bài…">
     <div class="seg" id="tSeg"></div>
     <div id="itemList"></div>
-    <p class="ver">MB Chấm · bản 16/11 (V22.5) · đọc phiếu v6</p>
+    <p class="ver">MB Chấm · bản 16/11 (V22.6) · đọc phiếu v7</p>
   </section>
 
   <section class="view" id="v-res">
@@ -824,11 +824,18 @@ function wakRefine(gray, w, h, mp, test, G){
   const fitAt = (k, dx, dy)=>{ let s = 0; for(let j = 0; j < test.rows[k].n; j++){ const p = G.pos(k, j), x = p.x + dx, y = p.y + dy;
       let ring = 0; for(const [a, b] of RING) ring += px(x + a, y + b); ring /= RING.length;
       const bg = BG.map(([a, b])=> px(x + a, y + b)).sort((u, v)=> v - u)[1]; s += bg - ring; } return s/test.rows[k].n; };
-  const off = test.rows.map((r, k)=>{ let best = [0, 0], bv = fitAt(k, 0, 0) + 1;              // ưu tiên nhẹ vị trí gốc
-    const tryAt = (dx, dy)=>{ const v = fitAt(k, dx, dy) - 0.6*Math.hypot(dx, dy); if(v > bv){ bv = v; best = [dx, dy]; } };
-    for(let dy = -2; dy <= 2.001; dy += 0.5) for(let dx = -2; dx <= 2.001; dx += 0.5) tryAt(dx, dy);   // dò thô bước 0,5 mm
-    const [cx, cy] = best; for(const dy of [-0.25, 0, 0.25]) for(const dx of [-0.25, 0, 0.25]) if(dx || dy) tryAt(cx + dx, cy + dy);   // rồi tinh chỉnh 0,25 mm
-    return best; });
+  const seek = (f, x0, y0, R)=>{ let best = [x0, y0], bv = f(x0, y0) + 1;              // ưu tiên nhẹ vị trí xuất phát
+    const tryAt = (dx, dy)=>{ const v = f(dx, dy) - 0.6*Math.hypot(dx - x0, dy - y0); if(v > bv){ bv = v; best = [dx, dy]; } };
+    const st = R > 0.5 ? 0.5 : 0.25; for(let dy = -R; dy <= R + 0.001; dy += st) for(let dx = -R; dx <= R + 0.001; dx += st) tryAt(x0 + dx, y0 + dy);   // dò thô bước 0,5 mm (vùng hẹp: 0,25 mm)
+    const [cx, cy] = best; for(const dy of [-0.25, 0, 0.25]) for(const dx of [-0.25, 0, 0.25]) if((dx || dy) && Math.abs(cx + dx - x0) <= R + 0.001 && Math.abs(cy + dy - y0) <= R + 0.001) tryAt(cx + dx, cy + dy);   // rồi tinh chỉnh 0,25 mm
+    return best; };
+  const off = test.rows.map((r, k)=> r.t ? null : seek((dx, dy)=> fitAt(k, dx, dy), 0, 0, 2));
+  // V22.6 (16/11): TRẢ LỜI NGẮN — các cột của một câu in liền nhau nên lệch gần như nhau: dò CHUNG cả câu (±2 mm), rồi mỗi cột chỉ tinh chỉnh ±0,5 mm.
+  // Trước đây dò riêng từng cột: cột cuối có ô tô rất đậm (bút mực đen) + đường kẻ khung ngay bên phải bị kéo lệch ~2 mm sang “chỗ khớp giả”
+  // (vòng dò đè lên đường kẻ, nằm giữa hai ô) → đọc trượt ô đã tô, cả câu chấm sai (phiếu 3721 câu 14: tô 46,7 mà máy coi cột 4 bỏ trống).
+  const tg = {}; test.rows.forEach((r, k)=>{ if(r.t) (tg[r.g] = tg[r.g] || []).push(k); });
+  Object.values(tg).forEach(ks=>{ const [jx, jy] = seek((dx, dy)=> ks.reduce((s, k)=> s + fitAt(k, dx, dy), 0)/ks.length, 0, 0, 2);
+    ks.forEach(k=>{ off[k] = ks.length > 1 ? seek((dx, dy)=> fitAt(k, dx, dy), jx, jy, 0.5) : [jx, jy]; }); });
   // làm trơn: trung vị với hàng trên / dưới trong cùng cột (độ cong biến đổi chậm), tránh một hàng nhảy sai
   const col = k=> (G.v >= 3 ? Math.round(G.pos(k, 0).x*4) : Math.round(G.pos(k, 0).x/5))*1000 + (test.rows[k].t ? 1 : 0), byCol = {};
   test.rows.forEach((r, k)=> (byCol[col(k)] = byCol[col(k)] || []).push(k));
